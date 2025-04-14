@@ -1,0 +1,6 @@
+{
+    "host": "localhost",
+    "port": 8765,
+    "ping_interval": 30,
+    "log_level": "info"
+}

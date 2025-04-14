@@ -1,0 +1,14 @@
+websockets
+huggingface_hub
+Pillow
+imageio
+easydict
+rembg
+onnxruntime
+plyfile
+pytest
+pytest-asyncio
+open3d
+utils3d
+pydantic_ai
+torch==2.5.1
