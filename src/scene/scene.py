@@ -1,38 +1,23 @@
+import json
 from ollama import chat
-from huggingface_hub import InferenceClient
-from PIL import Image
 
 
-class Chat:
+class SceneAnalyzer:
     def __init__(self):
-        self.list_message = [
-            {
-                'role': 'system',
-                'content': 'You are a 3D engine chatbot assistant. Be concise, calm, and friendly. \
-                By default, you act as a chatbot. If the user requests image generation, \
-                run a prompt with "no background" added if explicitly requested. \
-                If asked about your capabilities, mention you can generate an image and assist with chat. \
-                Do not provide image examples. \
-                When generating an image, return a JSON response: {"command": "generate_image", "prompt": "your_prompt"}.',
-            },
+        self.system_prompt = 'You are an assistant that analyzes a user\'s request to modify a 3D scene in the context of the current scene state. Your goal is to identify the necessary context from the scene to understand the request and determine if it\'s feasible or requires clarification. You will receive the current scene state (JSON) and the user\'s prompt (text) and you need to return a JSON in the same format with a relevant summary of the scene according to the user\'s prompt. Example Input: {"objects": [{"name": "table", "position": [0,0,0]}, {"name": "chair", "position": [1,0,1]}]} User: "Add a lamp on the table" Example Output: "{"objects": [{"name": "table", "position": [0,0,0]}]}"'
+        self.model_name = "llama3.2"
+
+    def analyze(self, current_scene: dict, user_input: str) -> dict:
+        prompt = f"Current scene: {json.dumps(current_scene)}\nUser: {user_input}"
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": prompt},
         ]
+        response = chat(self.model_name, messages)
 
-    def prompt(self, user_input):
-        """Send a prompt to the LLM and receive a structured response."""
-        self.list_message.append({'role': 'user', 'content': user_input})
-        response = chat('llama3.2', messages=self.list_message)
-        answer = response.message.content
-        self.list_message.append({'role': 'assistant', 'content': answer})
-        return answer
+        try:
+            summary = json.loads(response.message.content)
+        except (json.JSONDecodeError, ValueError) as e:
+            summary = {"error": f"Invalid JSON: {str(e)}", "raw_response": response}
 
-    def run(self):
-        while True:
-            user_input = input("Chat: ")
-            prompt = self.chat_with_llm(user_input)
-            print(prompt + '\n')
-
-
-# Usage
-if __name__ == '__main__':
-    generator = LLM(hf_token="")
-    generator.run()
+        return summary

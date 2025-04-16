@@ -1,6 +1,7 @@
 import json
 import asyncio
-#import model.llm.chat
+
+# import model.llm.chat
 
 
 class Session:
@@ -21,7 +22,7 @@ class Session:
         j = json.loads(message)
         if j.get("command") == "chat":
             input = j.get("message")
-            #output = model.llm.chat.prompt(input)
+            # output = model.llm.chat.prompt(input)
             await self.client.send_message("success", 200, output)
         else:
             await self.client.send_message("error", 400, "Command not recognized")

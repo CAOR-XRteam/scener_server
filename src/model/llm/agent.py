@@ -17,7 +17,9 @@ class Agent:
         self.memory = MemorySaver()
         self.model = OllamaLLM(model="gemma3:4b", streaming=True)
         self.tools = [improver_tool]
-        self.agent = create_react_agent(self.model, self.tools, checkpointer=self.memory)
+        self.agent = create_react_agent(
+            self.model, self.tools, checkpointer=self.memory
+        )
 
     def chat(self, user_input):
         """Send a prompt to the LLM and receive a structured response."""
@@ -28,7 +30,7 @@ class Agent:
         response = ""
         for chunk in response_stream:
             response += chunk
-            print(chunk, end='', flush=True)  # Print each chunk
+            print(chunk, end="", flush=True)  # Print each chunk
         print("\n")  # Newline after completion
 
         return response
@@ -37,14 +39,14 @@ class Agent:
         print("Type 'exit' to quit.")
         while True:
             user_input = input("Chat: ")
-            if user_input.lower() in ['exit', 'quit']:
+            if user_input.lower() in ["exit", "quit"]:
                 print("Goodbye!")
                 break
             self.chat(user_input)
 
 
 # Usage
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("-------------------")
     chat = Agent()
     chat.run()

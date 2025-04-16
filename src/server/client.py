@@ -8,6 +8,7 @@ import core.session
 
 # Le client manage les output et la session managera les input
 
+
 class Client:
     """Manage client session and input / ouput messages"""
 
@@ -31,11 +32,7 @@ class Client:
 
     async def send_message(self, status, code, message):
         """Create a JSON response and queue a message to be sent to the client."""
-        response = {
-            "status": status,
-            "code": code,
-            "message": message
-        }
+        response = {"status": status, "code": code, "message": message}
         await self.queue_output.put(json.dumps(response))
 
     # Subfunction
@@ -47,9 +44,13 @@ class Client:
                     if await server.valider.check_message(self, message):
                         await self.queue_input.put(message)
             except websockets.exceptions.ConnectionClosed as e:
-                utils.logger.error(f"Client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET} disconnected. Reason: {e}")
+                utils.logger.error(
+                    f"Client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET} disconnected. Reason: {e}"
+                )
             except Exception as e:
-                utils.logger.error(f"Error with client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}")
+                utils.logger.error(
+                    f"Error with client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}"
+                )
             finally:
                 self.is_active = False  # Mark the client as inactive when disconnected
                 await self.close()
@@ -60,12 +61,18 @@ class Client:
             try:
                 message = await self.queue_output.get()  # Wait for a message to send
                 await self.websocket.send(message)
-                utils.logger.info(f"Sent message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}:\n {message}")
+                utils.logger.info(
+                    f"Sent message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}:\n {message}"
+                )
             except asyncio.CancelledError:
                 break  # Break out of the loop if the task is canceled
             except Exception as e:
-                utils.logger.error(f"Error sending message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}")
-                self.is_active = False  # If there’s an error, mark the client as inactive
+                utils.logger.error(
+                    f"Error sending message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}"
+                )
+                self.is_active = (
+                    False  # If there’s an error, mark the client as inactive
+                )
 
     async def close(self):
         """Close the WebSocket connection gracefully."""

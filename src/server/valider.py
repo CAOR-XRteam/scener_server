@@ -4,7 +4,7 @@ import json
 # Main function
 async def check_message(client, message):
     """Handle the incoming message and return the response."""
-    #Check validity
+    # Check validity
     if not message:
         await client.send_message("error", 400, "Empty message received")
         return False
@@ -20,6 +20,7 @@ async def check_message(client, message):
     # Message is valid
     return True
 
+
 # Subfunction
 def is_json(message):
     """Check if the message is a valid JSON."""
@@ -28,6 +29,7 @@ def is_json(message):
         return True
     except json.JSONDecodeError:
         return False
+
 
 def has_command(message):
     """Check if the message contains a 'command' field."""

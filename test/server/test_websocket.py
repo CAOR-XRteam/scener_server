@@ -14,4 +14,6 @@ async def test_server_up():
         async with connect(uri) as websocket:
             pass
     except Exception as e:
-        pytest.fail(f"WebSocket server is not up or reachable: {e}")  # Skip the tests if server is down
+        pytest.fail(
+            f"WebSocket server is not up or reachable: {e}"
+        )  # Skip the tests if server is down

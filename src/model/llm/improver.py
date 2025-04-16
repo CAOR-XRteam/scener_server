@@ -1,6 +1,7 @@
 from langchain.tools import tool
 from langchain_ollama.llms import OllamaLLM
 
+
 @tool
 def improver_tool(user_input: str) -> str:
     """Refines and enhances prompts for better clarity and quality."""
@@ -19,7 +20,7 @@ def improver_tool(user_input: str) -> str:
     result = ""
     for chunk in response_stream:
         result += chunk
-        print(chunk, end='', flush=True)
+        print(chunk, end="", flush=True)
     print("\n")
 
     return result

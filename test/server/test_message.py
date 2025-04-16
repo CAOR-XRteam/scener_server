@@ -9,9 +9,7 @@ from client import send_message
 async def test_json():
     uri = "ws://localhost:8765"
 
-    post = {
-        "message": "Hello !"
-    }
+    post = {"message": "Hello !"}
 
     response = await send_message(uri, json.dumps(post))
     response_data = json.loads(response)
@@ -19,6 +17,7 @@ async def test_json():
     assert response_data["message"] == "No command in the json"
     assert response_data["status"] == "error"
     assert response_data["code"] == 400
+
 
 @pytest.mark.asyncio
 async def test_non_json():
@@ -31,6 +30,7 @@ async def test_non_json():
     assert response_data["status"] == "error"
     assert response_data["code"] == 400
 
+
 @pytest.mark.asyncio
 async def test_empty():
     uri = "ws://localhost:8765"
@@ -42,14 +42,12 @@ async def test_empty():
     assert response_data["status"] == "error"
     assert response_data["code"] == 400
 
+
 @pytest.mark.asyncio
 async def test_llm():
     uri = "ws://localhost:8765"
 
-    post = {
-        "command": "chat",
-        "message": "answer by saying only 'Hello !'"
-    }
+    post = {"command": "chat", "message": "answer by saying only 'Hello !'"}
 
     response = await send_message(uri, json.dumps(post))
     response_data = json.loads(response)

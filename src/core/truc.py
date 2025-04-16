@@ -12,6 +12,7 @@ trimmer = trim_messages(
     start_on="human",
 )
 
+
 def main():
     # Prompt
     template = """Question: {question} be polite and elegant and sober. speak only essential thing"""
@@ -37,6 +38,7 @@ def main():
         for chunk in chain.stream({"question": user_input}):
             print(chunk, end="", flush=True)
         print()
+
 
 if __name__ == "__main__":
     main()
