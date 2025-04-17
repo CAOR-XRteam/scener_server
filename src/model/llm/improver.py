@@ -1,14 +1,17 @@
-from langchain.tools import tool
-from langchain_ollama.llms import OllamaLLM
+# from langchain.tools import tool
+# from langchain_ollama.llms import OllamaLLM
 
 import logging
 from beartype import beartype
-from ollama import chat
+
+from ...lib import chat_call, deserialize_from_response_content
+
+logger = logging.getLogger(__name__)
 
 
 class Improver:
     @beartype
-    def __init__(self, model_name: str = "llama3.2"):
+    def __init__(self, model_name):
         self.system_prompt = (
             "You are a highly skilled assistant designed to enhance and improve any given prompt. "
             "Your task is to significantly refine the prompt, providing clearer, more actionable, and "
@@ -18,26 +21,27 @@ class Improver:
             "Example: input prompt: Generate a Japanese theatre scene with samurai armor in the center, enhanced prompt: Generate a traditional Japanese theatre scene with Samurai armor placed in the center of the stage. The room should have wooden flooring, simple red and gold accents, and folding screens in the background. The Samurai armor should be detailed, with elements like the kabuto (helmet) and yoroi (body armor), capturing the essence of a classical Japanese theatre setting."
         )
         self.model_name = model_name
-        logging.info(f"Improver initialized with model: {self.model_name}")
-    
-    @beartype    
-    def improve(self, user_input: str)->str:
+        logger.info(f"Initialized with model: {self.model_name}")
+
+    @beartype
+    def improve(self, user_input: str) -> str:
         prompt = f"{self.system_prompt}\nUser: {user_input}"
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": prompt},
         ]
-        
-        try:
-            response = chat(self.model_name, messages)
-        except Exception as e:
-            logging.error(f"Error during Improver chat API call: {str(e)}")
-            return {"error": f"Improver chat API call failed: {str(e)}"}
 
-        improved_input = response.message.content
-        logging.info(f"Improver chat API call successful: {improved_input}")
-        return improved_input
-        
+        return chat_call(self.model_name, messages, logger)
+
+
+if __name__ == "__main__":
+    improver = Improver()
+    user_input = (
+        "Generate a traditional Japanese theatre room with intricate wooden flooring, "
+        "high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
+    )
+    print(result=improver.improve(user_input))
+
 
 # @tool
 # def improver_tool(user_input: str) -> str:
