@@ -4,7 +4,7 @@
 import logging
 from beartype import beartype
 
-from ...lib import chat_call, deserialize_from_response_content
+from ...lib import chat_call
 
 logger = logging.getLogger(__name__)
 

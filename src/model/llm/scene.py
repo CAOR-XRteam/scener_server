@@ -2,7 +2,7 @@ import json
 import logging
 from beartype import beartype
 
-from ...lib import chat_call, deserialize_from_response_content
+from ...lib import chat_call, deserialize_from_str
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class SceneAnalyzer:
             {"role": "user", "content": prompt},
         ]
 
-        return deserialize_from_response_content(
+        return deserialize_from_str(
             chat_call(self.model_name, messages, logger), logger
         )
 

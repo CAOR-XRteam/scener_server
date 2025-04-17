@@ -1,8 +1,7 @@
 import logging
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.tools import tool, BaseTool
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.tools import tool
 from langchain_ollama.llms import OllamaLLM
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver

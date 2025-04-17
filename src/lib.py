@@ -25,11 +25,11 @@ def chat_call(model_name, messages: list, logger) -> str:
 
 
 @beartype
-def deserialize_from_response_content(response_content: str, logger) -> dict:
+def deserialize_from_str(s: str, logger) -> dict:
     try:
-        return json.loads(response_content)
+        return json.loads(s)
     except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Invalid JSON: {str(e)}\nRaw response: {response_content}")
-        raise Error(f"Invalid JSON: {str(e)}\nRaw response: {response_content}")
+        logger.error(f"Invalid JSON: {str(e)}\nRaw response: {s}")
+        raise Error(f"Invalid JSON: {str(e)}\nRaw response: {s}")
 
     return res
