@@ -1,6 +1,6 @@
 import logging
 
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_core.tools import tool
 from langchain_ollama.llms import OllamaLLM
 from langgraph.prebuilt import create_react_agent
@@ -20,8 +20,9 @@ class AgentTools:
         self.imporver = Improver(model_name)
         self.decomposer = Decomposer(model_name)
         self.scene_analyzer = SceneAnalyzer(model_name)
-        
-    def get_current_scene(): pass
+
+    def get_current_scene():
+        pass
 
     @tool
     def improve(self, user_input):
@@ -58,7 +59,8 @@ class Agent:
         self.agent_executor = create_react_agent(
             self.model, self.tools, self.system_prompt, checkpointer=self.memory
         )
-    
+        self.chat_history = [SystemMessage(content=self.system_prompt)]
+
     def chat(self, user_input, thread_id):
         """Send a prompt to the LLM and receive a structured response."""
         agent_input = {"messages": [HumanMessage(content=user_input)]}
@@ -72,9 +74,7 @@ class Agent:
                 last_message = chunk["messages"][-1]
 
                 if isinstance(last_message, AIMessage) and not last_message.tool_calls:
-                    new_content = last_message.content[
-                        len(final_response_content) :
-                    ]
+                    new_content = last_message.content[len(final_response_content) :]
                     if new_content:
                         print(new_content, end="")
                         final_response_content += new_content
@@ -82,7 +82,10 @@ class Agent:
             logger.info(f"\n[Agent Error] An error occurred: {e}")
             return f"[Error during agent execution: {e}]"
 
-        print(final_response_content)
+        self.chat_history.append(
+            AIMessage(content=final_response_content, additional_kwargs=config)
+        )
+        return final_response_content
 
     def run(self):
         print("Type 'exit' to quit")
@@ -90,7 +93,10 @@ class Agent:
 
         while True:
             try:
-                user_input = input("You: ")
+                user_input = input("You: ").strip()
+                self.chat_history.append(
+                    HumanMessage(content=user_input, additional_kwargs={})
+                )
                 if user_input.lower() == "exit":
                     print("bye")
                     break
