@@ -56,23 +56,23 @@ Respond in JSON:
                 ("user", self.user_prompt),
             ]
         )
-        
-        
+
         self.model = OllamaLLM(model=model_name, temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
-        
+
         logger.info(f"Initialized with model: {model_name}")
 
     def decompose(self, improved_user_input: str) -> dict:
         try:
-            result: dict = self.chain.invoke({"improved_user_input": improved_user_input})
+            result: dict = self.chain.invoke(
+                {"improved_user_input": improved_user_input}
+            )
             return result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise
-        
-        
+
         # prompt = f"User: {improved_user_input}"
         # messages = [
         #     {"role": "system", "content": self.system_prompt},

@@ -14,7 +14,9 @@ class DB:
 
     def init_db(self):
         sql.create_table_asset(self.conn, self.cursor)
-        logger.success(f"Connected to database {Fore.GREEN}{self.path}{Fore.GREEN}{Fore.RESET}")
+        logger.success(
+            f"Connected to database {Fore.GREEN}{self.path}{Fore.GREEN}{Fore.RESET}"
+        )
 
     def fill_db(self, path):
         """Recursively explore a folder and fill the database with asset data."""
@@ -32,13 +34,15 @@ class DB:
                     file_path = os.path.join(subpath, file_name)
 
                     # Match image files by extension
-                    if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    if file_name.lower().endswith((".png", ".jpg", ".jpeg")):
                         image_file = file_path
                     # Match mesh files by extension
-                    elif file_name.lower().endswith(('.obj', '.fbx', '.stl', '.ply', '.glb')):
+                    elif file_name.lower().endswith(
+                        (".obj", ".fbx", ".stl", ".ply", ".glb")
+                    ):
                         mesh_file = file_path
                     # Match description file (e.g., txt)
-                    elif file_name.lower().endswith('.txt'):
+                    elif file_name.lower().endswith(".txt"):
                         description_file = file_path
 
                 # Assign default values if any of the expected files are missing
@@ -47,7 +51,9 @@ class DB:
                 description = description_file if description_file else None
 
                 # Insert the asset into the database
-                sql.insert_asset(self.conn, self.cursor, subfolder_name, image, mesh, description)
+                sql.insert_asset(
+                    self.conn, self.cursor, subfolder_name, image, mesh, description
+                )
                 logger.info(f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}")
 
     def read_db(self):
@@ -57,14 +63,28 @@ class DB:
 
         # Print the results in a nice format
         if assets:
-            print(f"{'ID':<4} {'Name':<10} {'Image':<10} {'Mesh':<10} {'Description':<10}")
+            print(
+                f"{'ID':<4} {'Name':<10} {'Image':<10} {'Mesh':<10} {'Description':<10}"
+            )
             for asset in assets:
                 asset_id, asset_name, asset_image, asset_mesh, asset_description = asset
                 id = f"{asset_id:<4}"
                 name = f"{Fore.YELLOW}{asset_name:<10}{Fore.RESET}"
-                img = f"{Fore.GREEN}{"ok":<10}{Fore.RESET}" if asset_image else f"{Fore.RED}{"None":<10}{Fore.RESET}"
-                mesh = f"{Fore.GREEN}{"ok":<10}{Fore.RESET}" if asset_mesh else f"{Fore.RED}{"None":<10}{Fore.RESET}"
-                description = f"{Fore.GREEN}{"ok":<10}{Fore.RESET}" if asset_description else f"{Fore.RED}{"None":<10}{Fore.RESET}"
+                img = (
+                    f"{Fore.GREEN}{'ok':<10}{Fore.RESET}"
+                    if asset_image
+                    else f"{Fore.RED}{'None':<10}{Fore.RESET}"
+                )
+                mesh = (
+                    f"{Fore.GREEN}{'ok':<10}{Fore.RESET}"
+                    if asset_mesh
+                    else f"{Fore.RED}{'None':<10}{Fore.RESET}"
+                )
+                description = (
+                    f"{Fore.GREEN}{'ok':<10}{Fore.RESET}"
+                    if asset_description
+                    else f"{Fore.RED}{'None':<10}{Fore.RESET}"
+                )
                 print(f"{id} {name} {img} {mesh} {description}")
         else:
             print("No assets found.")

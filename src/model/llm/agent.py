@@ -15,6 +15,7 @@ from model.llm.decomposer import Decomposer
 
 logger = logging.getLogger(__name__)
 
+
 @beartype
 class AgentTools:
     def __init__(self, model_name: str):
@@ -29,7 +30,7 @@ class AgentTools:
     @tool
     def improve(self, user_input):
         """Refines the user's prompt for clarity, detail, and quality enhance the overall context."""
-        return self.imporver.improve(user_input)
+        return self.improver.improve(user_input)
 
     @tool
     def decompose(self, user_input):
@@ -43,11 +44,12 @@ class AgentTools:
 
     def get_tools(self):
         """Returns the list of tools"""
-        return [self.imporver, self.decomposer, self.scene_analyzer]
+        return [self.improver, self.decomposer, self.scene_analyzer]
+
 
 @beartype
 class Agent:
-    def __init__(self, model_name: str= "llama3.2"):
+    def __init__(self, model_name: str = "llama3.2"):
         # Define the template for the prompt TODO: create better prompt
         self.system_prompt = (
             "You are a helpful 3D engine chatbot assistant. "
@@ -59,7 +61,10 @@ class Agent:
         self.model = OllamaLLM(model=model_name, streaming=True)
         self.tools = AgentTools(model=model_name)
         self.agent_executor = create_react_agent(
-            self.model, self.tools.get_tools(), self.system_prompt, checkpointer=self.memory
+            self.model,
+            self.tools.get_tools(),
+            self.system_prompt,
+            checkpointer=self.memory,
         )
 
     def chat(self, user_input: str, thread_id: int = 0):
@@ -82,7 +87,7 @@ class Agent:
         except Exception as e:
             logger.info(f"\nAgent error occurred: {e}")
             return f"[Error during agent execution: {e}]"
-        
+
         return final_response_content
 
     def run(self):

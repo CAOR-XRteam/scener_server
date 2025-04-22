@@ -1,12 +1,17 @@
 import asyncio
 import websockets
-
 import utils
 import json
 import server.valider
 import core.session
+import logging
+
+from colorama import Fore
+from beartype import beartype
 
 # Le client manage les output et la session managera les input
+
+logger = logging.getLogger(__name__)
 
 
 class Client:
@@ -15,11 +20,13 @@ class Client:
     # Main function
     def __init__(self, websocket):
         self.websocket = websocket  # The WebSocket connection object
+        self.session = core.session.Session(self)
+        self.is_active = True  # State to track if the client is active
+
         self.queue_input = asyncio.Queue()  # Message queue for this client
         self.queue_output = asyncio.Queue()  # Message queue for this client
         self.disconnection = asyncio.Event()
-        self.session = core.session.Session(self)
-        self.is_active = True  # State to track if the client is active
+
         self.task_input = None
         self.task_output = None
         self.task_session = None
@@ -30,7 +37,8 @@ class Client:
         self.task_output = asyncio.create_task(self.loop_output())
         self.task_session = asyncio.create_task(self.session.run())
 
-    async def send_message(self, status, code, message):
+    @beartype
+    async def send_message(self, status: str, code: int, message: str):
         """Create a JSON response and queue a message to be sent to the client."""
         response = {"status": status, "code": code, "message": message}
         await self.queue_output.put(json.dumps(response))
@@ -45,11 +53,11 @@ class Client:
                         await self.queue_input.put(message)
             except websockets.exceptions.ConnectionClosed as e:
                 utils.logger.error(
-                    f"Client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET} disconnected. Reason: {e}"
+                    f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"
                 )
             except Exception as e:
                 utils.logger.error(
-                    f"Error with client {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}"
+                    f"Error with client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                 )
             finally:
                 self.is_active = False  # Mark the client as inactive when disconnected
@@ -62,13 +70,13 @@ class Client:
                 message = await self.queue_output.get()  # Wait for a message to send
                 await self.websocket.send(message)
                 utils.logger.info(
-                    f"Sent message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}:\n {message}"
+                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {message}"
                 )
             except asyncio.CancelledError:
                 break  # Break out of the loop if the task is canceled
             except Exception as e:
                 utils.logger.error(
-                    f"Error sending message to {utils.color.GREEN}{self.websocket.remote_address}{utils.color.RESET}: {e}"
+                    f"Error sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                 )
                 self.is_active = (
                     False  # If there’s an error, mark the client as inactive
@@ -76,14 +84,18 @@ class Client:
 
     async def close(self):
         """Close the WebSocket connection gracefully."""
+        if not self.is_active:
+            return
+
+        logger.info(f"Closing connection for {self.websocket.remote_address}")
         self.is_active = False
 
         # List of tasks to cancel and await
-        tasks = [self.task_input, self.task_output, self.task_session]
+        tasks_to_cancel = [self.task_input, self.task_output, self.task_session]
 
         # Cancel each task and await them
-        for task in tasks:
-            if task:
+        for task in tasks_to_cancel:
+            if task and task.done() is False:
                 task.cancel()  # Cancel the task
                 try:
                     await task  # Await cancellation

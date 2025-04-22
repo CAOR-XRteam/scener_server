@@ -1,11 +1,14 @@
 import asyncio
 import signal
 import websockets
-from loguru import logger
-from colorama import Fore, Style
+import logging
+
+from colorama import Fore
 
 import utils
 import server.client
+
+logger = logging.getLogger(__name__)
 
 
 class Server:
