@@ -1,6 +1,8 @@
 import logging
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from beartype import beartype
+
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
 from langchain_ollama.llms import OllamaLLM
 from langgraph.prebuilt import create_react_agent
@@ -13,12 +15,13 @@ from model.llm.decomposer import Decomposer
 
 logger = logging.getLogger(__name__)
 
-
+@beartype
 class AgentTools:
-    def __init__(self, model_name):
-        self.imporver = Improver(model_name)
+    def __init__(self, model_name: str):
+        self.improver = Improver(model_name)
         self.decomposer = Decomposer(model_name)
         self.scene_analyzer = SceneAnalyzer(model_name)
+        self.current_scene = {}
 
     def get_current_scene():
         pass
@@ -42,9 +45,9 @@ class AgentTools:
         """Returns the list of tools"""
         return [self.imporver, self.decomposer, self.scene_analyzer]
 
-
+@beartype
 class Agent:
-    def __init__(self):
+    def __init__(self, model_name: str= "llama3.2"):
         # Define the template for the prompt TODO: create better prompt
         self.system_prompt = (
             "You are a helpful 3D engine chatbot assistant. "
@@ -53,13 +56,13 @@ class Agent:
 
         # Memory and Model
         self.memory = MemorySaver()
-        self.model = OllamaLLM(model="llama3.2", streaming=True)
-        self.tools = AgentTools(model="llama3.2")
+        self.model = OllamaLLM(model=model_name, streaming=True)
+        self.tools = AgentTools(model=model_name)
         self.agent_executor = create_react_agent(
-            self.model, self.tools, self.system_prompt, checkpointer=self.memory
+            self.model, self.tools.get_tools(), self.system_prompt, checkpointer=self.memory
         )
 
-    def chat(self, user_input, thread_id):
+    def chat(self, user_input: str, thread_id: int = 0):
         """Send a prompt to the LLM and receive a structured response."""
         agent_input = {"messages": [HumanMessage(content=user_input)]}
         config = {"configurable": {"thread_id": thread_id}}
