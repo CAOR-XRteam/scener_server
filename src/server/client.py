@@ -91,17 +91,30 @@ class Client:
         self.is_active = False
 
         # List of tasks to cancel and await
-        tasks_to_cancel = [self.task_input, self.task_output, self.task_session]
+        active_tasks = [
+            task
+            for task in [self.task_input, self.task_output, self.task_session]
+            if task and not task.done()
+        ]
 
         # Cancel each task and await them
-        for task in tasks_to_cancel:
-            if task and task.done() is False:
-                task.cancel()  # Cancel the task
-                try:
-                    await task  # Await cancellation
-                except asyncio.CancelledError:
-                    pass  # Ignore the cancellation error
+        for task in active_tasks:
+            task.cancel()  # Cancel the task
+
+        await asyncio.gather(active_tasks, return_exceptions=True)
 
         # Close the WebSocket connection
-        await self.websocket.close()
-        self.disconnection.set()
+        try:
+            await self.websocket.close()
+            self.disconnection.set()
+        except Exception as e:
+            logger.error(
+                f"Error closing websocket connection for {self.websocket.remote_address}: {e}"
+            )
+
+        while not self.queue_input.empty():
+            await self.queue_input.get()
+            self.queue_input.task_done()
+        while not self.queue_output.empty():
+            await self.queue_output.get()
+            self.queue_output.task_done()
