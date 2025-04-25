@@ -22,33 +22,25 @@ How to proceed:
    - Position, rotation, scale
    - Materials and textures (wood, stone, etc.)
    - Descriptive prompt per object
-
-Output format:
-Respond in JSON:
+3. **Output Format**:
+   You must return a **valid JSON object only**, matching the following structure exactly:
 {{
   "scene": {{
     "objects": [
       {{
-        "name": "theatre_room",
-        "type": "room",
+        "name": "object_name_here",
+        "type": "object_type_here",
         "position": {{"x":0,"y":0,"z":0}},
         "rotation": {{"x":0,"y":0,"z":0}},
         "scale": {{"x":20,"y":10,"z":20}},
-        "material": "traditional_wood_material",
-        "prompt": "Generate an image of a squared traditional Japanese theatre room viewed from the outside..."
+        "material": "material_name_here",
+        "prompt": "Descriptive sub-prompt for rendering this object visually"
       }},
-      {{
-        "name": "hanging_lanterns",
-        "type": "mesh",
-        "position": {{"x":0,"y":5,"z":0}},
-        "rotation": {{"x":0,"y":0,"z":0}},
-        "scale": {{"x":0.5,"y":0.5,"z":0.5}},
-        "material": "paper_lantern",
-        "prompt": "Create a traditional paper lantern hanging in the air..."
-      }}
+      // More objects as needed...
     ]
   }}
-}}"""
+}}
+"""
         self.user_prompt = "User: {improved_user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
             [
