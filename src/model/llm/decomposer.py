@@ -65,6 +65,7 @@ Respond in JSON:
 
     def decompose(self, improved_user_input: str) -> dict:
         try:
+            logger.info(f"Decomposing input: {improved_user_input}")
             result: dict = self.chain.invoke(
                 {"improved_user_input": improved_user_input}
             )

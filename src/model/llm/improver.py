@@ -36,6 +36,7 @@ class Improver:
 
     def improve(self, user_input: str) -> str:
         try:
+            logger.info(f"Improving user input: {user_input}")
             result: str = self.chain.invoke({"user_input": user_input})
             return result
         except Exception as e:
