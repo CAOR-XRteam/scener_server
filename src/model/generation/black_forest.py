@@ -1,13 +1,16 @@
 import os
+import logging
+
 from huggingface_hub import InferenceClient
 from dotenv import load_dotenv
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 
 def generate_image(prompt):
-    print("Generate image...")
-    print(prompt)
+    logger.info("Generate image...")
+    logger.info(prompt)
 
     HF_API_KEY = os.getenv("HF_API_KEY")
 

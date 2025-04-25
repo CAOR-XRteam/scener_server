@@ -1,9 +1,10 @@
 import logging
 
 from beartype import beartype
+from pydantic import BaseModel, Field
 
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.tools import Tool
 from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
@@ -21,41 +22,96 @@ from lib import setup_logging
 logger = logging.getLogger(__name__)
 
 
+class ImproveToolInput(BaseModel):
+    user_input: str = Field(
+        description="The user's original text prompt to be improved for clarity and detail."
+    )
+
+
+class DecomposeToolInput(BaseModel):
+    user_input: str = Field(
+        description="The improved user's scene description prompt to be decomposed."
+    )
+
+
+class AnalyzeToolInput(BaseModel):
+    user_input: str = Field(
+        description="The JSON representing extracted relevant context from the current scene state."
+    )
+
+
+class GenerateImageToolInput(BaseModel):
+    decomposed_user_input: str = Field(
+        description="The JSON representing the decomposed scene, confirmed by the user."
+    )
+
+
 @beartype
 class AgentTools:
     def __init__(self, model_name: str):
         self.improver = Improver(model_name)
+        self.improve = Tool(
+            name="improve",
+            description="Refines the user's prompt for clarity, detail, and quality enhance the overall context.",
+            args_schema=ImproveToolInput,
+            func=self.improver.improve,
+        )
         self.decomposer = Decomposer(model_name)
+        self.decompose = Tool(
+            name="decompose",
+            description="Decomposes a user's scene description prompt into manageable elements for 3D scene creation.",
+            args_schema=DecomposeToolInput,
+            func=self.decomposer.decompose,
+        )
+        self.generate_image = Tool(
+            name="generate_image",
+            description="Generates an image based on the decomposed user's prompt using the Black Forest model.",
+            args_schema=GenerateImageToolInput,
+            func=self._generate_image,
+        )
         self.scene_analyzer = SceneAnalyzer(model_name)
+        self.analyze = Tool(
+            name="analyze",
+            description="Analyzes a user's modification request against the current scene state to extract relevant context or identify issues.",
+            args_schema=AnalyzeToolInput,
+            func=self.scene_analyzer.analyze,
+        )
+
         self.current_scene = {}
 
     def get_current_scene():
         pass
 
-    @tool
-    def improve(self, user_input):
+    # @tool(args_schema=ImproveToolInput)
+    def _improve(self, user_input: str):
         """Refines the user's prompt for clarity, detail, and quality enhance the overall context."""
         return self.improver.improve(user_input)
 
-    @tool
-    def decompose(self, user_input):
+    # @tool(args_schema=DecomposeToolInput)
+    def _decompose(self, user_input: str):
         """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
         return self.decomposer.decompose(user_input)
 
-    @tool
-    def analyze(self, user_input):
+    # @tool(args_schema=AnalyzeToolInput)
+    def _analyze(self, user_input: str):
         """Analyzes a user's modification request against the current scene state to extract relevant context or identify issues."""
         return self.scene_analyzer.analyze(self.get_current_scene, user_input)
 
-    @tool
-    def generate_image(self, decomposed_user_input):
+    # @tool(args_schema=GenerateImageToolInput)
+    def _generate_image(self, decomposed_user_input: dict):
         """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-        parsed_response = convert(decomposed_user_input)
-        print("\nAgent: Decomposition received. Generating images...")
-        objects_to_generate = parsed_response.get("scene", {}).get("objects", [])
+        # try:
+        #     parsed_response = convert(decomposed_user_input)
+        # except Exception as e:
+        #     logger.error(f"Failed to parse JSON: {e}")
+        #     raise
+
+        logger.info("\nAgent: Decomposition received. Generating images...")
+        objects_to_generate = decomposed_user_input.get("scene", {}).get("objects", [])
+        logger.debug(f"Agent: Decomposed objects to generate: {objects_to_generate}")
 
         if not objects_to_generate:
-            print(
+            logger.info(
                 "Agent: The decomposition resulted in no specific objects to generate images for."
             )
             return
@@ -69,16 +125,16 @@ class AgentTools:
                 generate_image(prompt=obj["prompt"], filename=safe_filename)
             else:
                 logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
-                print(f"\n[Skipping object {i+1} - missing prompt]")
+                logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-        print("\nAgent: Image generation process complete.")
+        logger.info("\nAgent: Image generation process complete.")
 
     def get_tools(self):
         """Returns the list of tools"""
         return [
             self.improve,
             self.decompose,
-            self.analyze,
+            # self.analyze,
             self.generate_image,
         ]
 
@@ -92,8 +148,8 @@ class Agent:
 TOOLS:
 ------
 You have access to the following tools:
-- improve: Call this tool to refine the user's prompt for clarity, detail, and quality. Input is the user's description.
-- decompose: Call this tool to break down a refined scene description into structured JSON elements for 3D scene creation. Input is the refined description from the 'improve' tool.
+- improve: Call this tool to refine the user's prompt for clarity, detail, and quality. Input is the user's description. IMPORTANT: input of this tool should be a string, not a dictionary.
+- decompose: Call this tool to break down a refined scene description into structured JSON elements for 3D scene creation. Input is the refined description from the 'improve' tool. IMPORTANT: input of this tool should be a string, not a dictionary.
 - analyze: Call this tool to analyze a user's modification request against the current scene state. Input is the user's modification request. (Requires current scene context - handled internally by the tool)
 - generate_image: Call this tool ONLY AFTER the user confirms the JSON output from 'decompose'. Input is the JSON string from 'decompose'.
 
@@ -115,12 +171,6 @@ WORKFLOW:
     b.  **Action:** Call the `generate_image` tool with the previously generated JSON string as input.
     c.  **(Wait for Observation - Tool Result)**
     d.  **Final Answer:** Inform the user that image generation has started or completed based on the tool's output.
-6.  **If User Requests Modification:**
-    a.  **Thought:** The user wants to modify the scene. I need to analyze the request first.
-    b.  **Action:** Call the `analyze` tool with the user's modification request as input.
-    c.  **(Wait for Observation - Tool Result)**
-    d.  **Thought:** Based on the analysis, decide the next step (e.g., ask more questions, re-decompose, etc.).
-    e.  **Final Answer:** Respond to the user based on the analysis.
 7.  **General Chat:** If the user input is not about image generation, respond conversationally without using tools.
 
 Only provide a "Final Answer:" when you are directly responding to the user without calling a tool in the current step (like asking a question, presenting the final JSON, or confirming generation start).
@@ -129,9 +179,8 @@ Only provide a "Final Answer:" when you are directly responding to the user with
         # Memory and Model
         self.memory = MemorySaver()
         self.tools = AgentTools(model_name)
-        self.model = ChatOllama(model=model_name, streaming=True).bind_tools(
-            self.tools.get_tools()
-        )
+
+        self.model = ChatOllama(model=model_name, streaming=True)
         self.model.invoke("Hello")
         logger.info(f"ChatOllama model '{model_name}' initialized successfully.")
 
@@ -190,5 +239,5 @@ Only provide a "Final Answer:" when you are directly responding to the user with
 # Usage
 if __name__ == "__main__":
     setup_logging()
-    chat = Agent()
-    chat.run()
+    agent = Agent(model_name="llama3.2")
+    agent.run()
