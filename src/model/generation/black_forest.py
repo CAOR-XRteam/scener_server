@@ -1,14 +1,17 @@
-from ollama import chat
-from ollama import ChatResponse
+import os
 from huggingface_hub import InferenceClient
-from PIL import Image
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def generate_image(prompt):
     print("Generate image...")
     print(prompt)
 
-    client = InferenceClient(provider="fal-ai", api_key="")
+    HF_API_KEY = os.getenv("HF_API_KEY")
+
+    client = InferenceClient(provider="fal-ai", api_key=HF_API_KEY)
 
     # output is a PIL.Image object
     image = client.text_to_image(prompt, model="black-forest-labs/FLUX.1-dev")
