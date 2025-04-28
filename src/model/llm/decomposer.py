@@ -11,32 +11,79 @@ logger = logging.getLogger(__name__)
 @beartype
 class Decomposer:
     def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
-        self.system_prompt = """You are a 3D scene generation assistant. You will receive a prompt describing a 3D scene that needs to be generated.
+        self.system_prompt = """You are a specialized JSON formatting assistant for 3D scene descriptions.
+Your SOLE TASK is to convert a given scene description string into a structured JSON object.
 
-Your task is to break this prompt down into manageable elements that can be processed for 3D scene creation.
+INPUT: You will receive a detailed text description of a 3D scene.
 
-How to proceed:
-1. **Check the Library First**: Before decomposing the scene, check the available elements in the library for existing objects, meshes, materials, and textures that closely match the user's input.
-2. **Decompose Unavailable Elements**: If no matching elements are found, decompose the prompt into:
-   - Object types (room, mesh, furniture)
-   - Position, rotation, scale
-   - Materials and textures (wood, stone, etc.)
-   - Descriptive prompt per object
-3. **Output Format**:
-   You must return a **valid JSON object only**, matching the following structure exactly:
+OUTPUT REQUIREMENTS:
+1.  **JSON ONLY**: Your response MUST be a single, valid JSON object and NOTHING ELSE.
+2.  **NO EXTRA TEXT**: Do NOT include explanations, apologies, greetings, comments, markdown formatting (like ```json ... ```), or any text before or after the JSON object.
+3.  **EXACT STRUCTURE**: The JSON object MUST strictly adhere to the following structure:
+
 {{
   "scene": {{
     "objects": [
       {{
-        "name": "object_name_here",
-        "type": "object_type_here",
+        "name": "object_name_here",  // Infer a concise, descriptive name
+        "type": "object_type_here",  // e.g., room, mesh, furniture, light
+        "position": {{"x":0,"y":0,"z":0}}, // Default or inferred position
+        "rotation": {{"x":0,"y":0,"z":0}}, // Default or inferred rotation
+        "scale": {{"x":1,"y":1,"z":1}},    // Default or inferred scale (adjust defaults if necessary, e.g., for a room)
+        "material": "material_name_here", // e.g., wood, glossy_red, metallic_silver
+        "prompt": "Descriptive sub-prompt for rendering this specific object visually" // A detailed prompt snippet focused *only* on this object
+      }},
+      // Add more objects here following the same structure for every distinct element described in the input text.
+    ]
+  }}
+}}
+
+PROCESSING LOGIC:
+-   Carefully read the input description.
+-   Identify each distinct object, element, or area (e.g., floor, wall, table, lamp, character).
+-   For each identified element, create a corresponding object entry in the JSON `objects` array.
+-   Fill in the fields (`name`, `type`, `position`, `rotation`, `scale`, `material`, `prompt`) based on the description. Use reasonable defaults if details are missing, but prioritize information from the text.
+-   The `prompt` field for each object should be a concise description focused *solely* on that object's appearance and characteristics as derived from the input text.
+
+Example Input: "A large, empty warehouse room with concrete floors, brick walls, and a metal rolling door on the far wall. A single wooden crate sits in the center."
+
+Example (Partial) Output Structure:
+{{
+  "scene": {{
+    "objects": [
+      {{
+        "name": "warehouse_room_floor",
+        "type": "mesh", // Or "floor" if you have specific types
         "position": {{"x":0,"y":0,"z":0}},
         "rotation": {{"x":0,"y":0,"z":0}},
-        "scale": {{"x":20,"y":10,"z":20}},
-        "material": "material_name_here",
-        "prompt": "Descriptive sub-prompt for rendering this object visually"
+        "scale": {{"x":20,"y":0.1,"z":20}}, // Example scale
+        "material": "concrete",
+        "prompt": "A wide expanse of smooth, grey concrete floor showing some wear."
       }},
-      // More objects as needed...
+      {{
+        "name": "warehouse_wall_brick",
+        "type": "mesh", // Or "wall"
+        // ... position/rotation/scale for one wall
+        "material": "red_brick",
+        "prompt": "A tall wall made of aged red bricks with visible mortar lines."
+      }},
+      // ... other walls ...
+      {{
+        "name": "metal_rolling_door",
+        "type": "mesh", // Or "door"
+        // ... position/rotation/scale for the door on a specific wall
+        "material": "corrugated_metal",
+        "prompt": "A large, grey, corrugated metal rolling door, closed."
+      }},
+      {{
+        "name": "wooden_crate",
+        "type": "mesh", // Or "prop", "furniture"
+        "position": {{"x":0,"y":0.5,"z":0}}, // Assuming center, slightly above floor
+        "rotation": {{"x":0,"y":0,"z":0}},
+        "scale": {{"x":1,"y":1,"z":1}},
+        "material": "weathered_wood",
+        "prompt": "A standard-sized wooden shipping crate, showing signs of wear, placed centrally."
+      }}
     ]
   }}
 }}
