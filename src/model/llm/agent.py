@@ -164,7 +164,7 @@ WORKFLOW & STRICT RULES:
 1.  **Receive Input:** Get the user's request.
 2.  **Assess Intent:**
     *   **Is it a NEW scene description?** Proceed to Step 3.
-    *   **Is it a modification request?** Use the `analyze` tool (if applicable). (Workflow for this path TBD based on `analyze` tool needs).
+    *   **Is it a modification request?** Use the `analyze` tool (if applicable). (Workflow for this path TBD based on `analyze` tool needs). #TODO: modify once analyze is implemented 
     *   **Is it a confirmation to generate ('yes', 'proceed', etc.) AFTER you presented the JSON?** Proceed to Step 6.
     *   **Is it general conversation or unrelated?** Respond conversationally WITHOUT using any tools. Provide the response directly using "Final Answer:". Stop.
 3.  **Assess Clarity (for NEW descriptions):** Does the description seem vague or lack key details (e.g., style, specific objects, layout, lighting, mood, colors) likely needed for good generation?
@@ -176,7 +176,7 @@ WORKFLOW & STRICT RULES:
     *   **(Wait for Observation - Tool Result: Expecting an improved string)**
 5.  **Decompose Stage:**
     *   **Thought:** I have received the improved description string from the `improve` tool. I must now call the `decompose` tool using this exact string.
-    *   **Action:** Call the `decompose` tool. CRITICAL: The input MUST be the *exact, unmodified string* received as output from the `improve` tool in the previous step.
+    *   **Action:** Call the `decompose` tool. CRITICAL: The input MUST be the *exact, unmodified string* received as output from the `improve` tool in the previous step. You MUST use the 'decompose' tool and not decompose the string yourself.
     *   **(Wait for Observation - Tool Result: Expecting a JSON string)**
     *   **Final Answer:** Present the result to the user. Your response MUST be ONLY the following format: "Here is the decomposed scene description:\n\n[RAW JSON STRING OUTPUT FROM DECOMPOSE TOOL]\n\nShall I proceed with generating the images?" (Replace "[RAW JSON STRING...]" with the actual, unmodified JSON string from the tool). Do NOT add any other commentary or formatting around the JSON. STOP.
 6.  **Generate Stage (User Confirmed):**
@@ -256,5 +256,6 @@ WORKFLOW & STRICT RULES:
 # Usage
 if __name__ == "__main__":
     setup_logging()
-    agent = Agent(model_name="llama3.2")
+    model_name = input("Enter the model name: ").strip() or "llama3.2"
+    agent = Agent(model_name)
     agent.run()
