@@ -26,7 +26,7 @@ class TestImprover:
 
         assert result == mock_response
         mock_llm_invoke.assert_called_once()
-    
+
     @patch("langchain_ollama.llms.OllamaLLM.invoke")
     def test_improve_llm_api_error(self, mock_llm_invoke, improver, sample_prompt):
         error_message = "Ollama service unreachable"
@@ -82,7 +82,7 @@ class TestDecomposer:
         user_input = "Blablabla"
         with pytest.raises(OutputParserException) as e:
             decomposer.decompose(user_input)
-            
+
     @patch("langchain_ollama.llms.OllamaLLM.invoke")
     def test_decompose_llm_api_error(self, mock_llm_invoke, decomposer, sample_prompt):
         error_message = "Ollama service unreachable"
@@ -143,15 +143,15 @@ class TestSceneAnalyzer:
         user_input = "Blablabla"
         with pytest.raises(OutputParserException) as e:
             analyzer.analyze(sample_scene, user_input)
-            
+
         mock_llm_invoke.assert_called_once()
-            
+
     @patch("langchain_ollama.llms.OllamaLLM.invoke")
     def test_analyze_llm_api_error(self, mock_llm_invoke, analyzer, sample_scene):
         error_message = "Ollama service unreachable"
         mock_llm_invoke.side_effect = ConnectionError(error_message)
 
-        user_input="Whatever"
+        user_input = "Whatever"
         with pytest.raises(ConnectionError, match=error_message):
             analyzer.analyze(sample_scene, user_input)
 

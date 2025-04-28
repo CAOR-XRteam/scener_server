@@ -8,6 +8,7 @@ from langchain_ollama.llms import OllamaLLM
 
 logger = logging.getLogger(__name__)
 
+
 @beartype
 class SceneAnalyzer:
     def __init__(self, model_name: str = "llama3.2"):
@@ -44,10 +45,12 @@ Correct JSON Output based on rules: `{{"objects": [{{"name": "table", "position"
         )
         self.chain = self.prompt | self.model | self.parser
         logger.info(f"Initialized with model: {model_name}")
-        
+
     def analyze(self, current_scene: dict, user_input: str) -> dict:
         try:
-            result: dict = self.chain.invoke({"user_input": user_input, "current_scene": json.dumps(current_scene)})
+            result: dict = self.chain.invoke(
+                {"user_input": user_input, "current_scene": json.dumps(current_scene)}
+            )
             return result
         except Exception as e:
             logger.error(f"Analysis failed: {str(e)}")
