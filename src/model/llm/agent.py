@@ -99,6 +99,7 @@ class AgentTools:
 
     # @tool(args_schema=GenerateImageToolInput)
     def _generate_image(self, decomposed_user_input: dict):
+        logging.info(f"Agent: Received decomposed user input: {decomposed_user_input}")
         """Generates an image based on the decomposed user's prompt using the Black Forest model."""
         # try:
         #     parsed_response = convert(decomposed_user_input)
@@ -106,15 +107,17 @@ class AgentTools:
         #     logger.error(f"Failed to parse JSON: {e}")
         #     raise
 
-        logger.info("\nAgent: Decomposition received. Generating images...")
+        # logger.info(
+        #     f"\nAgent: Decomposed JSON received: {parsed_response}. Generating image..."
+        # )
         objects_to_generate = decomposed_user_input.get("scene", {}).get("objects", [])
-        logger.debug(f"Agent: Decomposed objects to generate: {objects_to_generate}")
+        logger.info(f"Agent: Decomposed objects to generate: {objects_to_generate}")
 
         if not objects_to_generate:
             logger.info(
                 "Agent: The decomposition resulted in no specific objects to generate images for."
             )
-            return
+            return "[No objects to generate images for.]"
 
         for i, obj in enumerate(objects_to_generate):
             if isinstance(obj, dict) and obj.get("prompt"):
@@ -126,6 +129,7 @@ class AgentTools:
                 logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
         logger.info("\nAgent: Image generation process complete.")
+        return f"Image generation process complete."
 
     def get_tools(self):
         """Returns the list of tools"""
@@ -157,12 +161,12 @@ You have access to the following tools. ONLY use them exactly as instructed in t
 
 - decompose: Convert the improved description into structured JSON.
     - Input: The improved description (string) **exactly as returned by the `improve` tool**.
-    - Output: A JSON string representing the scene.
+    - Output: A JSON representing the scene.
 
 - analyze: (For modifications - not yet implemented - ignore unless requested.)
 
 - generate_image: Trigger image generation from a scene JSON.
-    - Input: The JSON string **exactly as returned by the `decompose` tool** and confirmed by the user.
+    - Input: The JSON **exactly as returned by the `decompose` tool** and confirmed by the user.
 
 WORKFLOW:
 ---------
@@ -189,7 +193,7 @@ WORKFLOW:
 5. **Decompose Stage:**
     - **Thought:** "I have received the improved description. I must call `decompose`."
     - **Action:** Call the `decompose` tool using the **EXACT string** returned by the `improve` tool.
-    - WAIT for tool output (expect a valid JSON string).
+    - WAIT for tool output (expect a valid JSON).
 
     - **Final Answer to User:** 
         - Present ONLY this format (and NOTHING else):
@@ -197,7 +201,7 @@ WORKFLOW:
           ```
           Here is the decomposed scene description:
 
-          [RAW JSON STRING OUTPUT FROM DECOMPOSE TOOL]
+          [RAW JSON OUTPUT FROM DECOMPOSE TOOL]
 
           Shall I proceed with generating the images?
           ```
@@ -207,20 +211,26 @@ WORKFLOW:
     - STOP. Wait for the user's response.
 
 6. **Generate Image Stage:**
-    - If the user says "yes", "proceed", or confirms:
-    - **Thought:** "User confirmed. I must generate the image."
-    - **Action:** Call the `generate_image` tool with the exact JSON string from Step 5.
-    - WAIT for tool output (expect a status message).
+    - If the user confirms ("yes", "proceed"):
+    - **Thought:** "User confirmed. I MUST retrieve the exact JSON that was the output of the `decompose` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'decomposed_user_input', and its value MUST be the retrieved JSON."
+    - **Action:** Call the `generate_image` tool, ensuring the input is structured correctly (e.g., `{'decomposed_user_input': 'THE_JSON_FROM_DECOMPOSE_OUTPUT'}`). Use the EXACT JSON from the `decompose` tool output. Do NOT modify it.
+    - WAIT for the tool to finish.
+    
 
-    - **Final Answer:** Inform the user about the generation status (e.g., "Image generation has started.") STOP.
+7. **Report Generation Status:**
+    - **Thought:** "The `generate_image` tool has completed."
+    - **Action:** None.
+    - **Final Answer:** Based on the output from the `generate_image` tool, inform the user about the generation status (e.g., "Image generation process complete for [object names]." or "Image generation started."). STOP.
 
 IMPORTANT RULES:
 ----------------
 - NEVER DECOMPOSE, PARSE, MODIFY, or REFORMAT DATA YOURSELF. ONLY USE TOOLS.
 - NEVER CALL `improve` MORE THAN ONCE PER DESCRIPTION.
+- IMPERATIVELY USE THE 'GENERATE_IMAGE' TOOL WHEN THE USER CONFIRMS IMAGE GENERATION.
 - ALWAYS PASS TOOL OUTPUTS EXACTLY AS RECEIVED TO THE NEXT TOOL.
 - ONLY RESPOND USING "Final Answer:" when not calling a tool at this step.
 - IF IN DOUBT about user intent → ask clarifying questions.
+- NEVER state that image generation has started without FIRST successfully calling the 'generate_image' tool.
 
 FAILURE MODES TO AVOID:
 -----------------------
