@@ -11,16 +11,17 @@ logger = logging.getLogger(__name__)
 @beartype
 class Decomposer:
     def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
-        self.system_prompt = """You are a specialized JSON formatting assistant for 3D scene descriptions.
-Your SOLE TASK is to convert a given scene description string into a structured JSON object.
+        self.system_prompt = """You are a specialized Scene Decomposer for 3D generation.
 
-INPUT: You will receive a detailed text description of a 3D scene.
+YOUR TASK:
+- Convert a given scene description string into a valid structured JSON object.
 
-OUTPUT REQUIREMENTS:
-1.  **JSON ONLY**: Your response MUST be a single, valid JSON object and NOTHING ELSE.
-2.  **NO EXTRA TEXT**: Do NOT include explanations, apologies, greetings, comments, markdown formatting (like ```json ... ```), or any text before or after the JSON object.
-3.  **EXACT STRUCTURE**: The JSON object MUST strictly adhere to the following structure:
+OUTPUT FORMAT:
+- Return ONLY the JSON object.
+- NO explanations, NO preambles, NO markdown.
+- ABSOLUTELY NO TEXT before or after the JSON.
 
+JSON STRUCTURE (STRICT):
 {{
   "scene": {{
     "objects": [
@@ -38,55 +39,13 @@ OUTPUT REQUIREMENTS:
   }}
 }}
 
-PROCESSING LOGIC:
--   Carefully read the input description.
--   Identify each distinct object, element, or area (e.g., floor, wall, table, lamp, character).
--   For each identified element, create a corresponding object entry in the JSON `objects` array.
--   Fill in the fields (`name`, `type`, `position`, `rotation`, `scale`, `material`, `prompt`) based on the description. Use reasonable defaults if details are missing, but prioritize information from the text.
--   The `prompt` field for each object should be a concise description focused *solely* on that object's appearance and characteristics as derived from the input text.
 
-Example Input: "A large, empty warehouse room with concrete floors, brick walls, and a metal rolling door on the far wall. A single wooden crate sits in the center."
-
-Example (Partial) Output Structure:
-{{
-  "scene": {{
-    "objects": [
-      {{
-        "name": "warehouse_room_floor",
-        "type": "mesh", // Or "floor" if you have specific types
-        "position": {{"x":0,"y":0,"z":0}},
-        "rotation": {{"x":0,"y":0,"z":0}},
-        "scale": {{"x":20,"y":0.1,"z":20}}, // Example scale
-        "material": "concrete",
-        "prompt": "A wide expanse of smooth, grey concrete floor showing some wear."
-      }},
-      {{
-        "name": "warehouse_wall_brick",
-        "type": "mesh", // Or "wall"
-        // ... position/rotation/scale for one wall
-        "material": "red_brick",
-        "prompt": "A tall wall made of aged red bricks with visible mortar lines."
-      }},
-      // ... other walls ...
-      {{
-        "name": "metal_rolling_door",
-        "type": "mesh", // Or "door"
-        // ... position/rotation/scale for the door on a specific wall
-        "material": "corrugated_metal",
-        "prompt": "A large, grey, corrugated metal rolling door, closed."
-      }},
-      {{
-        "name": "wooden_crate",
-        "type": "mesh", // Or "prop", "furniture"
-        "position": {{"x":0,"y":0.5,"z":0}}, // Assuming center, slightly above floor
-        "rotation": {{"x":0,"y":0,"z":0}},
-        "scale": {{"x":1,"y":1,"z":1}},
-        "material": "weathered_wood",
-        "prompt": "A standard-sized wooden shipping crate, showing signs of wear, placed centrally."
-      }}
-    ]
-  }}
-}}
+RULES:
+- Identify every distinct object or area (e.g., walls, floors, furniture, lights).
+- Create an `object` entry for each.
+- Use reasonable default values if necessary, but prefer information from the text.
+- The `prompt` field must focus ONLY on the visual description of that object.
+- NO additional text, commentary, or formatting beyond the required JSON object.
 """
         self.user_prompt = "User: {improved_user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
