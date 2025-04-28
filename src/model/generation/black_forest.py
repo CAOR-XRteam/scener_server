@@ -8,7 +8,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def generate_image(prompt):
+def generate_image(prompt, filename):
     logger.info("Generate image...")
     logger.info(prompt)
 
@@ -21,7 +21,7 @@ def generate_image(prompt):
 
     # output is a PIL.Image object
     image.show()
-    image.save("output_image.jpg")
+    image.save("filename")
 
 
 if __name__ == "__main__":
