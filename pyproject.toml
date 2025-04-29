@@ -1,0 +1,14 @@
+[project]
+name = "Scener"
+version = "0.1.0"
+description = "3D scene generation interface"
+
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

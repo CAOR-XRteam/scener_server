@@ -4,19 +4,18 @@ import json
 from beartype import beartype
 from pydantic import BaseModel, Field
 
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import Tool
-from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from improver import Improver
-from scene import SceneAnalyzer
-from decomposer import Decomposer
+from tools.improver import Improver
+from tools.scene import SceneAnalyzer
+from tools.decomposer import Decomposer
 
 from utils.json import convert
-from model.generation.black_forest import generate_image
+from model.black_forest import generate_image
 from lib import setup_logging
 
 
@@ -102,12 +101,6 @@ class AgentTools:
     def _generate_image(self, decomposed_user_input: dict):
         logging.info(f"Agent: Received decomposed user input: {decomposed_user_input}")
         """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-        # try:
-        #     parsed_response = convert(decomposed_user_input)
-        # except Exception as e:
-        #     logger.error(f"Failed to parse JSON: {e}")
-        #     raise
-
         logger.info(
             f"\nAgent: Decomposed JSON received: {decomposed_user_input}. Generating image..."
         )
@@ -128,6 +121,9 @@ class AgentTools:
 
         for i, obj in enumerate(objects_to_generate):
             if isinstance(obj, dict) and obj.get("prompt"):
+                logger.info(
+                    f"Agent: Generating image for object {i+1}: {obj['prompt']}"
+                )
                 obj_name = obj.get("name", f"object_{i+1}").replace(" ", "_").lower()
                 filename = obj_name + ".png"
                 generate_image(obj["prompt"], filename)
