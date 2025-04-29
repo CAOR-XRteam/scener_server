@@ -1,7 +1,10 @@
-from .__api__ import db
+from .api import *
 
-def main():
+
+def main(path):
+    db.fill(path)
     db.read()
 
 if __name__ == "__main__":
-    main()
+    path = "../media/asset"
+    main(path)
