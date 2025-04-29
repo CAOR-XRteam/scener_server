@@ -1,4 +1,5 @@
 import logging
+import json
 
 from beartype import beartype
 from pydantic import BaseModel, Field
@@ -41,7 +42,7 @@ class AnalyzeToolInput(BaseModel):
 
 
 class GenerateImageToolInput(BaseModel):
-    decomposed_user_input: str = Field(
+    decomposed_user_input: dict = Field(
         description="The JSON representing the decomposed scene, confirmed by the user."
     )
 
@@ -54,14 +55,14 @@ class AgentTools:
             name="improve",
             description="Refines the user's prompt for clarity, detail, and quality enhance the overall context.",
             args_schema=ImproveToolInput,
-            func=self.improver.improve,
+            func=self._improve,
         )
         self.decomposer = Decomposer(model_name)
         self.decompose = Tool(
             name="decompose",
             description="Decomposes a user's scene description prompt into manageable elements for 3D scene creation.",
             args_schema=DecomposeToolInput,
-            func=self.decomposer.decompose,
+            func=self._decompose,
         )
         self.generate_image = Tool(
             name="generate_image",
@@ -74,7 +75,7 @@ class AgentTools:
             name="analyze",
             description="Analyzes a user's modification request against the current scene state to extract relevant context or identify issues.",
             args_schema=AnalyzeToolInput,
-            func=self.scene_analyzer.analyze,
+            func=self._analyze,
         )
 
         self.current_scene = {}
@@ -83,12 +84,12 @@ class AgentTools:
         pass
 
     # @tool(args_schema=ImproveToolInput)
-    def _improve(self, user_input: str):
+    def _improve(self, user_input: str) -> str:
         """Refines the user's prompt for clarity, detail, and quality enhance the overall context."""
         return self.improver.improve(user_input)
 
     # @tool(args_schema=DecomposeToolInput)
-    def _decompose(self, user_input: str):
+    def _decompose(self, user_input: str) -> dict:
         """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
         return self.decomposer.decompose(user_input)
 
@@ -107,11 +108,17 @@ class AgentTools:
         #     logger.error(f"Failed to parse JSON: {e}")
         #     raise
 
-        # logger.info(
-        #     f"\nAgent: Decomposed JSON received: {parsed_response}. Generating image..."
-        # )
-        objects_to_generate = decomposed_user_input.get("scene", {}).get("objects", [])
-        logger.info(f"Agent: Decomposed objects to generate: {objects_to_generate}")
+        logger.info(
+            f"\nAgent: Decomposed JSON received: {decomposed_user_input}. Generating image..."
+        )
+        try:
+            objects_to_generate = decomposed_user_input.get("scene", {}).get(
+                "objects", []
+            )
+            logger.info(f"Agent: Decomposed objects to generate: {objects_to_generate}")
+        except Exception as e:
+            logger.error(f"Failed to extract objects from JSON: {e}")
+            return f"[Error during image generation: {e}]"
 
         if not objects_to_generate:
             logger.info(
@@ -166,7 +173,7 @@ You have access to the following tools. ONLY use them exactly as instructed in t
 - analyze: (For modifications - not yet implemented - ignore unless requested.)
 
 - generate_image: Trigger image generation from a scene JSON.
-    - Input: The JSON **exactly as returned by the `decompose` tool** and confirmed by the user.
+    - Input: The JSON string **exactly as returned by the `decompose` tool** and confirmed by the user.
 
 WORKFLOW:
 ---------
