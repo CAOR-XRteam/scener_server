@@ -10,13 +10,13 @@ class DB:
         self.path = path
         self.conn = sql.connect_db(self.path)
         self.cursor = sql.get_cursor(self.conn)
-        self.init_db()
+        self.init()
 
-    def init_db(self):
+    def init(self):
         sql.create_table_asset(self.conn, self.cursor)
         logger.success(f"Connected to database {Fore.GREEN}{self.path}{Fore.GREEN}{Fore.RESET}")
 
-    def fill_db(self, path):
+    def fill(self, path):
         """Recursively explore a folder and fill the database with asset data."""
         for subfolder_name in os.listdir(path):
             subpath = os.path.join(path, subfolder_name)
@@ -50,7 +50,7 @@ class DB:
                 sql.insert_asset(self.conn, self.cursor, subfolder_name, image, mesh, description)
                 logger.info(f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}")
 
-    def read_db(self):
+    def read(self):
         """Fetch and display all assets from the database in a human-readable format."""
         # Fetch all assets
         assets = sql.query_assets(self.cursor)
