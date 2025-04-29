@@ -1,21 +1,21 @@
 import asyncio
 import signal
 import websockets
+
 from loguru import logger
 from colorama import Fore, Style
 
-import utils
-import server.client
+from .client import Client
 
 
 class Server:
     """Manage server start / stop and handle clients"""
 
     # Main function
-    def __init__(self):
+    def __init__(self, host, port):
         """Initialize server parameters"""
-        self.host = utils.config['host']
-        self.port = utils.config['port']
+        self.host = host
+        self.port = port
         self.list_client = []
         self.queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
@@ -41,7 +41,7 @@ class Server:
     async def handler_client(self, websocket, path=None):
         """Handle an incoming WebSocket client connection."""
         # Add client
-        client = server.client.Client(websocket)
+        client = Client(websocket)
         client.start()
         self.list_client.append(client)
         logger.connection(websocket.remote_address)

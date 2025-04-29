@@ -1,7 +1,8 @@
-import os
 from library import sql
 from loguru import logger
 from colorama import Fore, Style
+import json
+import os
 
 
 # Database management
@@ -68,6 +69,23 @@ class DB:
                 print(f"{id} {name} {img} {mesh} {description}")
         else:
             print("No assets found.")
+
+    def get_list(self):
+        """Return the content of the asset table as a list of dictionaries."""
+        assets = sql.query_assets(self.cursor)
+        asset_list = []
+
+        for asset in assets:
+            asset_id, name, image, mesh, description = asset
+            asset_list.append({
+                "id": asset_id,
+                "name": name,
+                "image": image,
+                "mesh": mesh,
+                "description": description
+            })
+
+        return asset_list
 
     def close(self):
         sql.close_connection(self.conn)
