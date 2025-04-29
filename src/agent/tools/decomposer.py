@@ -67,6 +67,7 @@ RULES:
             result: dict = self.chain.invoke(
                 {"improved_user_input": improved_user_input}
             )
+            logger.info(f"Decomposition result: {result}")
             return result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
