@@ -1,2 +1,3 @@
 # Scener
-'pip install -e .' to read pyproject.toml
+'make install' to configure the project and install dependecies
+'make run agent' to run the agent
