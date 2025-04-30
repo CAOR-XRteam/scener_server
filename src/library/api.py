@@ -13,4 +13,4 @@ def remove_asset():
     pass
 
 def list_asset():
-    pass
+    return db.get_list()

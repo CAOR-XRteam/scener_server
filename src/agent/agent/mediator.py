@@ -1,5 +1,5 @@
 from langchain.agents import initialize_agent, AgentType
-from ..tools import calculator, date, browsing
+from ..tools import calculator, date, browsing, library
 from .llm import load_llm
 
 
@@ -7,7 +7,8 @@ from .llm import load_llm
 tools = [
     calculator,
     date,
-    browsing
+    browsing,
+    library
 ]
 
 # Load the Gemma model
