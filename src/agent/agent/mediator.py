@@ -1,9 +1,14 @@
 from langchain.agents import initialize_agent, AgentType
+
 from ..tools import calculator, date, browsing, library
-from .llm import load_llm
+from .llm import model_qwen3_4b
 
+#--------------------
+#Template for agentic AI
+#--------------------
 
-# Define all tools
+# Define tools
+#--------------------
 tools = [
     calculator,
     date,
@@ -11,22 +16,17 @@ tools = [
     library
 ]
 
-# Load the Gemma model
-llm = load_llm()
+# Load the model
+#--------------------
+agent = model_qwen3_4b(tools)
 
-# Initialize the agent
-def create():
-    return initialize_agent(
-        tools=tools,
-        llm=llm,
-        agent_type=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-        verbose=True
-    )
-
-def run(agent):
+# Run function
+#--------------------
+def run():
+    config = {"configurable": {"thread_id": "1"}}
     while True:
         query = input("User: ")
         if query.lower() in {"exit", "quit"}:
             break
-        response = agent.run(query)
-        print(f"Agent: {response}")
+        response = agent.invoke({"messages": [{"role": "user", "content": query}]}, config)
+        print(f"Agent: {response["messages"][-1].pretty_print()}")

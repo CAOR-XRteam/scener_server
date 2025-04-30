@@ -8,8 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 def main():
-    agent = mediator.create()
-    mediator.run(agent)
+    mediator.run()
 
 if __name__ == "__main__":
     os.system("clear")
