@@ -3,9 +3,6 @@ from langchain.agents import initialize_agent, AgentType
 from ..tools import calculator, date, browsing, library
 from .llm import model_qwen3_4b
 
-#--------------------
-#Template for agentic AI
-#--------------------
 
 # Define tools
 #--------------------
