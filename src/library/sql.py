@@ -43,6 +43,36 @@ def query_assets(cursor):
     cursor.execute("SELECT * FROM asset")
     return cursor.fetchall()
 
+def update_asset(conn, cursor, name, image=None, mesh=None, description=None):
+    """Update an existing asset's information by its name."""
+
+    # Build the SET clause for the SQL query dynamically based on the non-None parameters
+    update_fields = []
+    update_values = []
+
+    if image is not None:
+        update_fields.append("image = ?")
+        update_values.append(image)
+
+    if mesh is not None:
+        update_fields.append("mesh = ?")
+        update_values.append(mesh)
+
+    if description is not None:
+        update_fields.append("description = ?")
+        update_values.append(description)
+
+    if not update_fields:
+        return  # If no fields to update, return early
+
+    # Add the asset name at the end of the update_values to match the WHERE clause
+    update_fields_str = ", ".join(update_fields)
+    update_values.append(name)
+
+    # Execute the update query
+    cursor.execute(f"UPDATE asset SET {update_fields_str} WHERE name = ?", tuple(update_values))
+    conn.commit()
+
 def delete_asset(conn, cursor, name):
     """Delete an asset by its name."""
     cursor.execute("DELETE FROM asset WHERE name = ?", (name,))

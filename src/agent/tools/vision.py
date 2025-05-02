@@ -4,7 +4,7 @@ from pathlib import Path
 
 @tool
 def image_analysis(path: str) -> str:
-    """Analyze image content using Gemma 3 via LangChain and Ollama."""
+    """Analyze image content for an image path input."""
 
     image_path = Path(path).resolve()
 

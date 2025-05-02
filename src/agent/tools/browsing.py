@@ -2,9 +2,9 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
 
 
-browsing_tool = DuckDuckGoSearchRun()
+search = DuckDuckGoSearchRun()
 
 @tool
-def browsing(query: str) -> str:
-    """Search for general knowledge using DuckDuckGo. Input should be a single search term."""
-    return browsing_tool.run(query)
+def search_engine(query: str) -> str:
+    """Search for text, news, images and videos using the DuckDuckGo.com search engine."""
+    return search.invoke(query)

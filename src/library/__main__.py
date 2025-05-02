@@ -3,9 +3,9 @@ import os
 
 
 def main(path):
-    db.fill(path)
-    db.read()
-    list = db.get_list()
+    library.fill(path)
+    library.read()
+    list = library.get_list()
     print(list)
 
 if __name__ == "__main__":

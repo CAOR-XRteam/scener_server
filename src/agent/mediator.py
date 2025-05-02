@@ -1,6 +1,6 @@
 from langchain.agents import initialize_agent, AgentType
-
-from .tools import calculator, date, browsing, library, image_analysis
+from loguru import logger
+from .tools import calculator, date, search_engine, list_assets, update_asset, image_analysis
 from .llm import model, format
 
 
@@ -9,12 +9,13 @@ from .llm import model, format
 tools = [
     calculator,
     date,
-    browsing,
-    library,
+    search_engine,
+    list_assets,
+    update_asset,
     image_analysis
 ]
 
-# Load the model
+# Configure agent
 #--------------------
 agent = model.qwen3_4b(tools)
 role = "You are a helpful assistant. Please provide concise and accurate responses. do not use emojis"
@@ -23,6 +24,7 @@ role = "You are a helpful assistant. Please provide concise and accurate respons
 #--------------------
 def run():
     config = {"configurable": {"thread_id": "1"}}
+    logger.success(f"Start chatbot...")
     while True:
         # User query
         query = input("User: ")
