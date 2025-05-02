@@ -1,4 +1,4 @@
-from .agent import mediator
+from . import mediator
 import os
 import sys
 

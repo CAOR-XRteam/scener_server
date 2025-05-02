@@ -1,8 +1,7 @@
 from langchain.agents import initialize_agent, AgentType
 
-from ..tools import calculator, date, browsing, library
-from .llm import model_qwen3_4b
-from .format import print_answer
+from .tools import calculator, date, browsing, library
+from .llm import model, format
 
 
 # Define tools
@@ -16,7 +15,7 @@ tools = [
 
 # Load the model
 #--------------------
-agent = model_qwen3_4b(tools)
+agent = model.qwen3_4b(tools)
 
 # Run function
 #--------------------
