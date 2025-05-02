@@ -13,7 +13,6 @@ class DB:
     def _check_path_and_init_db(self):
         if not os.path.exists(self.path):
             logger.warning("Database file not found.")
-            exit()
 
         conn = self._get_connection()
         cursor = self._get_cursor()
@@ -37,12 +36,15 @@ class DB:
                 image = mesh = description = None
                 for file_name in os.listdir(subpath):
                     file_path = os.path.join(subpath, file_name)
+                    absolute_file_path = os.path.abspath(file_path)  # Get absolute path
+
                     if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-                        image = file_path
+                        image = absolute_file_path
                     elif file_name.lower().endswith(('.obj', '.fbx', '.stl', '.ply', '.glb')):
-                        mesh = file_path
+                        mesh = absolute_file_path
                     elif file_name.lower().endswith('.txt'):
-                        description = file_path
+                        description = absolute_file_path
+
                 sql.insert_asset(self._get_connection(), self._get_cursor(), subfolder_name, image, mesh, description)
                 logger.info(f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}")
 
