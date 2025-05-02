@@ -1,4 +1,11 @@
 from .database import DB
+from loguru import logger
+import sys
+
+
+#Loguru config
+logger.remove()
+logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
 
 path = "../media/database.db"
 db = DB(path)

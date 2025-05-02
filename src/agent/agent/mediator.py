@@ -2,6 +2,7 @@ from langchain.agents import initialize_agent, AgentType
 
 from ..tools import calculator, date, browsing, library
 from .llm import model_qwen3_4b
+from .format import print_answer
 
 
 # Define tools
@@ -27,3 +28,4 @@ def run():
             break
         response = agent.invoke({"messages": [{"role": "user", "content": query}]}, config)
         print(f"Agent: {response["messages"][-1].pretty_print()}")
+        #print_answer(response)

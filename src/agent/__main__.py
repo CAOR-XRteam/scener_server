@@ -11,5 +11,4 @@ def main():
     mediator.run()
 
 if __name__ == "__main__":
-    os.system("clear")
     main()
