@@ -9,9 +9,7 @@ def chat(agent, user_input: str, thread_id: int = 0):
     final_response_content = ""
 
     try:
-        for token in agent.stream(
-            agent_input, config=config, stream_mode="values"
-        ):
+        for token in agent.stream(agent_input, config=config, stream_mode="values"):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -24,6 +22,7 @@ def chat(agent, user_input: str, thread_id: int = 0):
         return f"[Error during agent execution: {e}]"
 
     return final_response_content
+
 
 def run(agent):
     print("Type 'exit' to quit")

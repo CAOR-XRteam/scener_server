@@ -1,13 +1,12 @@
 import asyncio
 import websockets
-import utils
 import json
 import server.valider
 from loguru import logger
 
 from beartype import beartype
 from colorama import Fore
-from server.session import Session
+
 
 # Le client manage les output et la session managera les input
 
@@ -17,9 +16,8 @@ class Client:
     """Manage client session and input / ouput messages"""
 
     # Main function
-    def __init__(self, websocket, model_name: str = "llama3.1"):
+    def __init__(self, websocket):
         self.websocket = websocket  # The WebSocket connection object
-        self.model_name = model_name
         self.session = None
         self.is_active = True  # State to track if the client is active
 
@@ -32,8 +30,10 @@ class Client:
         self.task_session = None
 
     def start(self):
+        from server.session import Session
+
         """Start input/output handlers."""
-        self.session = Session(self, self.model_name)
+        self.session = Session(self)
         self.task_input = asyncio.create_task(self.loop_input())
         self.task_output = asyncio.create_task(self.loop_output())
         self.task_session = asyncio.create_task(self.session.run())

@@ -4,21 +4,21 @@ import uuid
 
 from beartype import beartype
 from agent.api import AgentAPI
+from agent.llm.chat import chat
 from server.client import Client
 from loguru import logger
 
 
 @beartype
 class Session:
-    def __init__(self, client: Client, model_name: str = "llama3.1"):
+    def __init__(self, client: Client):
         self.client = client
         self.thread_id = uuid.uuid1()
-        self.model_name = model_name
 
         try:
-            self.agent = AgentAPI(model_name)
+            self.agent = AgentAPI()
             logger.info(
-                f"Session created with thread_id: {self.thread_id} for websocket {self.client.websocket.remote_address} with model {self.model_name}"
+                f"Session created with thread_id: {self.thread_id} for websocket {self.client.websocket.remote_address}"
             )
         except Exception as e:
             logger.error(f"Error initializing agent: {e}")
@@ -48,8 +48,10 @@ class Session:
                         "error", 400, f"Empty message in thread {self.thread_id}"
                     )
                 try:
-                    async for token in self.agent.chat(input, self.thread_id):
-                        await self.client.send_message("stream", 200, token)
+                    output = chat(
+                        self.agent.agent.agent_executor, input, self.thread_id
+                    )
+                    self.client.send_message("stream", 200, output)
                 except Exception as e:
                     logger.error(f"Error during chat stream: {e}")
                     await self.client.send_message(

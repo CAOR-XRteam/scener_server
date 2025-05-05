@@ -1,4 +1,4 @@
-from .api import *
+from library.api import *
 import os
 
 
@@ -8,6 +8,9 @@ def main(path):
     list = library.get_list()
     print(list)
 
+
 if __name__ == "__main__":
-    path = "../media/asset"
+    from loguru import logger
+
+    path = "/home/artem/Scener/src/media/asset"
     main(path)

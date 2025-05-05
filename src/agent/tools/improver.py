@@ -42,7 +42,7 @@ class Improver:
             ]
         )
 
-        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
+        self.model = OllamaLLM(model="llama3.2", temperature=temperature)
         self.parser = StrOutputParser()
         self.chain = self.prompt | self.model | self.parser
 

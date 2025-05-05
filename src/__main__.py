@@ -29,5 +29,5 @@ if __name__ == "__main__":
     except KeyError:
         host = "localhost"
         port = 8000
-    library.init()
+    # library.init()
     server.start(host, port, model_name)

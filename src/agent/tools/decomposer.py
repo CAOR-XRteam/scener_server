@@ -75,7 +75,7 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             ]
         )
 
-        self.model = OllamaLLM(model="gemma3:1b", temperature=temperature)
+        self.model = OllamaLLM(model="llama3.2", temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
