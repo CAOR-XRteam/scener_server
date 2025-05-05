@@ -1,12 +1,17 @@
-import logging
-
+from loguru import logger
+from colorama import Fore
+from pydantic import BaseModel, Field
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
+from langchain_core.tools import tool
 
-logger = logging.getLogger(__name__)
 
+class DecomposeToolInput(BaseModel):
+    user_input: str = Field(
+        description="The improved user's scene description prompt to be decomposed."
+    )
 
 @beartype
 class Decomposer:
@@ -87,6 +92,13 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             logger.error(f"Decomposition failed: {str(e)}")
             raise
 
+@tool(args_schema=DecomposeToolInput)
+def decomposer(prompt: str) -> dict:
+    """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
+    logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
+    tool = Decomposer()
+    output = tool.decompose(prompt)
+    return output
 
 if __name__ == "__main__":
     decomposer = Decomposer()
