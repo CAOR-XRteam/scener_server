@@ -7,7 +7,7 @@ from beartype import beartype
 from colorama import Fore
 
 import utils
-import server.client
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,8 @@ class Server:
         await self.server.wait_closed()
 
     async def handler_client(self, websocket, model_name):
+        import server.client
+
         """Handle an incoming WebSocket client connection."""
         # Add client
         client = server.client.Client(websocket, model_name)

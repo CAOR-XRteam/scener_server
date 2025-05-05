@@ -4,14 +4,13 @@ import uuid
 
 from beartype import beartype
 from agent.api import AgentAPI
+from server.client import Client
 
 logger = logging.getLogger(__name__)
 
 
 @beartype
 class Session:
-    from server.client import Client
-
     def __init__(self, client: Client, model_name: str = "llama3.1"):
         self.client = client
         self.thread_id = uuid.uuid1()
