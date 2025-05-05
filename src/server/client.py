@@ -3,11 +3,11 @@ import websockets
 import utils
 import json
 import server.valider
-from server.session import Session
 import logging
 
-from colorama import Fore
 from beartype import beartype
+from colorama import Fore
+from server.session import Session
 
 # Le client manage les output et la session managera les input
 
