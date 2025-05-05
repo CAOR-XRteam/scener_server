@@ -1,4 +1,3 @@
-from src.utils import config
 import library
 import server
 
