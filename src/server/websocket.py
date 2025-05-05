@@ -14,8 +14,13 @@ class Server:
     # Main function
     def __init__(self, host, port):
         """Initialize server parameters"""
+<<<<<<< HEAD
+        self.host = utils.config["host"]
+        self.port = utils.config["port"]
+=======
         self.host = host
         self.port = port
+>>>>>>> main
         self.list_client = []
         self.queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
@@ -34,7 +39,9 @@ class Server:
     async def run(self):
         """Run the WebSocket server."""
         self.server = await websockets.serve(self.handler_client, self.host, self.port)
-        logger.success(f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}")
+        logger.success(
+            f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
+        )
         print("---------------------------------------------")
         await self.server.wait_closed()
 
