@@ -1,3 +1,13 @@
+"""
+chat.py
+
+LLM chat functions
+
+Author: Artem
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from langchain_core.messages import HumanMessage, AIMessage
 from loguru import logger
 from colorama import Fore

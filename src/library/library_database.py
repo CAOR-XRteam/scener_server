@@ -1,3 +1,13 @@
+"""
+library_database.py
+
+Functions to connect to the sql database
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from loguru import logger
 from colorama import Fore, Style
 import sql

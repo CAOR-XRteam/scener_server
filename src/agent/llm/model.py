@@ -1,3 +1,13 @@
+"""
+model.py
+
+LLM models and Langchain agent configuration
+
+Author: Artem
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver

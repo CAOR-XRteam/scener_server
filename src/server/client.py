@@ -1,3 +1,13 @@
+"""
+client.py
+
+Handles websocket clients.
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 import asyncio
 import websockets
 
