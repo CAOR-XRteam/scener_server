@@ -1,6 +1,7 @@
-from library import sql
 from loguru import logger
 from colorama import Fore
+import sql
+
 
 class Asset:
     def __init__(self, db: 'DB'):

@@ -9,7 +9,7 @@ import sys
 logger.remove()
 logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
 
-path = "../media/database.db"
+path = "./media/database.db"
 db = Database(path)
 library = Library(db)
 asset = Asset(db)

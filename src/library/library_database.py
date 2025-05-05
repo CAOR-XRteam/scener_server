@@ -11,7 +11,7 @@ class Database:
 
     def _check_path_and_init_db(self):
         if not os.path.exists(self.path):
-            logger.warning("Database file not found.")
+            logger.warning(f"Database file not found {Fore.GREEN}{self.path}{Fore.RESET}.")
 
         # Ensure that the database is properly initialized
         conn = self._get_connection()
