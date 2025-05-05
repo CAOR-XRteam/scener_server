@@ -107,9 +107,9 @@ FAILURE MODES TO AVOID:
         """
 
         self.tools = [
-            improver,
-            date,
-            image_analysis
+            improver, #not OK
+            date, #OK
+            image_analysis #OK
         ]
         self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
 
