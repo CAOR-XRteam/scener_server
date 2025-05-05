@@ -1,5 +1,6 @@
 from langchain_core.messages import HumanMessage, AIMessage
 from loguru import logger
+from colorama import Fore
 
 
 def chat(agent, user_input: str, thread_id: int = 0):
@@ -19,6 +20,7 @@ def chat(agent, user_input: str, thread_id: int = 0):
                 if new_content:
                     print(new_content, end="", flush=True)
                     final_response_content += new_content
+        print("")
     except Exception as e:
         logger.info(f"\nAgent error occurred: {e}")
         return f"[Error during agent execution: {e}]"
@@ -26,19 +28,22 @@ def chat(agent, user_input: str, thread_id: int = 0):
     return final_response_content
 
 def run(agent):
-    print("Type 'exit' to quit")
+    print("-------------------------")
+    print(f"Type {Fore.RED}{'exit'}{Fore.RESET} to quit")
+    print("-------------------------")
+
     current_thread_id = 0
 
     while True:
         try:
-            user_input = input("You: ").strip()
+            user_input = input(f"\n{Fore.YELLOW}{'You: '}{Fore.RESET}").strip()
             if user_input.lower() == "exit":
                 print("bye")
                 break
             if not user_input:
                 continue
 
-            print("Agent: ")
+            print(f"{Fore.YELLOW}{'\nAgent: '}{Fore.RESET}")
 
             chat(agent, user_input, thread_id=current_thread_id)
 

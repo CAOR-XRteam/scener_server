@@ -111,7 +111,8 @@ FAILURE MODES TO AVOID:
             decomposer, #OK
             improver, #OK
             date, #OK
-            image_analysis #OK
+            image_analysis, #OK
+            #list_assets,
         ]
         self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
 

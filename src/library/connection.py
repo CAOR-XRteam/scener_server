@@ -1,4 +1,4 @@
-from library import sql
+from library import sql_function
 from loguru import logger
 from colorama import Fore
 import os
@@ -11,7 +11,7 @@ class Library:
         """Fill the database with assets from the specified directory."""
         conn = self.db._get_connection()
         cursor = self.db._get_cursor()  # fresh cursor
-        
+
         for subfolder_name in os.listdir(path):
             subpath = os.path.join(path, subfolder_name)
             if os.path.isdir(subpath):
@@ -28,7 +28,7 @@ class Library:
                         description = absolute_file_path
 
 
-                sql.insert_asset(conn, cursor, subfolder_name, image, mesh, description)
+                sql_function.insert_asset(conn, cursor, subfolder_name, image, mesh, description)
                 logger.info(f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}")
 
 
@@ -38,7 +38,7 @@ class Library:
         conn = self.db._get_connection()
         cursor = self.db._get_cursor()
 
-        assets = sql.query_assets(cursor)
+        assets = sql_function.query_assets(cursor)
         if assets:
             print(f"{'ID':<4} {'Name':<10} {'Image':<10} {'Mesh':<10} {'Description':<10}")
             for asset in assets:
@@ -57,7 +57,7 @@ class Library:
         conn = self.db._get_connection()
         cursor = self.db._get_cursor()
 
-        assets = sql.query_assets(cursor)
+        assets = sql_function.query_assets(cursor)
         return [{
             "id": asset_id,
             "name": name,

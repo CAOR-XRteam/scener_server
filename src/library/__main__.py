@@ -1,4 +1,4 @@
-from .api import *
+from api import *
 import os
 
 
@@ -9,5 +9,5 @@ def main(path):
     print(list)
 
 if __name__ == "__main__":
-    path = "../media/asset"
+    path = "./media/asset"
     main(path)

@@ -1,6 +1,6 @@
-from library import sql
 from loguru import logger
 from colorama import Fore, Style
+import sql
 import threading
 import os
 

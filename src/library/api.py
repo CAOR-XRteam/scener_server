@@ -1,6 +1,6 @@
-from .database import DB
-from .library import Library
-from .asset import Asset
+from database import DB
+from connection import Library
+from asset import Asset
 from loguru import logger
 import sys
 
