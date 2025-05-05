@@ -14,13 +14,8 @@ class Server:
     # Main function
     def __init__(self, host, port):
         """Initialize server parameters"""
-<<<<<<< HEAD
-        self.host = utils.config["host"]
-        self.port = utils.config["port"]
-=======
         self.host = host
         self.port = port
->>>>>>> main
         self.list_client = []
         self.queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
