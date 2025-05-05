@@ -7,7 +7,7 @@ from agent_tools import AgentTools
 class Agent:
     def __init__(self):
         # Define the template for the prompt
-        preprompt = """You are an AI Workflow Manager for 3D Scene Generation.
+        self.preprompt = """You are an AI Workflow Manager for 3D Scene Generation.
 
 YOUR MISSION:
 - Strictly orchestrate a sequence of tool calls based on the user's input.
@@ -103,7 +103,8 @@ FAILURE MODES TO AVOID:
 
         """
 
-        self.agent_executor = model.qwen3_4b(tools, preprompt)
+        self.tools = AgentTools()
+        self.agent_executor = model.qwen3_8b(self.tools.get_tools(), self.preprompt)
 
     def chat(self, user_input: str, thread_id: int = 0):
         """Send a prompt to the LLM and receive a structured response."""
