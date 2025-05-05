@@ -1,11 +1,9 @@
 import asyncio
 import signal
 import websockets
-
 from loguru import logger
 from colorama import Fore, Style
-
-from .client import Client
+from client import Client
 
 
 class Server:

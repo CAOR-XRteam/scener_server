@@ -3,10 +3,8 @@ import websockets
 
 import utils
 import json
-import server.valider
-import core.session
-
-# Le client manage les output et la session managera les input
+import valider
+import session
 
 
 class Client:

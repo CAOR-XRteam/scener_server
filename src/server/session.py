@@ -3,7 +3,7 @@ import logging
 import uuid
 
 from beartype import beartype
-from agent.api import AgentAPI
+from api import AgentAPI
 
 logger = logging.getLogger(__name__)
 

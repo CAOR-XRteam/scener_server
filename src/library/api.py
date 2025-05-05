@@ -1,6 +1,6 @@
-from database import DB
-from connection import Library
-from asset import Asset
+from library_database import Database
+from library_list import Library
+from library_asset import Asset
 from loguru import logger
 import sys
 
@@ -10,7 +10,7 @@ logger.remove()
 logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
 
 path = "../media/database.db"
-db = DB(path)
+db = Database(path)
 library = Library(db)
 asset = Asset(db)
 

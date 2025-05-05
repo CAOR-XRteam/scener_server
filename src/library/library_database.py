@@ -4,7 +4,7 @@ import sql
 import threading
 import os
 
-class DB:
+class Database:
     def __init__(self, path):
         self.path = path
         self._check_path_and_init_db()
