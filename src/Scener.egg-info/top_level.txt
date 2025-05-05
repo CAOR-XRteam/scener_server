@@ -1,6 +1,0 @@
-agent
-core
-library
-model
-server
-utils
