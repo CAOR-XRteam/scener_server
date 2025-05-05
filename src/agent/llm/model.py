@@ -9,7 +9,7 @@ def gemma3_4b():
 
 def qwen3_4b(tools):
     """Load and return the Ollama model."""
-    llm = ChatOllama(model="qwen3:4b")
+    llm = ChatOllama(model="qwen3:4b", temperature=0.5)
     memory = InMemorySaver()
 
     agent = create_react_agent(

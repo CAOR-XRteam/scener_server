@@ -34,8 +34,7 @@ def insert_asset(conn, cursor, name, image, mesh, description):
         return
 
     # Insert the new asset
-    cursor.execute("INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",
-                   (name, image, mesh, description))
+    cursor.execute("INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)", (name, image, mesh, description))
     conn.commit()
 
 def query_assets(cursor):

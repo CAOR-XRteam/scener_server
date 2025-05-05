@@ -7,28 +7,30 @@ import os
 class DB:
     def __init__(self, path):
         self.path = path
-        self.local = threading.local()
         self._check_path_and_init_db()
 
     def _check_path_and_init_db(self):
         if not os.path.exists(self.path):
             logger.warning("Database file not found.")
 
+        # Ensure that the database is properly initialized
         conn = self._get_connection()
         cursor = self._get_cursor()
         sql.create_table_asset(conn, cursor)
         logger.success(f"Connected to database {Fore.GREEN}{self.path}{Fore.RESET}")
 
     def _get_connection(self):
-        if not hasattr(self.local, "conn"):
-            self.local.conn = sql.connect_db(self.path)
-        return self.local.conn
+        # Creates a new connection each time it's needed, no need to cache
+        return sql.connect_db(self.path)
 
     def _get_cursor(self):
-        if not hasattr(self.local, "cursor"):
-            self.local.cursor = sql.get_cursor(self._get_connection())
-        return self.local.cursor
+        # Get a fresh cursor for each operation
+        conn = self._get_connection()
+        return sql.get_cursor(conn)
 
-    def close(self):
-        if hasattr(self.local, "conn"):
-            sql.close_connection(self.local.conn)
+    def close(self, conn=None):
+        # Close the specific connection
+        if conn:
+            sql.close_connection(conn)
+        else:
+            logger.warning("No connection to close.")
