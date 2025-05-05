@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @beartype
 class Decomposer:
-    def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
+    def __init__(self, temperature: float = 0.0):
         self.system_prompt = """You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your single purpose is to accurately convert a scene description string into structured JSON according to strict rules.
 
 YOUR CRITICAL TASK:
@@ -69,12 +69,11 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             ]
         )
 
-        # TODO model = model_name
         self.model = OllamaLLM(model="llama3.1", temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
-        logger.info(f"Initialized with model: {model_name}")
+        #logger.info(f"Initialized with model: {model_name}")
 
     def decompose(self, improved_user_input: str) -> dict:
         try:

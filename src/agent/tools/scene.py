@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @beartype
 class SceneAnalyzer:
-    def __init__(self, model_name: str = "llama3.2"):
+    def __init__(self):
         self.system_prompt = """You are an assistant that analyzes a user's request to modify a 3D scene based on its current state. Your goal is to extract **only the relevant subset** of the scene context required to understand and potentially fulfill the request.
 
 **Task:**
@@ -35,7 +35,7 @@ Input Scene Example: `{{"objects": [{{"name": "table", "position": [0,0,0]}}, {{
 User Prompt Example: `"Add a lamp on the table"`
 Correct JSON Output based on rules: `{{"objects": [{{"name": "table", "position": [0,0,0]}}]}}`"""
         self.user_prompt = "Current scene: {current_scene}\nUser: {user_input}"
-        self.model = OllamaLLM(model=model_name, temperature=0.0)
+        self.model = OllamaLLM(model="llama3.1", temperature=0.0)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.prompt = ChatPromptTemplate.from_messages(
             [
@@ -44,7 +44,7 @@ Correct JSON Output based on rules: `{{"objects": [{{"name": "table", "position"
             ]
         )
         self.chain = self.prompt | self.model | self.parser
-        logger.info(f"Initialized with model: {model_name}")
+        #logger.info(f"Initialized with model: {model_name}")
 
     def analyze(self, current_scene: dict, user_input: str) -> dict:
         try:

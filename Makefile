@@ -1,5 +1,5 @@
 install:
 	pip install -e .
 
-run agent:
-	python src/agent/main.py
+run:
+	python src/agent/__main__.py

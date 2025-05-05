@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @beartype
 class Improver:
-    def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
+    def __init__(self, temperature: float = 0.0):
         self.system_prompt = """You are a specialized Prompt Engineer for 3D scene generation.
 
 YOUR TASK:
@@ -34,11 +34,11 @@ GUIDELINES:
             ]
         )
 
-        self.model = OllamaLLM(model=model_name, temperature=temperature)
+        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
         self.parser = StrOutputParser()
         self.chain = self.prompt | self.model | self.parser
 
-        logger.info(f"Initialized with model: {model_name}")
+        #logger.info(f"Initialized with model: {model_name}")
 
     def improve(self, user_input: str) -> str:
         try:
