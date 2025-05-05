@@ -1,6 +1,8 @@
-from agent import Agent
+from agent.agent import Agent
+from beartype import beartype
 
 
+@beartype
 class AgentAPI:
     def __init__(self, model_name: str):
         self.agent = Agent(model_name)

@@ -9,9 +9,9 @@ from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from tools.improver import Improver
-from tools.scene import SceneAnalyzer
-from tools.decomposer import Decomposer
+from agent.tools.improver import Improver
+from agent.tools.scene import SceneAnalyzer
+from agent.tools.decomposer import Decomposer
 
 from model.black_forest import generate_image
 from lib import setup_logging
@@ -257,14 +257,14 @@ FAILURE MODES TO AVOID:
             checkpointer=self.memory,
         )
 
-    def chat(self, user_input: str, thread_id: int = 0):
+    async def chat(self, user_input: str, thread_id: int = 0):
         """Send a prompt to the LLM and receive a structured response."""
         agent_input = {"messages": [HumanMessage(content=user_input)]}
         config = {"configurable": {"thread_id": thread_id}}
         final_response_content = ""
 
         try:
-            for token in self.agent_executor.stream(
+            async for token in self.agent_executor.astream(
                 agent_input, config=config, stream_mode="values"
             ):
                 last_message = token["messages"][-1]

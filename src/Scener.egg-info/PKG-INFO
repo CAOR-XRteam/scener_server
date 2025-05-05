@@ -2,3 +2,17 @@ Metadata-Version: 2.4
 Name: Scener
 Version: 0.1.0
 Summary: 3D scene generation interface
+Requires-Dist: beartype>=0.20.2
+Requires-Dist: colorama>=0.4.6
+Requires-Dist: huggingface_hub>=0.30.2
+Requires-Dist: imageio>=2.37.0
+Requires-Dist: langchain_core>=0.3.56
+Requires-Dist: langchain_ollama>=0.3.2
+Requires-Dist: langgraph>=0.3.34
+Requires-Dist: loguru>=0.7.3
+Requires-Dist: ollama>=0.4.8
+Requires-Dist: Pillow>=11.2.1
+Requires-Dist: pydantic>=2.11.3
+Requires-Dist: pytest>=8.3.5
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: websockets>=15.0.1

@@ -1,6 +1,7 @@
 {
     "host": "localhost",
     "port": 8765,
+    "model_name": "qwen3:8b",
     "ping_interval": 30,
     "log_level": "info"
 }

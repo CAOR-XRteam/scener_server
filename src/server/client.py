@@ -3,7 +3,8 @@ import websockets
 import utils
 import json
 import server.valider
-import core.session
+
+# import core.session
 import logging
 
 from colorama import Fore
@@ -14,13 +15,15 @@ from beartype import beartype
 logger = logging.getLogger(__name__)
 
 
+@beartype
 class Client:
     """Manage client session and input / ouput messages"""
 
     # Main function
-    def __init__(self, websocket):
+    def __init__(self, websocket, model_name: str = "llama3.1"):
         self.websocket = websocket  # The WebSocket connection object
-        self.session = core.session.Session(self)
+        self.model_name = model_name
+        # self.session = None
         self.is_active = True  # State to track if the client is active
 
         self.queue_input = asyncio.Queue()  # Message queue for this client
@@ -33,11 +36,11 @@ class Client:
 
     def start(self):
         """Start input/output handlers."""
+        # self.session = core.session.Session(self, self.model_name)
         self.task_input = asyncio.create_task(self.loop_input())
         self.task_output = asyncio.create_task(self.loop_output())
         self.task_session = asyncio.create_task(self.session.run())
 
-    @beartype
     async def send_message(self, status: str, code: int, message: str):
         """Create a JSON response and queue a message to be sent to the client."""
         response = {"status": status, "code": code, "message": message}

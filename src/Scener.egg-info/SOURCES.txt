@@ -3,11 +3,12 @@ pyproject.toml
 src/Scener.egg-info/PKG-INFO
 src/Scener.egg-info/SOURCES.txt
 src/Scener.egg-info/dependency_links.txt
+src/Scener.egg-info/requires.txt
 src/Scener.egg-info/top_level.txt
 src/agent/__init__.py
+src/agent/__main__.py
 src/agent/agent.py
 src/agent/api.py
-src/agent/main.py
 src/agent/tools/__init__.py
 src/agent/tools/decomposer.py
 src/agent/tools/improver.py

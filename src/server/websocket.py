@@ -3,6 +3,7 @@ import signal
 import websockets
 import logging
 
+from beartype import beartype
 from colorama import Fore
 
 import utils
@@ -11,14 +12,16 @@ import server.client
 logger = logging.getLogger(__name__)
 
 
+@beartype
 class Server:
     """Manage server start / stop and handle clients"""
 
     # Main function
-    def __init__(self):
+    def __init__(self, host: str, port: str, model_name: str = "llama3.1"):
         """Initialize server parameters"""
-        self.host = utils.config["host"]
-        self.port = utils.config["port"]
+        self.host = host
+        self.port = port
+        self.model_name = model_name
         self.list_client = []
         self.queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
@@ -36,26 +39,28 @@ class Server:
 
     async def run(self):
         """Run the WebSocket server."""
-        self.server = await websockets.serve(self.handler_client, self.host, self.port)
-        logger.success(
+        self.server = await websockets.serve(
+            self.handler_client, self.host, self.port, self.model_name
+        )
+        logger.info(
             f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
         )
         print("---------------------------------------------")
         await self.server.wait_closed()
 
-    async def handler_client(self, websocket, path=None):
+    async def handler_client(self, websocket, model_name):
         """Handle an incoming WebSocket client connection."""
         # Add client
-        client = server.client.Client(websocket)
+        client = server.client.Client(websocket, model_name)
         client.start()
         self.list_client.append(client)
-        logger.connection(websocket.remote_address)
+        logger.info(f"New client connected:: {websocket.remote_address}")
 
         # Wait for the client to disconnect by awaiting the event
         await client.disconnection.wait()
 
         # Perform necessary cleanup after client is disconnected
-        logger.disconnection(websocket.remote_address)
+        logger.info(f"Client disconnected:: {websocket.remote_address}")
         self.list_client.remove(client)
 
     async def shutdown(self):

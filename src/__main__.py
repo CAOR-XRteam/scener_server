@@ -1,11 +1,19 @@
-import utils
+from src.utils import config
 import library
 import server
-import model
 from src.lib import setup_logging
 
 if __name__ == "__main__":
-    utils.init()
+    config = config.load_config()
+    try:
+        host, port, model_name = (
+            config.get("host"),
+            config.get("localhost"),
+            config.get("model_name"),
+        )
+    except KeyError:
+        host = "localhost"
+        port = 8000
     library.init()
-    server.start()
+    server.start(host, port, model_name)
     setup_logging()
