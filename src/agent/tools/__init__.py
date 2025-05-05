@@ -1,5 +1,9 @@
-from .calculator import calculator
-from .date import date
-from .browsing import search_engine
-from .library import *
-from .vision import image_analysis
+"""from model.llm.chatbot import Chatbot
+
+
+chatbot = None
+
+def init():
+    global chatbot
+    chatbot = Chatbot()
+"""

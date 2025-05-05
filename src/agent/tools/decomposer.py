@@ -1,35 +1,98 @@
-from ollama import chat
+import logging
+
+from beartype import beartype
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_ollama.llms import OllamaLLM
+
+logger = logging.getLogger(__name__)
 
 
+@beartype
 class Decomposer:
-    def __init__(self):
-        self.list_message = [
-            {
-                'role': 'system',
-                'content': 'You are a 3D scene generation assistant. You will receive a prompt describing a 3D scene that needs to be generated. Your task is to break this prompt down into manageable elements that can be processed for 3D scene creation. Here is how you should approach the task: Check the Library First: Before decomposing the scene, check the available elements in the library for existing objects, meshes, materials, and textures that closely match the users input. This will help in reusing pre-existing assets to save time and maintain coherence.Decompose Unavailable Elements: If there are no matching elements in the library, you will need to decompose the prompt into smaller components for individual creation. This might include: Objects and their types (e.g., room, mesh, furniture) Position, rotation, and scale of objects Materials and textures (e.g., wood, stone, paper) Descriptive prompts to generate specific assets. Output Format: The response should be formatted as a JSON object, following this structure, where each object in the scene has its own attributes like name, type, position, rotation, scale, material, and a descriptive prompt. Example JSON output format: {"scene":{"objects":[{"name":"theatre_room","type":"room","position":{"x":0,"y":0,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":20,"y":10,"z":20},"material":"traditional_wood_material","prompt":"Generate an image of a squared traditional Japanese theatre room viewed from the outside at a 3/4 top-down perspective. The room has intricate wooden flooring, high wooden ceiling beams, elegant red and gold accents, large silk curtains, bamboo poles, folding screens, and a scenic backdrop of mountains and cherry blossoms. The essence of classical Japanese theatre, such as Kabuki or Noh, should be captured, with a serene and elegant atmosphere."},{"name":"hanging_lanterns","type":"mesh","position":{"x":0,"y":5,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":0.5,"y":0.5,"z":0.5},"material":"paper_lantern","prompt":"Create a traditional paper lantern hanging in the air. The lantern should have intricate patterns, soft glowing light, and an artistic design, blending historical authenticity with a mythical aesthetic. The lantern should have red and gold accents with a soft, glowing warmth emanating from within."}]}}'
-            },
-        ]
+    def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
+        self.system_prompt = """You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your single purpose is to accurately convert a scene description string into structured JSON according to strict rules.
 
-    def prompt(self, user_input):
-        """Send the user input to the LLM and receive the enhanced response."""
-        self.list_message.append({'role': 'user', 'content': user_input})
-        response = chat('llama3.2', messages=self.list_message)
-        self.list_message.append({'role': 'assistant', 'content': response.message.content})
-        return response.message.content
+YOUR CRITICAL TASK:
+- Convert the given scene description string into a valid JSON object.
+- The decomposition MUST focus ONLY on the main, distinct renderable subjects or primary elements that the user wants images of. DO NOT decompose every minor detail into its own object.
 
-    def run(self):
-        """Interact with the user to continuously improve prompts."""
-        print("Welcome to the prompt improver! Type your prompts below.")
-        while True:
-            user_input = input("Improver: ")
-            if user_input.lower() == "exit":
-                print("Exiting the improver. Goodbye!")
-                break
-            response = self.prompt(user_input)
-            print(f"Improved Prompt: {response}\n")
+OUTPUT FORMAT:
+- Return ONLY the JSON object.
+- NO explanations, NO preambles, NO markdown formatting (like ```json), NO conversation.
+- ABSOLUTELY ZERO TEXT before or after the JSON object.
+
+JSON STRUCTURE (STRICT AND REQUIRED):
+{{
+  "scene": {{
+    "objects": [
+      {{
+        "name": "concise_descriptive_object_name",  // Infer a clear, short name (e.g., 'black_cat', 'wooden_table')
+        "type": "object_category",  // Use types like: 'mesh', 'furniture', 'prop', 'room' (if room is primary focus)
+        "position": {{"x":0,"y":0,"z":0}}, // Use reasonable default or inferred position
+        "rotation": {{"x":0,"y":0,"z":0}}, // Use reasonable default or inferred rotation
+        "scale": {{"x":1,"y":1,"z":1}},    // Use reasonable default or inferred scale
+        "material": "primary_material_name", // Describe the main material (e.g., 'polished_wood', 'glossy_fur', 'ceramic')
+        "prompt": "Detailed visual description of ONLY this object based on input, including relevant environmental context, followed by mandatory phrases." // A detailed prompt snippet for rendering *this specific object*.
+      }},
+      // Include one dictionary entry here for EACH identified main object.
+      // FOLLOW THE STRUCTURE EXACTLY for all objects.
+    ]
+  }}
+}}
+
+STRICT RULES FOR SELECTING AND DESCRIBING OBJECTS:
+1.  IDENTIFY MAIN SUBJECTS: Read the input and identify the primary, distinct physical entities or areas that are clearly described and seem intended as key components of the scene. These are your ONLY candidates for 'object' entries.
+    * Example Main Subjects: A specific animal (like the cat), a piece of furniture (the table), a defined prop (the mug).
+2.  **CRITICAL EXCLUSIONS - NEVER CREATE SEPARATE OBJECT ENTRIES FOR:**
+    * **Lighting:** Do NOT create objects with type 'light' or names like 'ambient_light', 'sunlight', 'shadows'.
+    * **Atmosphere/Effects:** Do NOT create objects for 'mist', 'fog', 'dust', 'haze', etc.
+    * **General Environment:** Do NOT create objects for generic 'walls', 'floor', 'ceiling', or 'room' UNLESS the room itself is the main subject being described in detail (e.g., "a detailed gothic library room").
+    * **Minor Details:** Do NOT create separate objects for very small or less significant items unless they are specifically highlighted (e.g., don't decompose a 'table_setting' into spoon, fork, knife unless the user specifically focuses on each utensil).
+3.  INCORPORATE ENVIRONMENTAL DETAILS: Describe lighting effects, shadows, atmospheric conditions (like mist), and relevant background context *within the 'prompt' field* of the main object(s) that are visually affected by these elements. For example, describe "soft light on the cat's fur" in the cat's prompt.
+4.  CREATE OBJECT ENTRIES: For *each* main subject identified in Rule 1, create *one* complete dictionary entry in the 'objects' list following the JSON STRUCTURE EXACTLY.
+5.  GENERATE PROMPTS: For each object entry's 'prompt' field:
+    * Write a detailed description focusing *only* on the visual appearance of that specific object, drawing information from the input text.
+    * Include how environmental factors (lighting, mist) described in the input affect this object's look.
+    * Always precise in the prompt that the object should not have any background and be viewed from outside with a distance 3/4 top-down perspective, entire object must be visible.*
+    * Example final prompt string: `"A cat viewed ENTIRELY from outside a distance 3/4 top-down perspective, with no background. The cat is large, sleek black cat with glossy fur sitting calmly. Soft light casts subtle highlights on the fur."`
+6.  USE DEFAULTS: Use reasonable default values for position, rotation, and scale unless the text explicitly provides spatial information relevant to that object.
+7.  MATERIAL: Infer the primary material if described.
+
+STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CHECK YOUR OUTPUT AGAINST ALL RULES, ESPECIALLY THE EXCLUSIONS AND THE MANDATORY PROMPT ENDING FOR EVERY OBJECT.
+"""
+        self.user_prompt = "User: {improved_user_input}"
+        self.prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", self.system_prompt),
+                ("user", self.user_prompt),
+            ]
+        )
+
+        # TODO model = model_name
+        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
+        self.parser = JsonOutputParser(pydantic_object=None)
+        self.chain = self.prompt | self.model | self.parser
+
+        logger.info(f"Initialized with model: {model_name}")
+
+    def decompose(self, improved_user_input: str) -> dict:
+        try:
+            logger.info(f"Decomposing input: {improved_user_input}")
+            result: dict = self.chain.invoke(
+                {"improved_user_input": improved_user_input}
+            )
+            logger.info(f"Decomposition result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Decomposition failed: {str(e)}")
+            raise
 
 
-# Usage
-if __name__ == '__main__':
-    improver = Improver()
-    improver.run()
+if __name__ == "__main__":
+    decomposer = Decomposer()
+    enhanced_user_prompt = (
+        "Generate a traditional Japanese theatre room with intricate wooden flooring, "
+        "high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
+    )
+    print(result=decomposer.decompose(enhanced_user_prompt))

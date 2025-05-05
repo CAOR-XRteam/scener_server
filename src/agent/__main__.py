@@ -1,14 +1,16 @@
-from . import mediator
 import os
-import sys
 
-# Add the parent directory to sys.path so we can import the 'library' package
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
+from api import AgentAPI
+from lib import setup_logging
 
-
-def main():
-    mediator.run()
 
 if __name__ == "__main__":
-    main()
+    setup_logging()
+    # TODO: check if the model is available and pull it otherwise
+    model_name = (
+        input("Enter the model name: ").strip() or "qwen3:8b"
+    )  # for the momemnt managed to get it work only with qwen3:8b
+    agent = AgentAPI(model_name)
+    agent.run()
