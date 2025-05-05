@@ -3,15 +3,13 @@ import websockets
 import utils
 import json
 import server.valider
-import logging
+from loguru import logger
 
 from beartype import beartype
 from colorama import Fore
 from server.session import Session
 
 # Le client manage les output et la session managera les input
-
-logger = logging.getLogger(__name__)
 
 
 @beartype
@@ -54,11 +52,11 @@ class Client:
                     if await server.valider.check_message(self, message):
                         await self.queue_input.put(message)
             except websockets.exceptions.ConnectionClosed as e:
-                utils.logger.error(
+                logger.error(
                     f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"
                 )
             except Exception as e:
-                utils.logger.error(
+                logger.error(
                     f"Error with client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                 )
             finally:
@@ -71,13 +69,13 @@ class Client:
             try:
                 message = await self.queue_output.get()  # Wait for a message to send
                 await self.websocket.send(message)
-                utils.logger.info(
+                logger.info(
                     f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {message}"
                 )
             except asyncio.CancelledError:
                 break  # Break out of the loop if the task is canceled
             except Exception as e:
-                utils.logger.error(
+                logger.error(
                     f"Error sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                 )
                 self.is_active = (

@@ -1,10 +1,26 @@
 from src.utils import config
 import library
 import server
-from src.lib import setup_logging
+
+import json
+import os
+
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "../../config.json")
+
+
+def load_config():
+    """Load the configuration from the JSON file."""
+    if not os.path.exists(CONFIG_PATH):
+        raise FileNotFoundError(f"Configuration file '{CONFIG_PATH}' not found.")
+
+    with open(CONFIG_PATH, "r") as f:
+        return json.load(f)
+
 
 if __name__ == "__main__":
-    config = config.load_config()
+    config = load_config()
     try:
         host, port, model_name = (
             config.get("host"),
@@ -16,4 +32,3 @@ if __name__ == "__main__":
         port = 8000
     library.init()
     server.start(host, port, model_name)
-    setup_logging()

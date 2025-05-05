@@ -1,16 +1,22 @@
-import logging
-
+from loguru import logger
+from colorama import Fore
+from pydantic import BaseModel, Field
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
+from langchain_core.tools import tool
 
-logger = logging.getLogger(__name__)
+
+class DecomposeToolInput(BaseModel):
+    prompt: str = Field(
+        description="The improved user's scene description prompt to be decomposed."
+    )
 
 
 @beartype
 class Decomposer:
-    def __init__(self, model_name: str = "llama3.2", temperature: float = 0.0):
+    def __init__(self, temperature: float = 0.0):
         self.system_prompt = """You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your single purpose is to accurately convert a scene description string into structured JSON according to strict rules.
 
 YOUR CRITICAL TASK:
@@ -69,12 +75,11 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             ]
         )
 
-        # TODO model = model_name
-        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
+        self.model = OllamaLLM(model="gemma3:1b", temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
-        logger.info(f"Initialized with model: {model_name}")
+        # logger.info(f"Initialized with model: {model_name}")
 
     def decompose(self, improved_user_input: str) -> dict:
         try:
@@ -89,10 +94,20 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             raise
 
 
+@tool(args_schema=DecomposeToolInput)
+def decomposer(prompt: str) -> dict:
+    """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
+    logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
+    tool = Decomposer()
+    output = tool.decompose(prompt)
+    return output
+
+
 if __name__ == "__main__":
-    decomposer = Decomposer()
-    enhanced_user_prompt = (
+    tool = Decomposer()
+    superprompt = (
         "Generate a traditional Japanese theatre room with intricate wooden flooring, "
         "high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
     )
-    print(result=decomposer.decompose(enhanced_user_prompt))
+    output = tool.decompose(superprompt)
+    print(output)

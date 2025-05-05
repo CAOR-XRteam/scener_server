@@ -1,11 +1,9 @@
-from agent.agent import Agent
-from beartype import beartype
+from agent import Agent
 
 
-@beartype
 class AgentAPI:
-    def __init__(self, model_name: str):
-        self.agent = Agent(model_name)
+    def __init__(self):
+        self.agent = Agent()
 
     def chat(self, user_input: str, thread_id: int = 0) -> str:
         self.agent.chat(user_input, thread_id)

@@ -5,8 +5,7 @@ import uuid
 from beartype import beartype
 from agent.api import AgentAPI
 from server.client import Client
-
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 @beartype
