@@ -1,13 +1,16 @@
 from beartype import beartype
-from langchain_core.messages import HumanMessage, AIMessage
 from llm import model
-from agent_tools import AgentTools
+from llm import chat
+from tools import *
+from loguru import logger
+
 
 @beartype
 class Agent:
     def __init__(self):
         # Define the template for the prompt
-        self.preprompt = """You are an AI Workflow Manager for 3D Scene Generation.
+        self.preprompt = """
+You are an AI Workflow Manager for 3D Scene Generation.
 
 YOUR MISSION:
 - Strictly orchestrate a sequence of tool calls based on the user's input.
@@ -103,57 +106,18 @@ FAILURE MODES TO AVOID:
 
         """
 
-        self.tools = AgentTools()
-        self.agent_executor = model.qwen3_8b(self.tools.get_tools(), self.preprompt)
-
-    def chat(self, user_input: str, thread_id: int = 0):
-        """Send a prompt to the LLM and receive a structured response."""
-        agent_input = {"messages": [HumanMessage(content=user_input)]}
-        config = {"configurable": {"thread_id": thread_id}}
-        final_response_content = ""
-
-        try:
-            for token in self.agent_executor.stream(
-                agent_input, config=config, stream_mode="values"
-            ):
-                last_message = token["messages"][-1]
-
-                if isinstance(last_message, AIMessage) and not last_message.tool_calls:
-                    new_content = last_message.content[len(final_response_content) :]
-                    if new_content:
-                        print(new_content, end="")
-                        final_response_content += new_content
-        except Exception as e:
-            logger.info(f"\nAgent error occurred: {e}")
-            return f"[Error during agent execution: {e}]"
-
-        return final_response_content
+        self.tools = [
+            improver,
+            date,
+            image_analysis
+        ]
+        self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
 
     def run(self):
-        print("Type 'exit' to quit")
-        current_thread_id = 0
-
-        while True:
-            try:
-                user_input = input("You: ").strip()
-                if user_input.lower() == "exit":
-                    print("bye")
-                    break
-                if not user_input.strip():
-                    continue
-
-                print("Agent: ")
-
-                self.chat(user_input, thread_id=current_thread_id)
-
-            except KeyboardInterrupt:
-                print("\nSession interrupted")
-                break
+        chat.run(self.agent_executor)
 
 
 # Usage
 if __name__ == "__main__":
-    setup_logging()
-    model_name = input("Enter the model name: ").strip() or "llama3.2"
-    agent = Agent(model_name)
+    agent = Agent()
     agent.run()
