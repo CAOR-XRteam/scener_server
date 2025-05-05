@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 
 
 class ImproveToolInput(BaseModel):
-    user_input: str = Field(
+    prompt: str = Field(
         description="The user's original text prompt to be improved for clarity and detail."
     )
 
@@ -32,6 +32,8 @@ class Improver:
             - NEVER invent unrelated storylines, characters, or scenes not implied by the original.
             - NEVER output anything other than the improved description string itself.
             """
+
+        print(self.system_prompt)
 
         self.user_prompt = "User: {user_input}"
         self.prompt = ChatPromptTemplate.from_messages(

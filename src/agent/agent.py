@@ -107,7 +107,7 @@ FAILURE MODES TO AVOID:
         """
 
         self.tools = [
-            improver, #not OK
+            improver, #OK
             date, #OK
             image_analysis #OK
         ]
