@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 
 
 class DecomposeToolInput(BaseModel):
-    user_input: str = Field(
+    prompt: str = Field(
         description="The improved user's scene description prompt to be decomposed."
     )
 
@@ -74,7 +74,7 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             ]
         )
 
-        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
+        self.model = OllamaLLM(model="gemma3:1b", temperature=temperature)
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
@@ -92,6 +92,7 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
             logger.error(f"Decomposition failed: {str(e)}")
             raise
 
+
 @tool(args_schema=DecomposeToolInput)
 def decomposer(prompt: str) -> dict:
     """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
@@ -101,9 +102,10 @@ def decomposer(prompt: str) -> dict:
     return output
 
 if __name__ == "__main__":
-    decomposer = Decomposer()
-    enhanced_user_prompt = (
+    tool = Decomposer()
+    superprompt = (
         "Generate a traditional Japanese theatre room with intricate wooden flooring, "
         "high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
     )
-    print(result=decomposer.decompose(enhanced_user_prompt))
+    output = tool.decompose(superprompt)
+    print(output)

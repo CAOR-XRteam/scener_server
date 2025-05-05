@@ -2,7 +2,8 @@ from model.black_forest import generate_image
 from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
 from beartype import beartype
-
+from loguru import logger
+from colorama import Fore
 
 
 class GenerateImageToolInput(BaseModel):
@@ -11,13 +12,13 @@ class GenerateImageToolInput(BaseModel):
     )
 
 
-# @tool(args_schema=GenerateImageToolInput)
-def _generate_image(self, decomposed_user_input: dict):
-    logging.info(f"Agent: Received decomposed user input: {decomposed_user_input}")
+@tool(args_schema=GenerateImageToolInput)
+def generate_image(self, decomposed_user_input: dict):
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-    logger.info(
-        f"\nAgent: Decomposed JSON received: {decomposed_user_input}. Generating image..."
-    )
+
+    logging.info(f"Agent: Received decomposed user input: {decomposed_user_input}")
+    logger.info(f"\nAgent: Decomposed JSON received: {decomposed_user_input}. Generating image...")
+    
     try:
         objects_to_generate = decomposed_user_input.get("scene", {}).get(
             "objects", []

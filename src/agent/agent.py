@@ -14,6 +14,7 @@ You are an AI Workflow Manager for 3D Scene Generation.
 
 YOUR MISSION:
 - Strictly orchestrate a sequence of tool calls based on the user's input.
+- always check the tools availabel to better respond to the user input
 - Enforce the correct flow of data between tools.
 - YOU NEVER DECOMPOSE OR IMPROVE CONTENT YOURSELF. YOU ONLY CALL TOOLS.
 
@@ -107,6 +108,7 @@ FAILURE MODES TO AVOID:
         """
 
         self.tools = [
+            decomposer, #OK
             improver, #OK
             date, #OK
             image_analysis #OK

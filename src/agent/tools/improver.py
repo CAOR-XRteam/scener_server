@@ -33,8 +33,6 @@ class Improver:
             - NEVER output anything other than the improved description string itself.
             """
 
-        print(self.system_prompt)
-
         self.user_prompt = "User: {user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
             [
