@@ -1,15 +1,18 @@
 from langchain_core.messages import HumanMessage, AIMessage
+from agent.agent import Agent
 from loguru import logger
 
 
-def chat(agent, user_input: str, thread_id: int = 0):
+def chat(agent: Agent, user_input: str, thread_id: int = 0):
     """Send a prompt to the LLM and receive a structured response."""
     agent_input = {"messages": [HumanMessage(content=user_input)]}
     config = {"configurable": {"thread_id": thread_id}}
     final_response_content = ""
 
     try:
-        for token in agent.stream(agent_input, config=config, stream_mode="values"):
+        for token in agent.agent_executor.stream(
+            agent_input, config=config, stream_mode="values"
+        ):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:

@@ -4,7 +4,7 @@ import websockets
 
 from beartype import beartype
 from colorama import Fore
-from loguru import logger
+from lib import logger
 
 
 @beartype

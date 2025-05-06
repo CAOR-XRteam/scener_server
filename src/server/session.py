@@ -1,12 +1,11 @@
 import json
-import logging
 import uuid
 
 from beartype import beartype
 from agent.api import AgentAPI
 from agent.llm.chat import chat
 from server.client import Client
-from loguru import logger
+from lib import logger
 
 
 @beartype
@@ -43,14 +42,11 @@ class Session:
             j = json.loads(message)
             if j.get("command") == "chat":
                 input = j.get("message")
-                if not input:
-                    await self.client.send_message(
-                        "error", 400, f"Empty message in thread {self.thread_id}"
-                    )
+                await self.client.send_message(
+                    "error", 400, f"Empty message in thread {self.thread_id}"
+                )
                 try:
-                    output = chat(
-                        self.agent.agent.agent_executor, input, self.thread_id
-                    )
+                    output = self.agent.chat(input, self.thread_id)
                     self.client.send_message("stream", 200, output)
                 except Exception as e:
                     logger.error(f"Error during chat stream: {e}")

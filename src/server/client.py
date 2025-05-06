@@ -2,7 +2,7 @@ import asyncio
 import websockets
 import json
 import server.valider
-from loguru import logger
+from lib import logger
 
 from beartype import beartype
 from colorama import Fore
