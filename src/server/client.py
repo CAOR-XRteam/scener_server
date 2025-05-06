@@ -49,13 +49,9 @@ class Client:
         self.task_session = asyncio.create_task(self.session.run())
 
     async def send_message(self, output_message: OutputMessage):
-        """Create a JSON response and queue a message to be sent to the client."""
+        """Queue a message to be sent to the client."""
         try:
-            await self.queue_output.put(output_message.model_dump_json())
-        except (TypeError, ValueError) as e:
-            logger.error(
-                f"Error creating JSON response for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {message}"
-            )
+            await self.queue_output.put(output_message)
         except asyncio.CancelledError:
             logger.error(
                 f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {message}"
@@ -90,8 +86,10 @@ class Client:
         """Process the outgoing messages in the client's queue."""
         while self.is_active:
             try:
-                message = await self.queue_output.get()  # Wait for a message to send
-                await self.websocket.send(message)
+                message: OutputMessage = (
+                    await self.queue_output.get()
+                )  # Wait for a message to send
+                await self.websocket.send(message.message)
                 logger.info(
                     f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {message}"
                 )
