@@ -4,6 +4,17 @@ import server
 import json
 import os
 
+import utils
+import library
+import server
+import model
+
+
+if __name__ == "__main__":
+    utils.init()
+    library.init()
+    server.start()
+
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "../../config.json")

@@ -11,10 +11,11 @@ Last Updated: 05-05-2025
 from loguru import logger
 from colorama import Fore
 from library import sql
+from library.library_database import Database as DB
 
 
 class Asset:
-    def __init__(self, db: "DB"):
+    def __init__(self, db: DB):
         self.db = db
 
     def add(self, name, image=None, mesh=None, description=None):

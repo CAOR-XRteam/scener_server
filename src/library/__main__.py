@@ -1,13 +1,21 @@
-from library.api import *
-
-
-def main(path):
-    library.fill(path)
-    library.read()
-    list = library.get_list()
-    print(list)
-
+from library.api import LibraryAPI
+import inspect
+import os
+from library.library_database import Database
 
 if __name__ == "__main__":
-    path = "/home/artem/Scener/src/media/asset"
-    main(path)
+    db_path = (
+        os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        + "/media/database.db"
+    )
+    db = Database(db_path)
+    LibraryAPI = LibraryAPI(db)
+
+    assets_path = (
+        os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        + "/media/asset/"
+    )
+    LibraryAPI.fill(assets_path)
+    LibraryAPI.read()
+    list = LibraryAPI.get_list()
+    print(list)

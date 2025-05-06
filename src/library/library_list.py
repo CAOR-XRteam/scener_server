@@ -10,13 +10,13 @@ Last Updated: 05-05-2025
 
 from loguru import logger
 from colorama import Fore
-import library.sql
 import os
-import library.sql as sql
+from library import sql
+from library.library_database import Database as DB
 
 
 class Library:
-    def __init__(self, db: "DB"):
+    def __init__(self, db: DB):
         self.db = db
 
     def fill(self, path):
