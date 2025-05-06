@@ -55,14 +55,27 @@ if __name__ == "__main__":
         "scene": {
             "objects": [
                 {
-                    "name": "black_cat",
-                    "type": "mesh",
+                    "name": "cream_couch",
+                    "type": "furniture",
+                    "material": "plush_fabric",
+                    "prompt": "A plush, cream-colored couch with a low back and rolled arms, front camera view, placed on a white and empty background, completely detached from its surroundings."
+                },
+                {
+                    "name": "gray_cat",
+                    "type": "prop",
+                    "material": "glossy_fur",
+                    "prompt": "A sleek, gray cat with bright green eyes, front camera view, placed on a white and empty background, completely detached from its surroundings."
+                },
+                {
+                    "name": "living_room",
+                    "type": "room",
                     "material": "polished_wood",
-                    "prompt": "A sleek black domestic cat lounges on a plush beige couch in a cozy living room, surrounded by warm golden lighting that filters through sheer white curtains. The cat is a large, sleek black cat with glossy fur sitting calmly. Soft light casts subtle highlights on the fur."
+                    "prompt": "A squared room, room view from the outside with a distant 3/4 top-down perspective, placed on a white and empty background, completely detached from its surroundings."
                 }
             ]
         }
     }
+
 
     res = generate_image.invoke({"scene_json": scene_dict})  # ✅ Pass a dict
     print(res)
