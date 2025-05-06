@@ -1,3 +1,14 @@
+"""
+sql.py
+
+Low-level SQL functions
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
+
 import sqlite3
 
 

@@ -1,6 +1,17 @@
-from library import sql
+"""
+library_asset.py
+
+Asset management functions
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from loguru import logger
 from colorama import Fore
+import sql
+
 
 class Asset:
     def __init__(self, db: 'DB'):

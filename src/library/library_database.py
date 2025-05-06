@@ -1,18 +1,30 @@
-from library import sql
+"""
+library_database.py
+
+Functions to connect to the sql database
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from loguru import logger
 from colorama import Fore, Style
+import sql
 import threading
 import os
 
 
-class DB:
+class Database:
     def __init__(self, path):
         self.path = path
         self._check_path_and_init_db()
 
     def _check_path_and_init_db(self):
         if not os.path.exists(self.path):
-            logger.warning(f"Database file not found with path: {self.path}")
+            logger.warning(
+                f"Database file not found {Fore.GREEN}{self.path}{Fore.RESET}."
+            )
 
         # Ensure that the database is properly initialized
         conn = self._get_connection()

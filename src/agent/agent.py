@@ -1,3 +1,13 @@
+"""
+agent.py
+
+Main AI agent, in charge of managing user input and use appropriate tools
+
+Author: Artem
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from beartype import beartype
 from agent.llm import model
 from agent.llm import chat
@@ -111,6 +121,7 @@ FAILURE MODES TO AVOID:
             improver,  # OK
             date,  # OK
             image_analysis,  # OK
+            # list_assets,
         ]
         self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
 

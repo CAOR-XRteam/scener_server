@@ -1,6 +1,12 @@
-from .api import *
+from api import *
 import os
 
+
+def start():
+    global server
+    if server is None:
+        server = ws.Server()
+    server.start()
 
 def main():
     server.start()

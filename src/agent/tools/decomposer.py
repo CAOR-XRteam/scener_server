@@ -106,8 +106,7 @@ def decomposer(prompt: str) -> dict:
 if __name__ == "__main__":
     tool = Decomposer()
     superprompt = (
-        "Generate a traditional Japanese theatre room with intricate wooden flooring, "
-        "high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
+        "Generate a traditional Japanese theatre room with intricate wooden flooring, high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
     )
     output = tool.decompose(superprompt)
     print(output)

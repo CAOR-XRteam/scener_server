@@ -1,5 +1,16 @@
+"""
+library_list.py
+
+SQL list management functions
+
+Author: Nathan SV
+Created: 05-05-2025
+Last Updated: 05-05-2025
+"""
+
 from loguru import logger
 from colorama import Fore
+import library.sql
 import os
 import library.sql as sql
 
