@@ -10,7 +10,6 @@ Last Updated: 05-05-2025
 
 from beartype import beartype
 from agent.llm import model
-from agent.llm import chat
 from agent.tools import *
 from loguru import logger
 
@@ -126,6 +125,8 @@ FAILURE MODES TO AVOID:
         self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
 
     def run(self):
+        from agent.llm import chat
+
         chat.run(self.agent_executor)
 
 

@@ -1,4 +1,4 @@
-from api import *
+from server.api import *
 import os
 
 
@@ -8,8 +8,10 @@ def start():
         server = ws.Server()
     server.start()
 
+
 def main():
     server.start()
+
 
 if __name__ == "__main__":
     os.system("clear")

@@ -1,9 +1,7 @@
-import json
 import uuid
 
 from beartype import beartype
 from agent.api import AgentAPI
-from agent.llm.chat import chat
 from server.client import Client
 from lib import logger
 
@@ -38,28 +36,27 @@ class Session:
                 break
 
     async def handle_message(self, message: str):
-        try:
-            j = json.loads(message)
-            if j.get("command") == "chat":
-                input = j.get("message")
-                await self.client.send_message(
-                    "error", 400, f"Empty message in thread {self.thread_id}"
-                )
-                try:
-                    output = self.agent.chat(input, self.thread_id)
-                    self.client.send_message("stream", 200, output)
-                except Exception as e:
-                    logger.error(f"Error during chat stream: {e}")
-                    await self.client.send_message(
-                        "error",
-                        500,
-                        f"Error during chat stream in thread {self.thread_id}",
-                    )
-            else:
-                await self.client.send_message(
-                    "error", 400, f"Command not recognized in thread {self.thread_id}"
-                )
-        except json.JSONDecodeError:
+        if not message or message.isspace():
             await self.client.send_message(
-                "error", 400, f"Invalid JSON format in thread {self.thread_id}"
+                "error", 400, f"Empty message in thread {self.thread_id}"
+            )
+            return
+
+        logger.info(f"Received message in thread {self.thread_id}: {message}")
+
+        try:
+            output_generator = self.agent.achat(message, self.thread_id)
+            logger.info(f"{output_generator}")
+            async for token in output_generator:
+                logger.info(f"Token: {token}")
+                await self.client.send_message("stream", 200, token)
+
+            logger.info(f"Stream completed for thread {self.thread_id}")
+
+        except Exception as e:
+            logger.error(f"Error during chat stream: {e}")
+            await self.client.send_message(
+                "error",
+                500,
+                f"Error during chat stream in thread {self.thread_id}",
             )

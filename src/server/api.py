@@ -1,4 +1,4 @@
-import websocket as ws
+import server.websocket as ws
 
 
 host = "localhost"

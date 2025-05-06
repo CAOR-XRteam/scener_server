@@ -59,8 +59,9 @@ class Client:
         while self.is_active:
             try:
                 async for message in self.websocket:
-                    if await server.valider.check_message(self, message):
-                        await self.queue_input.put(message)
+                    await self.queue_input.put(message)
+                    # if await server.valider.check_message(self, message):
+                    #     await self.queue_input.put(message)
             except websockets.exceptions.ConnectionClosed as e:
                 logger.error(
                     f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"
