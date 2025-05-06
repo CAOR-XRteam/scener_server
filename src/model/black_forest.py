@@ -1,22 +1,17 @@
-import os
-import logging
-
+from loguru import logger
+from colorama import Fore
 from beartype import beartype
-from huggingface_hub import InferenceClient
+from huggingface_hub import InferenceClient, login
+from diffusers import FluxPipeline, StableDiffusionPipeline
 from dotenv import load_dotenv
+import os
+import torch
+
 
 load_dotenv()
-logger = logging.getLogger(__name__)
-
 
 @beartype
-def generate_image(prompt: str, filename):
-    import torch
-
-    from diffusers import FluxPipeline, StableDiffusionPipeline
-
-    from huggingface_hub import login
-
+def generate(prompt: str, filename):
     torch.cuda.empty_cache()
     torch.cuda.ipc_collect()
 
@@ -31,39 +26,13 @@ def generate_image(prompt: str, filename):
     pipe.enable_xformers_memory_efficient_attention()
     pipe.enable_model_cpu_offload()
 
-    # pipe = FluxPipeline.from_pretrained(
-    #     "black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16
-    # )
-    # pipe.to(
-    #     "cuda"
-    # ).enable_model_cpu_offload()  # save some VRAM by offloading the model to CPU. Remove this if you have enough GPU power
-
     with torch.autocast("cuda"):
         image = pipe(
-            prompt, height=384, width=384, num_inference_steps=25, guidance_scale=7.5
+            prompt, height=384, width=384, num_inference_steps=25, guidance_scale=3.5
         ).images[0]
-
-    # with torch.autocast("cuda"):
-    #     image = pipe(prompt, guidance_scale=7.5).images[0]
 
     image.show()
     image.save(filename)
-
-
-# def generate_image(prompt, filename):
-#     logger.info("Generate image...")
-#     logger.info(prompt)
-
-#     HF_API_KEY = os.getenv("HF_API_KEY")
-
-#     client = InferenceClient(provider="fal-ai", api_key=HF_API_KEY)
-
-#     # output is a PIL.Image object
-#     image = client.text_to_image(prompt, model="black-forest-labs/FLUX.1-dev")
-
-#     # output is a PIL.Image object
-#     image.show()
-#     image.save(filename, "PNG")
 
 
 if __name__ == "__main__":
