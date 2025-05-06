@@ -8,13 +8,15 @@ Created: 05-05-2025
 Last Updated: 05-05-2025
 """
 
+from beartype import beartype
 from langchain_core.messages import HumanMessage, AIMessage
 from agent.agent import Agent
 from lib import logger
 from colorama import Fore
 
 
-def chat(agent: Agent, user_input: str, thread_id: int = 0):
+@beartype
+def chat(agent: Agent, user_input: str, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
     agent_input = {"messages": [HumanMessage(content=user_input)]}
     config = {"configurable": {"thread_id": thread_id}}
@@ -39,7 +41,8 @@ def chat(agent: Agent, user_input: str, thread_id: int = 0):
     return final_response_content
 
 
-async def achat(agent: Agent, user_input: str, thread_id: int = 0):
+@beartype
+async def achat(agent: Agent, user_input: str, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
     agent_input = {"messages": [HumanMessage(content=user_input)]}
     config = {"configurable": {"thread_id": thread_id}}
@@ -61,7 +64,8 @@ async def achat(agent: Agent, user_input: str, thread_id: int = 0):
         raise
 
 
-def run(agent):
+@beartype
+def run(agent: Agent):
     print("-------------------------")
     print(f"Type {Fore.RED}exit{Fore.RESET} to quit")
     print("-------------------------")

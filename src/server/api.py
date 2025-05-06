@@ -1,6 +1,14 @@
-import server.websocket as ws
+import server.server as ws
 
 
-host = "localhost"
-port = 8765
-server = ws.Server(host, port)
+class ServerAPI:
+    """API for the WebSocket server."""
+
+    def __init__(self, host: str = "localhost", port: int = 8765):
+        self.host = host
+        self.port = port
+        self.server = ws.Server(host, port)
+
+    def start(self):
+        """Start the WebSocket server."""
+        self.server.start()

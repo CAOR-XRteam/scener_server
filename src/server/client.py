@@ -10,12 +10,12 @@ Last Updated: 05-05-2025
 
 import asyncio
 import websockets
-import json
-import server.valider
-from lib import logger
+
 
 from beartype import beartype
 from colorama import Fore
+from lib import logger
+from server.valider import InputMessage, OutputMessage
 
 
 # Le client manage les output et la session managera les input
@@ -48,10 +48,22 @@ class Client:
         self.task_output = asyncio.create_task(self.loop_output())
         self.task_session = asyncio.create_task(self.session.run())
 
-    async def send_message(self, status: str, code: int, message: str):
+    async def send_message(self, output_message: OutputMessage):
         """Create a JSON response and queue a message to be sent to the client."""
-        response = {"status": status, "code": code, "message": message}
-        await self.queue_output.put(json.dumps(response))
+        try:
+            await self.queue_output.put(output_message.model_dump_json())
+        except (TypeError, ValueError) as e:
+            logger.error(
+                f"Error creating JSON response for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {message}"
+            )
+        except asyncio.CancelledError:
+            logger.error(
+                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {message}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {message}"
+            )
 
     # Subfunction
     async def loop_input(self):
@@ -59,9 +71,9 @@ class Client:
         while self.is_active:
             try:
                 async for message in self.websocket:
-                    await self.queue_input.put(message)
-                    # if await server.valider.check_message(self, message):
-                    #     await self.queue_input.put(message)
+                    await self.queue_input.put(
+                        InputMessage(command="chat", message=message)
+                    )
             except websockets.exceptions.ConnectionClosed as e:
                 logger.error(
                     f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"

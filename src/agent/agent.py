@@ -11,7 +11,6 @@ Last Updated: 05-05-2025
 from beartype import beartype
 from agent.llm import model
 from agent.tools import *
-from loguru import logger
 
 
 @beartype

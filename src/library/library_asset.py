@@ -10,11 +10,11 @@ Last Updated: 05-05-2025
 
 from loguru import logger
 from colorama import Fore
-import sql
+from library import sql
 
 
 class Asset:
-    def __init__(self, db: 'DB'):
+    def __init__(self, db: "DB"):
         self.db = db
 
     def add(self, name, image=None, mesh=None, description=None):
@@ -30,7 +30,9 @@ class Asset:
         # Check if the asset with the same name already exists
         existing_asset = self._get_asset_by_name(conn, cursor, name)
         if existing_asset:
-            logger.warning(f"Asset with name {Fore.YELLOW}{name}{Fore.RESET} already exists.")
+            logger.warning(
+                f"Asset with name {Fore.YELLOW}{name}{Fore.RESET} already exists."
+            )
             return
 
         # Insert the new asset

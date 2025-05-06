@@ -1,9 +1,11 @@
+import asyncio
 import uuid
 
 from beartype import beartype
 from agent.api import AgentAPI
 from server.client import Client
 from lib import logger
+from server.valider import InputMessage, OutputMessage
 
 
 @beartype
@@ -27,35 +29,65 @@ class Session:
                 message = await self.client.queue_input.get()
                 await self.handle_message(message)
                 self.client.queue_input.task_done()
+            except asyncio.CancelledError:
+                logger.info(
+                    f"Session {self.thread_id} cancelled for websocket {self.client.websocket.remote_address}"
+                )
+                break
             except Exception as e:
                 # Optional: log or handle processing errors
                 logger.error(f"Session error: {e}")
                 await self.client.send_message(
-                    "error", 500, f"Internal server error in thread {self.thread_id}"
+                    OutputMessage(
+                        status="error",
+                        code=500,
+                        message=f"Internal server error in thread {self.thread_id}",
+                    )
                 )
                 break
 
-    async def handle_message(self, message: str):
+    async def handle_message(self, input_message: InputMessage):
+        if input_message.command != "chat":
+            await self.client.send_message(
+                OutputMessage(
+                    status="error",
+                    code=400,
+                    message=f"Invalid command in thread {self.thread_id}",
+                )
+            )
+            return
+        message = input_message.message
         if not message or message.isspace():
             await self.client.send_message(
-                "error", 400, f"Empty message in thread {self.thread_id}"
+                OutputMessage(
+                    status="error",
+                    code=400,
+                    message=f"Empty message received in thread {self.thread_id}",
+                )
             )
             return
 
         logger.info(f"Received message in thread {self.thread_id}: {message}")
 
         try:
-            output_generator = self.agent.achat(message, self.thread_id)
-            logger.info(f"{output_generator}")
+            output_generator = self.agent.achat(message, str(self.thread_id))
             async for token in output_generator:
-                await self.client.send_message("stream", 200, token)
+                await self.client.send_message(
+                    OutputMessage(status="stream", code=200, message=token)
+                )
 
             logger.info(f"Stream completed for thread {self.thread_id}")
-
+        except asyncio.CancelledError:
+            logger.info(
+                f"Stream cancelled for thread {self.thread_id} for websocket {self.client.websocket.remote_address}"
+            )
+            raise
         except Exception as e:
             logger.error(f"Error during chat stream: {e}")
             await self.client.send_message(
-                "error",
-                500,
-                f"Error during chat stream in thread {self.thread_id}",
+                OutputMessage(
+                    status="error",
+                    code=500,
+                    message=f"Error during chat stream in thread {self.thread_id}",
+                )
             )

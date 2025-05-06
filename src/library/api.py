@@ -1,16 +1,8 @@
 from library.library_database import Database
 from library.library_list import Library
 from library.library_asset import Asset
-from loguru import logger
+from lib import logger
 import sys
-
-
-# Loguru config
-logger.remove()
-logger.add(
-    sys.stderr,
-    format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}",
-)
 
 path = "/home/artem/Scener/src/media/database.db"
 db = DB(path)

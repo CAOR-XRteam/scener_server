@@ -10,6 +10,30 @@ Last Updated: 05-05-2025
 
 import json
 
+from pydantic import BaseModel, field_validator
+from typing import Literal
+
+
+def validate_message(m):
+    if not m or m.isspace():
+        raise ValueError("Message must not be empty or whitespace")
+    return m
+
+
+class OutputMessage(BaseModel):
+    status: Literal["stream", "error"]
+    code: int
+    message: str
+
+    _validate_message = field_validator("message")(validate_message)
+
+
+class InputMessage(BaseModel):
+    command: Literal["chat"]
+    message: str
+
+    _validate_message = field_validator("message")(validate_message)
+
 
 # Main function
 async def check_message(client, message):
