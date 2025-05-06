@@ -20,17 +20,18 @@ class Improver:
             You are a specialized Prompt Engineer for 3D scene generation.
 
             YOUR TASK:
-            - Given a user's prompt, produce a *single* improved, detailed, and clarified version of the description.
+            - Given a user's prompt, produce a *single* improved, detailed, and clarified version of the description based uniquely on the elements of the input.
 
             OUTPUT FORMAT:
             - Return ONLY a single improved text string.
             - NO explanations, NO preambles, NO markdown, NO extra text.
 
             GUIDELINES:
-            - Enhance clarity, specificity, and actionable detail (objects, materials, layout, lighting, mood).
-            - You may infer reasonable details from the context if missing (e.g., default lighting, typical materials).
+            - Enhance clarity, specificity, and actionable detail (objects, material), but all details should refer to the physical aspects of element, no lighting, no weather effect.
+            - You may infer reasonable details from the context if missing (e.g., typical materials).
             - NEVER invent unrelated storylines, characters, or scenes not implied by the original.
             - NEVER output anything other than the improved description string itself.
+            - provide enough details to describe a complete small scene only based on elements of the input.
             """
 
         self.user_prompt = "User: {user_input}"
@@ -65,7 +66,7 @@ def improver(prompt: str) -> str:
 
 if __name__ == "__main__":
     user_input = (
-        "a cat in a house"
+        "a cat on a couch in a living room"
     )
     superprompt = improver(user_input)
     print(superprompt)

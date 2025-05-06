@@ -5,7 +5,7 @@ from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
-from model.black_forest import generate_image
+from model.black_forest import generate
 from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
 from beartype import beartype

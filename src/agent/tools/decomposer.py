@@ -6,6 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
 from langchain_core.tools import tool
+import json
 
 
 class DecomposeToolInput(BaseModel):
@@ -16,11 +17,15 @@ class DecomposeToolInput(BaseModel):
 @beartype
 class Decomposer:
     def __init__(self, temperature: float = 0.0):
-        self.system_prompt = """You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your single purpose is to accurately convert a scene description string into structured JSON according to strict rules.
+        self.system_prompt = """
+You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your single purpose is to accurately convert a scene description string into structured JSON according to strict rules.
 
 YOUR CRITICAL TASK:
+- First, decompose the scene description into several distinct elements, knowing that a scene should contain at least a room element.
 - Convert the given scene description string into a valid JSON object.
-- The decomposition MUST focus ONLY on the main, distinct renderable subjects or primary elements that the user wants images of. DO NOT decompose every minor detail into its own object.
+- The decomposition MUST focus ONLY on the main, distinct objects of the scene DO NOT decompose every minor detail into its own object.
+- Be sure that the number of elements are small enough (1-5), and that they represent the main elements of the scene.
+- Place these element in the scene by specifying their position and rotation approximately to approach at maximum the scene description.
 
 OUTPUT FORMAT:
 - Return ONLY the JSON object.
@@ -38,7 +43,7 @@ JSON STRUCTURE (STRICT AND REQUIRED):
         "rotation": {{"x":0,"y":0,"z":0}}, // Use reasonable default or inferred rotation
         "scale": {{"x":1,"y":1,"z":1}},    // Use reasonable default or inferred scale
         "material": "primary_material_name", // Describe the main material (e.g., 'polished_wood', 'glossy_fur', 'ceramic')
-        "prompt": "Detailed visual description of ONLY this object based on input, including relevant environmental context, followed by mandatory phrases." // A detailed prompt snippet for rendering *this specific object*.
+        "prompt": "Provide a detailed visual description of this object only without his contexte on the scene or his link with the other objects, with no environmental context. The description must mention that the object is placed on a 'white and empty background' and is 'completely detached' from its surroundings. If the object type is 'room', include the camera setting: 'room view from the outside with a distant 3/4 top-down perspective'. For all other types, use: 'front camera view'. we only want a good global illumination of the object."
       }},
       // Include one dictionary entry here for EACH identified main object.
       // FOLLOW THE STRUCTURE EXACTLY for all objects.
@@ -47,22 +52,24 @@ JSON STRUCTURE (STRICT AND REQUIRED):
 }}
 
 STRICT RULES FOR SELECTING AND DESCRIBING OBJECTS:
-1.  IDENTIFY MAIN SUBJECTS: Read the input and identify the primary, distinct physical entities or areas that are clearly described and seem intended as key components of the scene. These are your ONLY candidates for 'object' entries.
-    * Example Main Subjects: A specific animal (like the cat), a piece of furniture (the table), a defined prop (the mug).
+1.  IDENTIFY MAIN SUBJECTS: Read the input and identify the primary, distinct physical entities that are clearly described and seem intended as key components of the scene. These are your ONLY candidates for 'object' entries.
+    * Example Main Subjects: A specific animal (like a cat), a piece of furniture (a couch), a defined room (a house).
 2.  **CRITICAL EXCLUSIONS - NEVER CREATE SEPARATE OBJECT ENTRIES FOR:**
     * **Lighting:** Do NOT create objects with type 'light' or names like 'ambient_light', 'sunlight', 'shadows'.
     * **Atmosphere/Effects:** Do NOT create objects for 'mist', 'fog', 'dust', 'haze', etc.
     * **General Environment:** Do NOT create objects for generic 'walls', 'floor', 'ceiling', or 'room' UNLESS the room itself is the main subject being described in detail (e.g., "a detailed gothic library room").
     * **Minor Details:** Do NOT create separate objects for very small or less significant items unless they are specifically highlighted (e.g., don't decompose a 'table_setting' into spoon, fork, knife unless the user specifically focuses on each utensil).
-3.  INCORPORATE ENVIRONMENTAL DETAILS: Describe lighting effects, shadows, atmospheric conditions (like mist), and relevant background context *within the 'prompt' field* of the main object(s) that are visually affected by these elements. For example, describe "soft light on the cat's fur" in the cat's prompt.
-4.  CREATE OBJECT ENTRIES: For *each* main subject identified in Rule 1, create *one* complete dictionary entry in the 'objects' list following the JSON STRUCTURE EXACTLY.
-5.  GENERATE PROMPTS: For each object entry's 'prompt' field:
+3.  CREATE OBJECT ENTRIES: For *each* main subject identified in Rule 1, create *one* complete dictionary entry in the 'objects' list following the JSON STRUCTURE EXACTLY.
+4.  GENERATE PROMPTS: For each object entry's 'prompt' field:
     * Write a detailed description focusing *only* on the visual appearance of that specific object, drawing information from the input text.
-    * Include how environmental factors (lighting, mist) described in the input affect this object's look.
-    * Always precise in the prompt that the object should not have any background and be viewed from outside with a distance 3/4 top-down perspective, entire object must be visible.*
-    * Example final prompt string: `"A cat viewed ENTIRELY from outside a distance 3/4 top-down perspective, with no background. The cat is large, sleek black cat with glossy fur sitting calmly. Soft light casts subtle highlights on the fur."`
-6.  USE DEFAULTS: Use reasonable default values for position, rotation, and scale unless the text explicitly provides spatial information relevant to that object.
-7.  MATERIAL: Infer the primary material if described.
+    * Always precise in the prompt that the object should not have any background and be viewed from outside with a distance 3/4 top-down perspective, entire object must be entirely visible.*
+    * Example final prompt string: `"A cat viewed ENTIRELY from outside a distance 3/4 top-down perspective, with no background. The cat is large, sleek black cat with glossy fur sitting calmly. "`
+5.  USE DEFAULTS: Use reasonable default values for position, rotation, and scale unless the text explicitly provides spatial information relevant to that object.
+6.  MATERIAL: Infer the primary material if described.
+
+EXAMPLE
+for the input prompt 'A sleek black domestic cat lounges on a beige couch in a cozy living room', there are 3 main objects: the cat, the couch and the room.
+So you may describe the cat physical aspect only, the couch physical aspect only and the roo physical only in their respective json 'prompt' part.
 
 STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CHECK YOUR OUTPUT AGAINST ALL RULES, ESPECIALLY THE EXCLUSIONS AND THE MANDATORY PROMPT ENDING FOR EVERY OBJECT.
 """
@@ -104,7 +111,7 @@ def decomposer(prompt: str) -> dict:
 if __name__ == "__main__":
     tool = Decomposer()
     superprompt = (
-        "Generate a traditional Japanese theatre room with intricate wooden flooring, high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
+        "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
     )
     output = tool.decompose(superprompt)
-    print(output)
+    print(json.dumps(output, indent=2))
