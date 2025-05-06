@@ -1,10 +1,14 @@
-from agent import Agent
+from agent.agent import Agent
 from loguru import logger
 import sys
 
-#Loguru config
+# Loguru config
 logger.remove()
-logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
+logger.add(
+    sys.stderr,
+    format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}",
+)
+
 
 class AgentAPI:
     def __init__(self):
