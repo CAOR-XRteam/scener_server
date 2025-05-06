@@ -48,7 +48,6 @@ class Session:
             output_generator = self.agent.achat(message, self.thread_id)
             logger.info(f"{output_generator}")
             async for token in output_generator:
-                logger.info(f"Token: {token}")
                 await self.client.send_message("stream", 200, token)
 
             logger.info(f"Stream completed for thread {self.thread_id}")

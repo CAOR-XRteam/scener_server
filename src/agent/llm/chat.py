@@ -50,7 +50,6 @@ async def achat(agent: Agent, user_input: str, thread_id: int = 0):
             agent_input, config=config, stream_mode="values"
         ):
             last_message = token["messages"][-1]
-            logger.info(f"Last message: {last_message}")
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
                 new_content = last_message.content[len(final_response_content) :]
