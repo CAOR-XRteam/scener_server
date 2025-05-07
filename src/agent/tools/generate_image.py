@@ -1,7 +1,6 @@
 from model import black_forest
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
-from beartype import beartype
 from loguru import logger
 from colorama import Fore
 from pathlib import Path

@@ -11,21 +11,21 @@ import json
 
 class DecomposeToolInput(BaseModel):
     prompt: str = Field(
-        description="The improved user's scene description prompt to be decomposed."
+        description="The raw user's scene description prompt to be decomposed."
     )
+
 
 @beartype
 class Decomposer:
     def __init__(self, temperature: float = 0.5):
         self.system_prompt = """
-You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your sole task is to accurately convert a scene description string into structured JSON, adhering to strict rules. The output must always generate **high-quality zero-shot prompts** for each object in the scene, following the format provided below.
+You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your sole task is to accurately convert a scene description string into structured JSON, adhering to strict rules. The output must always extract **verbatim zero-shot prompts** for each object in the scene, following the format provided below.
 
 YOUR CRITICAL TASK:
 - Decompose the scene description into several distinct elements, ensuring at least one 'room' object.
 - Convert the scene into a valid JSON object.
-- Focus ONLY on **key physical elements**. **Do NOT extract minor details** or interpret the scene.
-- Limit the total object count to 1–5, with always at least one 'room' type object.
-- **The most critical part of the output is the 'prompt'** field, which must be a detailed, rich visual description of the object.
+- Focus ONLY on **key physical elements**. **Do NOT extract minor details** or interpret the scene beyond identifying these key elements.
+- **The most critical part of the output is the 'prompt' field for each object.** This field must contain the **exact, verbatim phrase** describing that specific object as it appeared in the user's input scene description. **Do NOT modify, enhance, or add ANY details (like camera angles, background information, or context) to this user-provided object description.**
 
 OUTPUT FORMAT:
 - Output **ONLY** the JSON. **NO explanations**, **NO markdown**, **NO extra formatting**.
@@ -38,7 +38,7 @@ JSON STRUCTURE (STRICT AND REQUIRED):
         "name": "concise_descriptive_object_name",  // short, clear identifier (e.g., 'black_cat', 'wooden_table')
         "type": "object_category",  // one of: 'mesh', 'furniture', 'prop', 'room'
         "material": "primary_material_name",  // e.g., 'polished_wood', 'glossy_fur', 'ceramic'
-        "prompt": "Detailed visual description of the object based on the input prompt but with more details. Must include: 'placed on a white and empty background, entire whole object, completely detached from the background'. Use 'front camera view' for all objects, and 'squared room view from the outside with a distant 3/4 top-down perspective' if the object type is 'room'. No mention of other objects or environmental context. Assume normalized object size and scale visually."
+        "prompt": "The exact, verbatim phrase describing this specific object, extracted directly from the user's input scene description. This must be the exact noun phrase or descriptive phrase from the input that **identifies or describes the object itself**. **Do NOT include prepositions (like 'on', 'in', 'under'), verbs describing actions, or phrases indicating relationships to other objects.** Do NOT modify capitalization. For example, if the user input mentions 'a fluffy white dog', this prompt should be exactly 'a fluffy white dog'. If the input is 'cat on a table', the prompt for the cat is 'cat' and the prompt for the table is 'a table' (or just 'table' depending on the exact wording around it)."
       }},
       // Add one entry per main object. STRICTLY follow this format.
     ]
@@ -49,44 +49,48 @@ RULES FOR OBJECT SELECTION:
 1. IDENTIFY MAIN OBJECTS ONLY:
    - Must be clearly described, physical, and significant in the scene.
    - Examples: cat → prop, couch → furniture, gothic library → room.
-   - A **room object is always required**.
 
-2. STRICTLY EXCLUDE:
+2. A **room object is always required**. If the scene description implies an outdoor setting without a defined room, you may need to infer a generic 'outdoor_space' or similar as the 'room' type object, and its prompt would be the relevant part of the user's description for that space.
+
+3. STRICTLY EXCLUDE:
    - Lights, shadows, ambient/sunlight.
    - Fog, mist, atmosphere, dust.
-   - Generic walls/floor/ceiling unless the room is the focused element.
-   - Minor clutter (utensils, cushions, books) unless explicitly emphasized.
-
-3. **PROMPT FIELD**:
-   - The prompt must provide a **rich, detailed description** of the object’s physical features.
-   - Focus on the object’s **key design, material, and visible features**. Avoid mentioning relationships to other objects or placement in the scene.
-   - The description should be **concise but full of visual details**, ensuring that the object is clearly distinguishable and detailed for rendering.
-   - The prompt must include:
-     - "Placed on a white and empty background."
-     - "Completely detached from surroundings."
-     - **Camera view** based on object type:
-       - Use "front camera view" for non-room objects.
-       - Use "squared room view from the outside with a distant 3/4 top-down perspective" for room objects.
-   - Example prompt:
-     "A traditional Japanese theater room with detailed wooden architecture, elevated tatami stage, red silk cushions, sliding shoji panels, and ornate golden carvings on the upper walls. The room is viewed from an isometric 3/4 top-down perspective, with an open cutaway style revealing the interior. The scene is well-lit with soft, global illumination. No people, no objects outside the room, placed on a white and empty background, completely detached from surroundings."
+   - Generic walls/floor/ceiling unless the room is the focused element and described as such.
+   - Minor clutter (utensils, cushions, books) unless explicitly emphasized as a main object.
 
 4. DEFAULT FIELD VALUES:
-   - Use inferred or standard values for position, rotation, and scale unless explicitly specified.
+   - For 'name' and 'material', use inferred or standard values if not explicitly detailed for the object in the user's prompt. The 'prompt' field, however, must remain verbatim.
 
-EXAMPLE SCENE:
-Input: "A sleek black domestic cat lounges on a beige couch in a cozy living room."
+EXAMPLE SCENE AND REQUIRED OUTPUT:
+Input: "A sleek black domestic cat lounges sitting on a beige couch"
 
-Generated Output (Objects):
-- black_cat → type: prop
-- beige_couch → type: furniture
-- living_room → type: room
+Required Output (Demonstrating full structure, object inclusion, and verbatim prompts):
+{{
+  "scene": {{
+    "objects": [
+      {{
+        "name": "black_cat", // Concise name
+        "type": "prop",
+        "material": "fur", // Inferred
+        "prompt": "a sleek black domestic cat" // Verbatim, including article
+      }},
+      {{
+        "name": "beige_couch", // Concise name
+        "type": "furniture",
+        "material": "fabric", // Inferred
+        "prompt": "a beige couch" // Verbatim, including article
+      }},
+       {{
+        "name": "living_room", // Concise name
+        "type": "room",
+        "material": "walls", // Inferred default
+        "prompt": "a cozy living room" // Verbatim, including article
+      }}
+    ]
+  }}
+}}
 
-Each object will have its own **detailed visual prompt** with no mention of other objects or context, like so:
-- "A sleek black domestic cat with glossy fur, lounging on a soft cushion. Front camera view, placed on a white and empty background, completely detached from its surroundings."
-- "A plush beige couch with rounded arms and thick cushions, front camera view, placed on a white and empty background, completely detached from its surroundings."
-- "A cozy living room with wooden furniture, a fireplace, and large windows, squared room view from the outside with a distant 3/4 top-down perspective, placed on a white and empty background, completely detached from surroundings."
-
-STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DO NOT ADD OR OMIT ANYTHING.
+STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL RENDERING. Ensure all main physical objects described and the required room object are included. The 'prompt' field must be the exact, verbatim text from the input that *identifies or describes* that specific object, not its relationship to others.
 """
         self.user_prompt = "User: {improved_user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
@@ -100,7 +104,7 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DO NOT AD
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
-        #logger.info(f"Initialized with model: {model_name}")
+        # logger.info(f"Initialized with model: {model_name}")
 
     def decompose(self, improved_user_input: str) -> dict:
         try:
@@ -123,10 +127,9 @@ def decomposer(prompt: str) -> dict:
     output = tool.decompose(prompt)
     return output
 
+
 if __name__ == "__main__":
     tool = Decomposer()
-    superprompt = (
-        "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
-    )
+    superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
     output = tool.decompose(superprompt)
     print(json.dumps(output, indent=2))
