@@ -17,15 +17,24 @@ def gemma3_4b():
     """Load and return the Ollama model."""
     return ChatOllama(model="gemma3:4b")
 
+
 def qwen3_8b(tools, base_prompt):
     """Load and return the Ollama model."""
     llm = ChatOllama(model="qwen3:8b", streaming=True)
     memory = InMemorySaver()
 
     agent = create_react_agent(
-        tools=tools,
-        model=llm,
-        prompt=base_prompt,
-        checkpointer=memory
+        tools=tools, model=llm, prompt=base_prompt, checkpointer=memory
+    )
+    return agent
+
+
+def initialize_agent(model, tools, base_prompt):
+    """Initialize the agent with the specified tools and prompt."""
+    llm = ChatOllama(model=model, streaming=True)
+    memory = InMemorySaver()
+
+    agent = create_react_agent(
+        tools=tools, model=llm, prompt=base_prompt, checkpointer=memory
     )
     return agent

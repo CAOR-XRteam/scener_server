@@ -9,8 +9,9 @@ Last Updated: 05-05-2025
 """
 
 from beartype import beartype
-from agent.llm import model
+from agent.llm.model import initialize_agent
 from agent.tools import *
+from lib import load_config
 
 
 @beartype
@@ -121,7 +122,8 @@ FAILURE MODES TO AVOID:
             image_analysis,  # OK
             # list_assets,
         ]
-        self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
+        model = load_config().get("model")
+        self.agent_executor = initialize_agent(model, self.tools, self.preprompt)
 
     def run(self):
         from agent.llm import chat
