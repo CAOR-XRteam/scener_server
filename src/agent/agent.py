@@ -8,13 +8,11 @@ Created: 05-05-2025
 Last Updated: 05-05-2025
 """
 
-from beartype import beartype
 from agent.llm.model import initialize_agent
 from agent.tools import *
 from lib import load_config
 
 
-@beartype
 class Agent:
     def __init__(self):
         # Define the template for the prompt
