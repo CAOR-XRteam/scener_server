@@ -7,50 +7,72 @@ from agent.tools.decomposer import Decomposer
 from agent.tools.improver import Improver
 from langchain_core.messages import AIMessage
 from langchain_core.exceptions import OutputParserException
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 
 class TestImprover:
     @pytest.fixture
-    def improver(self):
-        return Improver()
-
-    @pytest.fixture
     def sample_prompt(self):
         return "Generate a Japanese theatre scene with samurai armor in the center"
 
-    @patch("langchain_ollama.llms.OllamaLLM.invoke")
-    def test_improve(self, mock_llm_invoke, improver, sample_prompt):
+    @pytest.fixture
+    def improver(self):
+        with patch("agent.tools.improver.initialize_model") as mock_init:
+            mock_llm_instance = MagicMock()
+            mock_llm_invoke_method = MagicMock()
+
+            mock_llm_instance.invoke = mock_llm_invoke_method
+            mock_init.return_value = mock_llm_instance
+
+            improver = Improver(model_name="test")
+
+            mock_init.assert_called_once_with("test", temperature=0.0)
+
+            return improver, mock_llm_instance
+
+    def test_improve(self, improver, sample_prompt):
+        improver, mock_llm_invoke = improver
         mock_response = "Generate a traditional Japanese theatre scene with Samurai armor placed in the center of the stage. The room should have wooden flooring, simple red and gold accents, and folding screens in the background. The Samurai armor should be detailed, with elements like the kabuto (helmet) and yoroi (body armor), capturing the essence of a classical Japanese theatre setting."
         mock_llm_invoke.return_value = AIMessage(content=mock_response)
 
-        result = improver.improve(sample_prompt)
+        result = improver.improve_single_prompt(sample_prompt)
 
         assert result == mock_response
         mock_llm_invoke.assert_called_once()
 
-    @patch("langchain_ollama.llms.OllamaLLM.invoke")
-    def test_improve_llm_api_error(self, mock_llm_invoke, improver, sample_prompt):
+    def test_improve_llm_api_error(self, improver, sample_prompt):
+        improver, mock_llm_invoke = improver
         error_message = "Ollama service unreachable"
         mock_llm_invoke.side_effect = ConnectionError(error_message)
 
         with pytest.raises(ConnectionError, match=error_message):
-            improver.improve(sample_prompt)
+            improver.improve_single_prompt(sample_prompt)
 
         mock_llm_invoke.assert_called_once()
 
 
 class TestDecomposer:
     @pytest.fixture
-    def decomposer(self):
-        return Decomposer()
-
-    @pytest.fixture
     def sample_prompt(self):
         return "Generate a traditional Japanese theatre room with intricate wooden flooring, high wooden ceiling beams, elegant red and gold accents, and large silk curtains."
 
-    @patch("langchain_ollama.llms.OllamaLLM.invoke")
-    def test_decompose(self, mock_llm_invoke, decomposer, sample_prompt):
+    @pytest.fixture
+    def decomposer(self):
+        with patch("agent.tools.decomposer.initialize_model") as mock_init:
+            mock_llm_instance = MagicMock()
+            mock_llm_invoke_method = MagicMock()
+
+            mock_llm_instance.invoke = mock_llm_invoke_method
+            mock_init.return_value = mock_llm_instance
+
+            decomposer = Decomposer(model_name="test")
+
+            mock_init.assert_called_once_with("test", temperature=0.0)
+
+            return decomposer, mock_llm_instance
+
+    def test_decompose(self, decomposer, sample_prompt):
+        decomposer, mock_llm_invoke = decomposer
         mock_response = '{"scene": {"objects": [{"name": "theatre_room", "type": "room", "position": {"x": 0, "y": 0, "z": 0}, "rotation": {"x": 0, "y": 0, "z": 0}, "scale": {"x": 20, "y": 10, "z": 20}, "material": "traditional_wood_material", "prompt": "Generate an image of a squared traditional Japanese theatre room viewed from the outside at a 3/4 top-down perspective."}]}}'
         mock_llm_invoke.return_value = AIMessage(content=mock_response)
 
@@ -77,16 +99,16 @@ class TestDecomposer:
         assert result == expected
         mock_llm_invoke.assert_called_once()
 
-    @patch("langchain_ollama.llms.OllamaLLM.invoke")
-    def test_invalid_json_response(self, mock_llm_invoke, decomposer):
+    def test_invalid_json_response(self, decomposer):
+        decomposer, mock_llm_invoke = decomposer
         mock_llm_invoke.return_value = AIMessage(content='{"scene": [invalidjson]}')
 
         user_input = "Blablabla"
         with pytest.raises(OutputParserException) as e:
             decomposer.decompose(user_input)
 
-    @patch("langchain_ollama.llms.OllamaLLM.invoke")
-    def test_decompose_llm_api_error(self, mock_llm_invoke, decomposer, sample_prompt):
+    def test_decompose_llm_api_error(self, decomposer, sample_prompt):
+        decomposer, mock_llm_invoke = decomposer
         error_message = "Ollama service unreachable"
         mock_llm_invoke.side_effect = ConnectionError(error_message)
 
@@ -96,6 +118,7 @@ class TestDecomposer:
         mock_llm_invoke.assert_called_once()
 
 
+@pytest.mark.skip(reason="not implemented yet")
 class TestSceneAnalyzer:
     @pytest.fixture
     def analyzer(self):

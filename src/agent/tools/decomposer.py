@@ -17,7 +17,7 @@ class DecomposeToolInput(BaseModel):
 
 @beartype
 class Decomposer:
-    def __init__(self, model_name: str, temperature: float = 0.5):
+    def __init__(self, model_name: str, temperature: float = 0.0):
         self.system_prompt = """
 You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your sole task is to accurately convert a scene description string into structured JSON, adhering to strict rules. The output must always extract **verbatim zero-shot prompts** for each object in the scene, following the format provided below.
 
