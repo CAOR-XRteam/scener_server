@@ -10,9 +10,8 @@ Last Updated: 05-05-2025
 
 from agent.llm.model import initialize_agent
 from agent.tools import *
+from langchain_core.tools import Tool
 from lib import load_config
-from lib import logger
-from beartype import beartype
 
 
 class Agent:
@@ -42,7 +41,7 @@ You have access to the following tools. ONLY use them exactly as instructed in t
 - analyze: (For modifications - not yet implemented - ignore unless requested.)
 
 - generate_image: Trigger image generation from a scene JSON.
-    - Input: The JSON **exactly as returned by the `improve` tool** and confirmed by the user.
+    - Input: The JSON **exactly as returned by the `improve` tool**.
 
 WORKFLOW:
 ---------
@@ -85,17 +84,39 @@ FAILURE MODES TO AVOID:
 - Always proceed one step at a time. No skipping.
 - Always wait for tool outputs before proceeding.
         """
+        config = load_config()
+
+        decomposer_model_name = config.get("decomposer_model")
+        decomposer_instance = Decomposer(model_name=decomposer_model_name)
+        decomposer_tool = Tool.from_function(
+            func=decomposer_instance.decompose,
+            name="decomposer",
+            description="Decomposes a user's scene description prompt into manageable elements for 3D scene creation.",
+            args_schema=DecomposeToolInput,
+        )
+
+        improver_model_name = config.get("improver_model")
+        improver_instance = Improver(model_name=improver_model_name)
+        improver_tool = Tool.from_function(
+            func=improver_instance.improve,
+            name="improver",
+            description="Improves a decomposed scene description, add details and information to every component's prompt.",
+            args_schema=ImproveToolInput,
+        )
 
         self.tools = [
-            decomposer,  # OK
-            improver,  # OK
-            date,  # OK
+            decomposer_tool,  # OK
+            improver_tool,  # OK
+            # date,  # OK
             generate_image,  # OK
             image_analysis,  # OK
             # list_assets,
         ]
-        model = load_config().get("model")
-        self.agent_executor = initialize_agent(model, self.tools, self.preprompt)
+
+        agent_model_name = config.get("agent_model")
+        self.agent_executor = initialize_agent(
+            agent_model_name, self.tools, self.preprompt
+        )
 
     def run(self):
         from agent.llm import chat

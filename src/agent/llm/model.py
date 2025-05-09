@@ -15,20 +15,15 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
 
 
-def gemma3_4b():
-    """Load and return the Ollama model."""
-    return ChatOllama(model="gemma3:4b")
-
-
-def qwen3_8b():
-    """Load and return the Ollama model."""
-    return ChatOllama(model="qwen3:8b", streaming=True)
+def initialize_model(model_name: str, temperature: int = 0):
+    """Initialize the model from its name"""
+    return ChatOllama(model=model_name, temperature=temperature, streaming=True)
 
 
 @beartype
-def initialize_agent(model: str, tools: list[BaseTool], base_prompt: str):
+def initialize_agent(model_name: str, tools: list[BaseTool], base_prompt: str):
     """Initialize the agent with the specified tools and prompt."""
-    llm = ChatOllama(model=model, streaming=True)
+    llm = initialize_model(model_name)
     memory = InMemorySaver()
 
     agent = create_react_agent(

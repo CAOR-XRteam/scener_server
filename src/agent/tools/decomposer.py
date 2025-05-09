@@ -1,12 +1,12 @@
-from loguru import logger
-from colorama import Fore
-from pydantic import BaseModel, Field
+import json
+
+from agent.llm.model import initialize_model
 from beartype import beartype
+from colorama import Fore
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_ollama.llms import OllamaLLM
-from langchain_core.tools import tool
-import json
+from loguru import logger
+from pydantic import BaseModel, Field
 
 
 class DecomposeToolInput(BaseModel):
@@ -17,7 +17,7 @@ class DecomposeToolInput(BaseModel):
 
 @beartype
 class Decomposer:
-    def __init__(self, temperature: float = 0.5):
+    def __init__(self, model_name: str, temperature: float = 0.5):
         self.system_prompt = """
 You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your sole task is to accurately convert a scene description string into structured JSON, adhering to strict rules. The output must always extract **verbatim zero-shot prompts** for each object in the scene, following the format provided below.
 
@@ -92,7 +92,7 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
 
 STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL RENDERING. Ensure all main physical objects described and the required room object are included. The 'prompt' field must be the exact, verbatim text from the input that *identifies or describes* that specific object, not its relationship to others.
 """
-        self.user_prompt = "User: {improved_user_input}"
+        self.user_prompt = "User: {user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", self.system_prompt),
@@ -100,16 +100,16 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
             ]
         )
 
-        self.model = OllamaLLM(model="gemma3:4b", temperature=temperature)
+        self.model = initialize_model(model_name, temperature=temperature)
+        # TODO: define pydantic model for the json output of the decomposer?
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, improved_user_input: str) -> dict:
+    def decompose(self, user_input: str) -> dict:
+        logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
         try:
-            logger.info(f"Decomposing input: {improved_user_input}")
-            result: dict = self.chain.invoke(
-                {"improved_user_input": improved_user_input}
-            )
+            logger.info(f"Decomposing input: {user_input}")
+            result: dict = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
             return result
         except Exception as e:
@@ -117,17 +117,8 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
             raise
 
 
-@tool(args_schema=DecomposeToolInput)
-def decomposer(prompt: str) -> dict:
-    """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
-    logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
-    tool = Decomposer()
-    output = tool.decompose(prompt)
-    return output
-
-
 if __name__ == "__main__":
-    tool = Decomposer()
+    decomposer = Decomposer()
     superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
-    output = tool.decompose(superprompt)
+    output = decomposer.decompose(superprompt)
     print(json.dumps(output, indent=2))

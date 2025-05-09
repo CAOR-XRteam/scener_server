@@ -9,7 +9,7 @@ import os
 
 class GenerateImageToolInput(BaseModel):
     improved_decomposed_input: dict = Field(
-        description="The JSON representing the decomposed scene, confirmed by the user."
+        description="The JSON representing the decomposed scene."
     )
 
 

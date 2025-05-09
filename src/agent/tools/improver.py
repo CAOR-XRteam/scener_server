@@ -1,20 +1,13 @@
 from loguru import logger
 from colorama import Fore
-from pydantic import BaseModel, Field
+from agent.llm.model import initialize_model
 from beartype import beartype
+from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_ollama.llms import OllamaLLM
-from langchain_core.tools import tool
 
 
 class ImproveToolInput(BaseModel):
-    prompt: str = Field(
-        description="A text prompt to be improved for clarity and detail."
-    )
-
-
-class ImproveToolInput1(BaseModel):
     decomposed_input: dict = Field(
         description="A decomposed scene description ready to be improved for clarity and detail."
     )
@@ -22,7 +15,7 @@ class ImproveToolInput1(BaseModel):
 
 @beartype
 class Improver:
-    def __init__(self, temperature: float = 0.0):
+    def __init__(self, model_name: str, temperature: float = 0.0):
         self.system_prompt = """
             You are a specialized Prompt Engineer for 3D object generation.
 
@@ -64,67 +57,56 @@ class Improver:
             ]
         )
 
-        self.model = OllamaLLM(model="llama3.1", temperature=temperature)
+        self.model = initialize_model(model_name, temperature=temperature)
         self.parser = StrOutputParser()
         self.chain = self.prompt | self.model | self.parser
 
-    def improve(self, user_input: str) -> str:
+    def improve_single_prompt(self, prompt: str) -> str:
         try:
-            logger.info(f"Improving user's input: {user_input}")
-            result: str = self.chain.invoke({"user_input": user_input})
+            logger.info(f"Improving user's input: {prompt}")
+            result: str = self.chain.invoke({"user_input": prompt})
             logger.info(f"Improved result: {result}")
             return result
         except Exception as e:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
+    def improve(self, decomposed_input: dict) -> dict:
+        """Improve a decomposed scene description, add details and information to every component's prompt"""
+        logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
+        logger.info(f"Improving decomposed scene: {decomposed_input}")
 
-# @tool(args_schema=ImproveToolInput)
-# def improver_bis(prompt: str) -> str:
-#     """Improve an input prompt, add details and information"""
-#     logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
-#     tool = Improver()
-#     output = tool.improve(prompt)
-#     return output
+        try:
+            objects_to_improve = decomposed_input.get("scene", {}).get("objects", [])
+            logger.info(f"Agent: Decomposed objects to improve: {objects_to_improve}")
+        except Exception as e:
+            logger.error(f"Failed to extract objects from JSON: {e}")
+            return f"[Error during image generation: {e}]"
 
-
-@tool(args_schema=ImproveToolInput1)
-def improver(decomposed_input: dict) -> dict:
-    """Improve a decomposed scene description, add details and information to every component's prompt"""
-    logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
-    logger.info(f"Improving decomposed scene: {decomposed_input}")
-    tool = Improver()
-
-    try:
-        objects_to_improve = decomposed_input.get("scene", {}).get("objects", [])
-        logger.info(f"Agent: Decomposed objects to improve: {objects_to_improve}")
-    except Exception as e:
-        logger.error(f"Failed to extract objects from JSON: {e}")
-        return f"[Error during image generation: {e}]"
-
-    if not objects_to_improve:
-        logger.info(
-            "Agent: The decomposition resulted in no specific objects to improve."
-        )
-        return "[No objects to improve.]"
-
-    for i, obj in enumerate(objects_to_improve):
-        if isinstance(obj, dict) and obj.get("prompt"):
+        if not objects_to_improve:
             logger.info(
-                f"Agent: Improving the prompt for the object {i+1}: {obj['prompt']}"
+                "Agent: The decomposition resulted in no specific objects to improve."
             )
-            output = tool.improve(obj["prompt"])
-            obj["prompt"] = output
-        else:
-            logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
-            logger.info(f"\n[Skipping object {i+1} - missing prompt]")
+            return "[No objects to improve.]"
 
-    logger.info(f"Decomposed scene with enhanced prompts: {decomposed_input}")
+        for i, obj in enumerate(objects_to_improve):
+            if isinstance(obj, dict) and obj.get("prompt"):
+                logger.info(
+                    f"Agent: Improving the prompt for the object {i+1}: {obj['prompt']}"
+                )
+                output = self.improve_single_prompt(obj["prompt"])
+                obj["prompt"] = output
+            else:
+                logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
+                logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-    return decomposed_input
+        logger.info(f"Decomposed scene with enhanced prompts: {decomposed_input}")
+
+        return decomposed_input
 
 
 if __name__ == "__main__":
     user_input = "a cat on a couch in a living room"
-    superprompt = improver(user_input)
+    improver = Improver(model_name="llama3.1")
+    superprompt = improver.improve_single_prompt(user_input)
     print(superprompt)
