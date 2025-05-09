@@ -5,7 +5,7 @@ from beartype import beartype
 from colorama import Fore
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from loguru import logger
+from lib import logger
 from pydantic import BaseModel, Field
 
 

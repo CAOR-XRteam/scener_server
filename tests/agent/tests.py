@@ -1,11 +1,11 @@
 import pytest
 
+from agent.tools.scene import SceneAnalyzer
+from agent.tools.decomposer import Decomposer
+from agent.tools.improver import Improver
 from langchain_core.messages import AIMessage
 from langchain_core.exceptions import OutputParserException
 from unittest.mock import patch
-from .scene import SceneAnalyzer
-from .decomposer import Decomposer
-from .improver import Improver
 
 
 class TestImprover:

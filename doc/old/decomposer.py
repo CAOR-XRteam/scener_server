@@ -14,6 +14,7 @@ class DecomposeToolInput(BaseModel):
         description="The improved user's scene description prompt to be decomposed."
     )
 
+
 @beartype
 class Decomposer:
     def __init__(self, temperature: float = 0.0):
@@ -85,7 +86,7 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
         self.parser = JsonOutputParser(pydantic_object=None)
         self.chain = self.prompt | self.model | self.parser
 
-        #logger.info(f"Initialized with model: {model_name}")
+        # logger.info(f"Initialized with model: {model_name}")
 
     def decompose(self, improved_user_input: str) -> dict:
         try:
@@ -108,10 +109,9 @@ def decomposer(prompt: str) -> dict:
     output = tool.decompose(prompt)
     return output
 
+
 if __name__ == "__main__":
     tool = Decomposer()
-    superprompt = (
-        "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
-    )
+    superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
     output = tool.decompose(superprompt)
     print(json.dumps(output, indent=2))
