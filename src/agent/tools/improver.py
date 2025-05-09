@@ -16,6 +16,7 @@ class ImproveToolInput(BaseModel):
 @beartype
 class Improver:
     def __init__(self, model_name: str, temperature: float = 0.0):
+        # TODO: mandatory room? if other type of background?
         self.system_prompt = """
             You are a specialized Prompt Engineer for 3D object generation.
 

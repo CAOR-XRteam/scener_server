@@ -43,7 +43,7 @@ class Server:
 
     async def run(self):
         """Run the WebSocket server."""
-        self.server = await websockets.serve(self.handler_client, self.host, self.port)
+        self.server = await websockets.serve(self.handler_client, "0.0.0.0", self.port)
         logger.info(
             f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
         )

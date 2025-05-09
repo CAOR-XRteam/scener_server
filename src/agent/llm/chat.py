@@ -42,6 +42,41 @@ def chat(agent: Agent, user_input: str, thread_id: str = 0):
 
 
 @beartype
+async def achat(agent: Agent, user_input: str, thread_id: str = 0):
+    """Send a prompt to the LLM and receive a structured response."""
+
+    agent_input = {"messages": [HumanMessage(content=user_input)]}
+
+    config = {"configurable": {"thread_id": thread_id}}
+
+    final_response_content = ""
+
+    try:
+
+        async for token in agent.agent_executor.astream(
+            agent_input, config=config, stream_mode="values"
+        ):
+
+            last_message = token["messages"][-1]
+
+            if isinstance(last_message, AIMessage) and not last_message.tool_calls:
+
+                new_content = last_message.content[len(final_response_content) :]
+
+                if new_content:
+
+                    yield new_content
+
+                    final_response_content += new_content
+
+    except Exception as e:
+
+        logger.info(f"\nAgent error occurred: {e}")
+
+        raise
+
+
+@beartype
 def run(agent: Agent):
     print("-------------------------")
     print(f"Type {Fore.RED}exit{Fore.RESET} to quit")
