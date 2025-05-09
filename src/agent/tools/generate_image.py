@@ -8,21 +8,25 @@ import os
 
 
 class GenerateImageToolInput(BaseModel):
-    scene_json: dict = Field(
+    improved_decomposed_input: dict = Field(
         description="The JSON representing the decomposed scene, confirmed by the user."
     )
 
 
 @tool(args_schema=GenerateImageToolInput)
-def generate_image(scene_json: dict):
+def generate_image(improved_decomposed_input: dict):
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
 
     logger.info(f"Using tool {Fore.GREEN}{'image_generation'}{Fore.RESET}")
-    logger.info(f"\nAgent: Decomposed JSON received: {scene_json}. Generating image...")
+    logger.info(
+        f"\nAgent: Decomposed JSON received: {improved_decomposed_input}. Generating image..."
+    )
 
     # Retrieve list of to-generated objects
     try:
-        objects_to_generate = scene_json.get("scene", {}).get("objects", [])
+        objects_to_generate = improved_decomposed_input.get("scene", {}).get(
+            "objects", []
+        )
         logger.info(f"Agent: Decomposed objects to generate: {objects_to_generate}")
     except Exception as e:
         logger.error(f"Failed to extract objects from JSON: {e}")
@@ -42,7 +46,11 @@ def generate_image(scene_json: dict):
             dir_path = str(Path(__file__).resolve().parents[3] / "media" / "temp")
             os.makedirs(dir_path, exist_ok=True)
             filename = dir_path + "/" + obj_name + ".png"
-            black_forest.generate(obj["prompt"], filename)
+            try:
+                black_forest.generate(obj["prompt"], filename)
+            except Exception as e:
+                logger.error(f"Failed to generate image:{e}")
+                pass
         else:
             logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
             logger.info(f"\n[Skipping object {i+1} - missing prompt]")
@@ -77,5 +85,7 @@ if __name__ == "__main__":
         }
     }
 
-    res = generate_image.invoke({"scene_json": scene_dict})  # ✅ Pass a dict
+    res = generate_image.invoke(
+        {"improved_decomposed_input": scene_dict}
+    )  # ✅ Pass a dict
     print(res)

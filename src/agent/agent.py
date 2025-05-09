@@ -11,6 +11,8 @@ Last Updated: 05-05-2025
 from agent.llm.model import initialize_agent
 from agent.tools import *
 from lib import load_config
+from lib import logger
+from beartype import beartype
 
 
 class Agent:
@@ -49,7 +51,6 @@ WORKFLOW:
 2. **Assess Intent:**
     - If a NEW SCENE DESCRIPTION → Step 3.
     - If a MODIFICATION REQUEST → Use the `analyze` tool. (Details TBD.)
-    - If a CONFIRMATION to generate ("yes", "proceed", etc.) → Step 5.
     - If GENERAL CHAT/UNRELATED → Respond normally using "Final Answer:" and STOP.
 
 3. **Decompose Stage:**
@@ -59,11 +60,9 @@ WORKFLOW:
 4. **Improve Stage:**
     - **Thought:** "I have received the scene decomposition from the 'decompose' tool. I must call `improve` tool with the FULL scene decomposition recieved from 'decompose' tool."
     - WAIT for tool output (expect a valid JSON).
-    - **Thought:** "I have received the 'improver' tool output. I must present the enhanced prompts to the user and ask its confirmation before moving to the next step."
    
 5. **Generate Image Stage:**
-    - If the user confirms ("yes", "proceed"):
-    - **Thought:** "User confirmed. I MUST retrieve the exact JSON that was the output of the `improve` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'decomposed_input', and its value MUST be the retrieved JSON."
+    - **Thought:** "I have received the improved scene decomposition from the 'improve' tool. I MUST retrieve the exact JSON that was the output of the `improve` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'improved_decomposed_input', and its value MUST be the retrieved JSON."
     - WAIT for the tool to finish.
 
 6. **Report Generation Status:**
@@ -74,8 +73,6 @@ IMPORTANT RULES:
 ----------------
 - NEVER DECOMPOSE, PARSE, MODIFY, or REFORMAT DATA YOURSELF. ONLY USE TOOLS.
 - NEVER CALL `improve` MORE THAN ONCE PER DESCRIPTION.
-- YOU MUST PRESENT THE RESULTING ENHANCED PROMPTS OBTAINED WITH 'IMPROVER' TOOL TO THE USER AND ASK ITS CONFIRMATION BEFORE USING 'GENERATE_IMAGE' TOOL.
-- IMPERATIVELY USE THE 'GENERATE_IMAGE' TOOL WHEN THE USER CONFIRMS IMAGE GENERATION.
 - ALWAYS PASS TOOL OUTPUTS EXACTLY AS RECEIVED TO THE NEXT TOOL.
 - ONLY RESPOND USING "Final Answer:" when not calling a tool at this step.
 - IF IN DOUBT about user intent → ask clarifying questions.
@@ -87,7 +84,6 @@ FAILURE MODES TO AVOID:
 - Do not call `improve` repeatedly unless the user provides a new, different description.
 - Always proceed one step at a time. No skipping.
 - Always wait for tool outputs before proceeding.
-
         """
 
         self.tools = [

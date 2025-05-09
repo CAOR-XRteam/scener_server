@@ -24,34 +24,38 @@ class ImproveToolInput1(BaseModel):
 class Improver:
     def __init__(self, temperature: float = 0.0):
         self.system_prompt = """
-            You are a specialized Prompt Engineer for 3D scene generation.
+            You are a specialized Prompt Engineer for 3D object generation.
 
             YOUR TASK:
-            - Given a user's prompt, produce a *single* improved, detailed, and clarified version of the description based uniquely on the elements of the input.
+            - Given a user's prompt for a single object, produce an improved, detailed, and clarified version of its description.
+            - Focus *exclusively* on the physical aspects of the object itself.
 
             OUTPUT FORMAT:
-            - Return ONLY a single improved text string.
+            - Return ONLY the improved text string for the object.
             - NO explanations, NO preambles, NO markdown, NO extra text.
 
             GUIDELINES:
-            - Enhance clarity, specificity, and actionable detail (objects, material), but all details should refer to the physical aspects of element, no lighting, no weather effect.
-            - You may infer reasonable details from the context if missing (e.g., typical materials).
-            - NEVER invent unrelated storylines, characters, or scenes not implied by the original.
+            - Enhance clarity, specificity, and actionable detail regarding the object's design, material, texture, color, and key visible features.
+            - All details MUST refer to the physical aspects of the object. DO NOT include lighting, weather effects, or its relationship to other objects or placement in a larger scene (beyond the required background/camera statements).
+            - You may infer reasonable details from the context if missing (e.g., typical materials for the object type).
+            - NEVER invent unrelated storylines, characters, or scenes not implied by the original object prompt.
             - NEVER output anything other than the improved description string itself.
-            - Provide enough details to describe a complete small scene only based on elements of the input.
             - The prompt must provide a **rich, detailed description** of the object’s physical features.
-            - Focus on the object’s **key design, material, and visible features**. Avoid mentioning relationships to other objects or placement in the scene.
-            - The description should be **concise but full of visual details**, ensuring that the object is clearly distinguishable and detailed for rendering.
             - The prompt must include:
-            - "Placed on a white and empty background."
-            - "Completely detached from surroundings."
+                - "Placed on a white and empty background."
+                - "Completely detached from surroundings."
             - **Camera view** based on object type:
-            - Use "front camera view" for non-room objects.
-            - Use "squared room view from the outside with a distant 3/4 top-down perspective" for room objects.
-            - Example prompt:
-            "A traditional Japanese theater room with detailed wooden architecture, elevated tatami stage, red silk cushions, sliding shoji panels, and ornate golden carvings on the upper walls. The room is viewed from an isometric 3/4 top-down perspective, with an open cutaway style revealing the interior. The scene is well-lit with soft, global illumination. No people, no objects outside the room, placed on a white and empty background, completely detached from surroundings."
-            """
+                - For non-room objects (e.g., 'prop', 'furniture', 'character'): Use "front camera view".
+                - For room objects (e.g., 'room', 'environment'): Use "squared room view from the outside with a distant 3/4 top-down perspective".
+            
+            EXAMPLE OF AN IMPROVED *OBJECT* PROMPT (for a non-room object):
+            Original: "a red chair"
+            Improved: "A vibrant red armchair, crafted from polished mahogany wood, featuring a high back with button-tufted detailing, plush velvet cushioning on the seat and backrest, and elegantly curved cabriole legs. Front camera view. Placed on a white and empty background. Completely detached from surroundings."
 
+            EXAMPLE OF AN IMPROVED *ROOM* PROMPT:
+            Original: "a kitchen"
+            Improved: "A modern, minimalist kitchen with sleek white cabinetry, stainless steel appliances including a double-door refrigerator and a built-in oven, a central island with a quartz countertop and induction cooktop, and light gray porcelain tile flooring. Squared room view from the outside with a distant 3/4 top-down perspective. Placed on a white and empty background. Completely detached from surroundings."
+            """
         self.user_prompt = "User: {user_input}"
         self.prompt = ChatPromptTemplate.from_messages(
             [
@@ -75,13 +79,13 @@ class Improver:
             raise
 
 
-@tool(args_schema=ImproveToolInput)
-def improver_bis(prompt: str) -> str:
-    """Improve an input prompt, add details and information"""
-    logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
-    tool = Improver()
-    output = tool.improve(prompt)
-    return output
+# @tool(args_schema=ImproveToolInput)
+# def improver_bis(prompt: str) -> str:
+#     """Improve an input prompt, add details and information"""
+#     logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
+#     tool = Improver()
+#     output = tool.improve(prompt)
+#     return output
 
 
 @tool(args_schema=ImproveToolInput1)
