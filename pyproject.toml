@@ -21,6 +21,9 @@ dependencies = [
     "python-dotenv>=1.1.0",
     "torch>=2.6.0",
     "websockets>=15.0.1",
+    "diffusers>=0.17.0",
+    "transformers>=4.30.0",
+    "accelerate-1.6.0",
 ]
 
 [build-system]
