@@ -47,25 +47,27 @@ class Session:
                 break
 
     async def handle_message(self, input_message: InputMessage):
-        if input_message.command != "chat":
-            await self.client.send_message(
-                OutputMessage(
-                    status="error",
-                    code=400,
-                    message=f"Invalid command in thread {self.thread_id}",
-                )
-            )
-            return
+        # TODO: these two cases are handled by pydantic type, but need to be handled before constructing 'InputMessage'
+
+        # if input_message.command != "chat":
+        #     await self.client.send_message(
+        #         OutputMessage(
+        #             status="error",
+        #             code=400,
+        #             message=f"Invalid command in thread {self.thread_id}",
+        #         )
+        #     )
+        #     return
         message = input_message.message
-        if not message or message.isspace():
-            await self.client.send_message(
-                OutputMessage(
-                    status="error",
-                    code=400,
-                    message=f"Empty message received in thread {self.thread_id}",
-                )
-            )
-            return
+        # if not message or message.isspace():
+        #     await self.client.send_message(
+        #         OutputMessage(
+        #             status="error",
+        #             code=400,
+        #             message=f"Empty message received in thread {self.thread_id}",
+        #         )
+        #     )
+        #     return
 
         logger.info(f"Received message in thread {self.thread_id}: {message}")
 
