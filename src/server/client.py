@@ -54,11 +54,12 @@ class Client:
             await self.queue_output.put(output_message)
         except asyncio.CancelledError:
             logger.error(
-                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {message}"
+                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}"
             )
+            raise
         except Exception as e:
             logger.error(
-                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {message}"
+                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
             )
 
     # Subfunction
@@ -70,14 +71,21 @@ class Client:
                     await self.queue_input.put(
                         InputMessage(command="chat", message=message)
                     )
+            except asyncio.CancelledError:
+                logger.error(
+                    f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
+                )
+                break
             except websockets.exceptions.ConnectionClosed as e:
                 logger.error(
                     f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"
                 )
+                break
             except Exception as e:
                 logger.error(
                     f"Error with client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                 )
+                break
             finally:
                 self.is_active = False  # Mark the client as inactive when disconnected
                 await self.close()
@@ -94,6 +102,9 @@ class Client:
                     f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {message}"
                 )
             except asyncio.CancelledError:
+                logger.error(
+                    f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
+                )
                 break  # Break out of the loop if the task is canceled
             except Exception as e:
                 logger.error(
@@ -122,7 +133,7 @@ class Client:
         for task in active_tasks:
             task.cancel()  # Cancel the task
 
-        await asyncio.gather(active_tasks, return_exceptions=True)
+        await asyncio.gather(*active_tasks, return_exceptions=True)
 
         # Close the WebSocket connection
         try:
