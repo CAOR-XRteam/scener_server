@@ -36,7 +36,3 @@ class LibraryAPI:
     def delete_asset(self, name):
         """Delete an asset by its name."""
         self.asset.delete(self, name)
-
-    def list_asset():
-        """Return a list of all assets as dictionaries."""
-        return library.get_list()

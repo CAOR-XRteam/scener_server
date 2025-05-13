@@ -1,11 +1,10 @@
-import logging
 import sys
 import os
 import json
 
 from loguru import logger
 
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.json")
 
 
@@ -16,15 +15,6 @@ def load_config():
 
     with open(CONFIG_PATH, "r") as f:
         return json.load(f)
-
-
-def setup_logging():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-    logging.getLogger("langgraph").setLevel(logging.DEBUG)
-    logging.getLogger("langchain_core").setLevel(logging.DEBUG)
 
 
 logger.remove()
