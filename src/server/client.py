@@ -16,6 +16,7 @@ from beartype import beartype
 from colorama import Fore
 from lib import logger
 from server.valider import InputMessage, OutputMessage
+from pydantic import ValidationError
 
 
 # Le client manage les output et la session managera les input
@@ -68,9 +69,19 @@ class Client:
         while self.is_active:
             try:
                 async for message in self.websocket:
-                    await self.queue_input.put(
-                        InputMessage(command="chat", message=message)
+                    message = InputMessage(command="chat", message=message)
+                    await self.queue_input.put(message)
+            except ValidationError as e:
+                logger.error(
+                    f"Validation error for client {self.websocket.remote_address}: {e}"
+                )
+                await self.send_message(
+                    OutputMessage(
+                        status="error",
+                        code=400,
+                        message=f"Invalid input: {e}",
                     )
+                )
             except asyncio.CancelledError:
                 logger.error(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
