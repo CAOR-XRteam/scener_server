@@ -13,7 +13,7 @@ import signal
 import websockets
 
 from beartype import beartype
-from colorama import Fore
+from colorama import Fore, Style
 from lib import logger
 from server.client import Client
 
@@ -28,7 +28,6 @@ class Server:
         self.host = host
         self.port = port
         self.list_client: list[Client] = []
-        self.queue = asyncio.Queue()
         self.shutdown_event = asyncio.Event()
         self.server = None
 
@@ -37,10 +36,6 @@ class Server:
         loop.add_signal_handler(signal.SIGINT, self.handler_shutdown)
         try:
             loop.run_until_complete(self.run())
-        except KeyboardInterrupt:
-            logger.info("KeyboardInterrupt caught in start(). Initiating shutdown.")
-            if not self.shutdown_event.is_set():
-                loop.run_until_complete(self.handler_shutdown(signal.SIGINT))
         except Exception as e:
             logger.error(f"Error in server's main execution: {e}")
         finally:
@@ -77,7 +72,6 @@ class Server:
         import server.client
 
         """Handle an incoming WebSocket client connection."""
-        # Add client
         try:
             try:
                 client = server.client.Client(websocket)
@@ -85,30 +79,30 @@ class Server:
                 logger.error(
                     f"Failed to instantiate client for {websocket.remote_address}: {e}"
                 )
-                if websocket.open:
+                try:
                     await websocket.close()
+                except Exception as e:
+                    logger.info(
+                        f"Failed to close websocket connection for {websocket.remote_address}: {e}"
+                    )
                 return
+
             try:
                 client.start()
             except Exception as e:
                 logger.error(
                     f"Error starting client for {websocket.remote_address}: {e}"
                 )
+
                 if client in self.list_client:
                     self.list_client.remove(client)
-                try:
-                    await client.close()
-                except Exception as exc:
-                    logger.error(
-                        f"Error closing client {websocket.remote_address} after start failure: {exc}",
-                    )
-                if websocket.open:
-                    await websocket.close()
+
+                await self._close_client(client)
                 return
+
             self.list_client.append(client)
             logger.info(f"New client connected:: {websocket.remote_address}")
 
-            # Wait for the client to disconnect by awaiting the event
             try:
                 await client.disconnection.wait()
             except asyncio.CancelledError:
@@ -116,24 +110,37 @@ class Server:
                     f"Task cancelled for client {websocket.remote_address} disconnection event."
                 )
                 if client.is_active:
-                    asyncio.create_task(client.close())
+                    await self._close_client(client)
+            except Exception as e:
+                logger.error(
+                    f"Internal error for client {websocket.remote_address} disconnection event."
+                )
+                if client.is_active:
+                    await self._close_client(client)
         finally:
-            # Perform necessary cleanup after client is disconnected
-            logger.info(f"Client disconnected:: {websocket.remote_address}")
-            self.list_client.remove(client)
+            if client:
+                if client in self.list_client:
+                    self.list_client.remove(client)
+                    logger.info(
+                        f"Removed client {websocket.remote_address} from list. (Remaining: {len(self.list_client)})"
+                    )
 
-    async def _close_client(self, client):
-        try:
-            await client.close()
-        except Exception as e:
-            logger.error(
-                f"Error closing client {client.websocket.remote_address}: {e}",
-            )
-            client.is_active = False
-            client.disconnection.set()
-        finally:
-            if client in self.list_client:
-                self.list_client.remove(client)
+                if client.is_active:
+                    logger.warning(
+                        f"Client {websocket.remote_address} still marked active in finally. Forcing close."
+                    )
+
+                    try:
+                        await client.close()
+                    except Exception as e:
+                        logger.error(
+                            f"Error during final client closing for {websocket.remote_address}: {e}"
+                        )
+                        client.is_active = False
+                        if not client.disconnection.is_set():
+                            client.disconnection.set()
+
+            logger.info(f"Finished closing the client {websocket.remote_address}.")
 
     async def shutdown(self):
         """Gracefully shut down the server."""
@@ -148,14 +155,31 @@ class Server:
             except Exception as e:
                 logger.error(f"Error during server shutdown: {e}")
 
-        # Filter out inactive clients and then close them
         for client in list(self.list_client):
             if client.is_active:
-                # await client.close()
-                self._close_client(client)
+                await self._close_client(client)
 
         self.list_client.clear()
 
         logger.info("All client connections processed for shutdown.")
         print("---------------------------------------------")
         logger.success(f"Server shutdown sequence completed.{Style.RESET_ALL}")
+
+    async def _close_client(self, client):
+        try:
+            await client.close()
+        except Exception as e:
+            logger.error(
+                f"Error closing client {client.websocket.remote_address}: {e}",
+            )
+            try:
+                await client.websocket.close()
+            except Exception as e:
+                logger.info(
+                    f"Failed to close websocket connection for {client.websocket.remote_address}: {e}"
+                )
+            client.is_active = False
+            client.disconnection.set()
+        finally:
+            if client in self.list_client:
+                self.list_client.remove(client)

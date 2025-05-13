@@ -32,13 +32,13 @@ def load_config():
 if __name__ == "__main__":
     config = load_config()
     try:
-        host, port, model_name = (
+        host, port, agent_model_name = (
             config.get("host"),
             config.get("localhost"),
-            config.get("model_name"),
+            config.get("agent_model_name"),
         )
     except KeyError:
         host = "localhost"
         port = 8000
     # library.init()
-    server.start(host, port, model_name)
+    server.start(host, port, agent_model_name)

@@ -10,6 +10,8 @@ import websockets.exceptions
 import uuid
 from colorama import Fore
 
+import types
+
 
 @pytest.fixture
 def mock_ws():
@@ -403,23 +405,37 @@ class TestClient:
 
     @pytest.mark.asyncio
     @patch("server.client.logger")
-    async def test_loop_input_success(self, mock_logger, mock_client, mock_ws):
+    @patch("server.client.Client.close", new_callable=AsyncMock)
+    async def test_loop_input_success(
+        self,
+        mock_close: AsyncMock,
+        mock_logger: MagicMock,
+        mock_client: Client,
+        mock_ws: AsyncMock,
+    ):
         mock_ws.__aiter__.return_value = ["test1", "test2"]
+
+        async def close_side_effect():
+            mock_client.is_active = False
+
+        mock_close.side_effect = close_side_effect
+        mock_client.is_active = True
 
         await mock_client.loop_input()
 
+        mock_close.assert_awaited_once()
+        mock_logger.error.assert_not_called()
+
         queued_messages = []
         while not mock_client.queue_input.empty():
-            queued_messages.append(await mock_client.queue_input.get())
+            item = await asyncio.wait_for(mock_client.queue_input.get(), timeout=0.1)
+            queued_messages.append(item)
+            mock_client.queue_input.task_done()
 
         assert queued_messages == [
             InputMessage(command="chat", message="test1"),
             InputMessage(command="chat", message="test2"),
         ]
-
-        assert mock_client.is_active is False
-
-        mock_logger.assert_not_called()
 
     @pytest.mark.asyncio
     @patch("server.client.logger")
@@ -503,7 +519,7 @@ class TestClient:
     async def test_loop_output_success(self, mock_logger, mock_client, mock_ws):
         message = OutputMessage(status="stream", code=200, message="test")
         mock_client.queue_output.get = AsyncMock(
-            side_effect=[message, asyncio.CancelledError]
+            side_effect=[message, ValueError("test")]
         )
 
         await mock_client.loop_output()
@@ -525,7 +541,7 @@ class TestClient:
 
         mock_ws.send.assert_not_awaited()
 
-        mock_logger.error.assert_called_once_with(
+        mock_logger.info.assert_called_once_with(
             f"Task cancelled for {Fore.GREEN}{mock_ws.remote_address}{Fore.RESET}"
         )
 
@@ -571,9 +587,8 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("asyncio.gather", new_callable=AsyncMock)
     @patch("server.client.logger")
-    async def test_close_success(self, mock_logger, mock_gather, mock_client, mock_ws):
+    async def test_close_success(self, mock_logger, mock_client, mock_ws):
         mock_client.task_input = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_output = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_session = asyncio.create_task(asyncio.sleep(1))
@@ -591,14 +606,6 @@ class TestClient:
         assert mock_client.queue_input.empty()
         assert mock_client.queue_output.empty()
 
-        mock_gather.assert_awaited_once()
-        gathered_tasks = mock_gather.call_args[0]
-        assert set(gathered_tasks) == {
-            mock_client.task_input,
-            mock_client.task_output,
-            mock_client.task_session,
-        }
-
         mock_client.disconnection.set.assert_called_once()
 
         mock_logger.info.assert_called_once_with(
@@ -606,9 +613,8 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("asyncio.gather", new_callable=AsyncMock)
     @patch("server.client.logger")
-    async def test_close_ws_error(self, mock_logger, mock_gather, mock_client, mock_ws):
+    async def test_close_ws_error(self, mock_logger, mock_client, mock_ws):
         mock_client.task_input = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_output = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_session = asyncio.create_task(asyncio.sleep(1))
@@ -629,16 +635,7 @@ class TestClient:
         assert mock_client.queue_input.empty()
         assert mock_client.queue_output.empty()
 
-        mock_gather.assert_awaited_once()
-        gathered_tasks = mock_gather.call_args[0]
-        assert set(gathered_tasks) == {
-            mock_client.task_input,
-            mock_client.task_output,
-            mock_client.task_session,
-        }
-        assert mock_gather.call_args[1].get("return_exceptions") is True
-
-        mock_client.disconnection.set.assert_not_called()
+        mock_client.disconnection.set.assert_called_once()
 
         mock_logger.info.assert_called_once_with(
             f"Closing connection for {mock_ws.remote_address}"

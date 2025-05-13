@@ -1,10 +1,9 @@
 {
     "host": "localhost",
     "port": 8765,
-    "model_name": "qwen3:8b",
     "ping_interval": 30,
     "log_level": "info",
-    "agent_model": "qwen3:14b",
+    "agent_model": "qwen3:8b",
     "decomposer_model": "llama3.1",
     "improver_model": "llama3.1"
 }
