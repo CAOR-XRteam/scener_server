@@ -1,8 +1,6 @@
-from loguru import logger
-from colorama import Fore
 from beartype import beartype
-from huggingface_hub import InferenceClient, login
-from diffusers import FluxPipeline, StableDiffusionPipeline
+from huggingface_hub import login
+from diffusers import StableDiffusionPipeline
 from dotenv import load_dotenv
 import os
 import torch
@@ -10,8 +8,9 @@ import torch
 
 load_dotenv()
 
+
 @beartype
-def generate(prompt: str, filename):
+def generate(prompt: str, filename: str):
     torch.cuda.empty_cache()
     torch.cuda.ipc_collect()
 
@@ -37,4 +36,4 @@ def generate(prompt: str, filename):
 
 if __name__ == "__main__":
     prompt = "A majestic steampunk boat with intricate brass and copper details sails across the open sea, its smokestacks releasing gentle plumes of steam. In the distance, the colossal figure of Cthulhu emerges ominously from the horizon, its tentacles writhing beneath a stormy, otherworldly sky. The atmosphere is eerie yet awe-inspiring, with a blend of fantasy and Lovecraftian horror."
-    generate_image(prompt, "steampunk_boat.png")
+    generate(prompt, "steampunk_boat.png")

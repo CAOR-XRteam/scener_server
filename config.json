@@ -1,0 +1,3 @@
+{"agent_model": "qwen3:14b",
+"decomposer_model": "llama3.1",
+"improver_model": "llama3.1"}
