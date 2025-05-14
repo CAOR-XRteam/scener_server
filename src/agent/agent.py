@@ -8,11 +8,10 @@ Created: 05-05-2025
 Last Updated: 05-05-2025
 """
 
-from beartype import beartype
-from agent.llm import model
-from llm import chat
-from tools import *
-from loguru import logger
+from agent.llm.model import initialize_agent
+from agent.tools import *
+from langchain_core.tools import Tool
+from lib import load_config
 
 
 class Agent:
@@ -111,6 +110,7 @@ FAILURE MODES TO AVOID:
             # date,  # OK
             generate_image,  # OK
             image_analysis,  # OK
+            speech_to_texte,
             # list_assets,
         ]
 
