@@ -9,7 +9,7 @@ Last Updated: 05-05-2025
 """
 
 from beartype import beartype
-from llm import model
+from agent.llm import model
 from llm import chat
 from tools import *
 from loguru import logger
