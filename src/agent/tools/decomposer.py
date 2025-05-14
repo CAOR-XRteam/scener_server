@@ -69,22 +69,22 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
   "scene": {{
     "objects": [
       {{
-        "name": "black_cat", // Concise name
+        "name": "black_cat",
         "type": "prop",
-        "material": "fur", // Inferred
-        "prompt": "a sleek black domestic cat" // Verbatim, including article
+        "material": "fur",
+        "prompt": "a sleek black domestic cat"
       }},
       {{
-        "name": "beige_couch", // Concise name
+        "name": "beige_couch",
         "type": "furniture",
-        "material": "fabric", // Inferred
-        "prompt": "a beige couch" // Verbatim, including article
+        "material": "fabric",
+        "prompt": "a beige couch"
       }},
        {{
-        "name": "living_room", // Concise name
+        "name": "living_room", 
         "type": "room",
-        "material": "walls", // Inferred default
-        "prompt": "a cozy living room" // Verbatim, including article
+        "material": "walls",
+        "prompt": "a cozy living room"
       }}
     ]
   }}

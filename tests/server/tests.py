@@ -1,16 +1,16 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 import pytest
 from server.valider import InputMessage, OutputMessage
 
 from server.client import Client
 from server.session import Session
+from server.server import Server
 
 import websockets.exceptions
 import uuid
+import signal
 from colorama import Fore
-
-import types
 
 
 @pytest.fixture
@@ -21,13 +21,195 @@ def mock_ws():
 
 
 @pytest.fixture
-def mock_client(mock_ws):
-    return Client(mock_ws)
+def mock_agent():
+    agent_instance = Mock()
+    agent_instance.achat = AsyncMock()
+
+    return agent_instance
+
+
+@pytest.fixture
+def mock_client(mock_ws, mock_agent):
+    return Client(mock_ws, mock_agent)
+
+
+class MockWsServer:
+    def __init__(self):
+        self.close = Mock()
+        self.wait_closed = AsyncMock()
+        self._is_serving = True
+
+    def is_serving(self):
+        return self._is_serving
 
 
 class TestServer:
-    # TODO
-    pass
+    def run_coroutine(self, coroutine):
+        return asyncio.run(coroutine)
+
+    @pytest.fixture
+    def mock_server(self, mock_agent):
+        with patch(
+            "server.server.AgentAPI", new_callable=Mock, return_value=mock_agent
+        ):
+            with patch("server.server.logger"):
+                server = Server(host="0.0.0.0", port=8765)
+                server.handler_shutdown = Mock()
+
+                return server
+
+    @patch("server.server.AgentAPI")
+    @patch("server.server.logger")
+    def test_init_success(self, mock_logger, mock_agent_api, mock_agent):
+        mock_agent_api.return_value = mock_agent
+
+        server = Server(host="0.0.0.0", port=8765)
+
+        assert server.host == "0.0.0.0"
+        assert server.port == 8765
+        assert server.list_client is not None
+        assert server.server is None
+        assert server.agent is mock_agent
+
+        mock_agent_api.assert_called_once()
+
+        mock_logger.info.assert_called_once_with(
+            "AgentAPI initialized successfully at server startup."
+        )
+
+    @patch("server.server.AgentAPI")
+    @patch("server.server.logger")
+    def test_init_agent_error(self, mock_logger, mock_agent_api):
+        err = ValueError("test")
+        mock_agent_api.side_effect = err
+
+        server = Server(host="0.0.0.0", port=8765)
+
+        assert server.host == "0.0.0.0"
+        assert server.port == 8765
+        assert server.list_client is not None
+        assert server.server is None
+        assert server.agent is None
+
+        mock_agent_api.assert_called_once()
+
+        mock_logger.critical.assert_called_once_with(
+            f"Failed to initialize AgentAPI at server startup: {err}"
+        )
+
+    @patch("server.server.asyncio.get_event_loop")
+    @patch("server.server.logger")
+    def test_start_success(self, mock_logger, mock_get_event_loop, mock_server):
+        async def mock_run_server():
+            mock_server.server = mock_ws_server
+            await asyncio.sleep(0.01)
+            mock_ws_server._is_serving = False
+
+        mock_loop = MagicMock()
+        mock_get_event_loop.return_value = mock_loop
+        mock_ws_server = MockWsServer()
+        mock_server.run = AsyncMock(side_effect=mock_run_server)
+        mock_loop.run_until_complete.side_effect = self.run_coroutine
+
+        mock_server.start()
+
+        mock_server.run.assert_awaited_once()
+
+        mock_get_event_loop.assert_called_once()
+        assert mock_loop.run_until_complete.call_count == 2
+        mock_loop.add_signal_handler.assert_called_once_with(
+            signal.SIGINT, mock_server.handler_shutdown
+        )
+
+        mock_server.server.wait_closed.assert_awaited_once()
+
+        mock_logger.info.assert_called_once_with("Server finished working.")
+
+    @patch("server.server.asyncio.get_event_loop")
+    @patch("server.server.logger")
+    def test_start_exception(self, mock_logger, mock_get_event_loop, mock_server):
+        mock_loop = MagicMock()
+        mock_get_event_loop.return_value = mock_loop
+        err = ValueError("test")
+        mock_server.run = AsyncMock(side_effect=err)
+        mock_server.server = MockWsServer()
+        mock_loop.run_until_complete.side_effect = self.run_coroutine
+
+        mock_server.start()
+
+        mock_server.run.assert_awaited_once()
+
+        mock_get_event_loop.assert_called_once()
+        mock_loop.add_signal_handler.assert_called_once_with(
+            signal.SIGINT, mock_server.handler_shutdown
+        )
+        assert mock_loop.run_until_complete.call_count == 1
+
+        mock_logger.error.assert_called_once_with(
+            f"Error in server's main execution: {err}"
+        )
+
+        mock_logger.info.assert_called_once_with("Server finished working.")
+
+    @pytest.mark.asyncio
+    @patch("server.server.websockets.serve", new_callable=AsyncMock)
+    @patch("server.server.logger")
+    async def test_run_success(self, mock_logger, mock_ws_serve, mock_server):
+        mock_ws_server = MockWsServer()
+        mock_ws_serve.return_value = mock_ws_server
+
+        await mock_server.run()
+
+        mock_ws_serve.assert_awaited_once_with(
+            mock_server.handler_client, mock_server.host, mock_server.port
+        )
+        mock_logger.info.assert_called_once_with(
+            f"Server running on {Fore.GREEN}ws://{mock_server.host}:{mock_server.port}{Fore.GREEN}"
+        )
+        mock_ws_server.wait_closed.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch("server.server.websockets.serve", new_callable=AsyncMock)
+    @patch("server.server.logger")
+    async def test_run_os_error(self, mock_logger, mock_ws_serve, mock_server):
+        err = OSError("test")
+        mock_ws_serve.side_effect = err
+
+        await mock_server.run()
+
+        assert mock_server.shutdown_event.is_set()
+
+        mock_ws_serve.assert_awaited_once_with(
+            mock_server.handler_client, mock_server.host, mock_server.port
+        )
+
+        mock_logger.error.assert_called_once_with(
+            f"Could not start server on {Fore.GREEN}ws://{mock_server.host}:{mock_server.port}{Fore.GREEN}: {err}."
+        )
+
+    @pytest.mark.asyncio
+    @patch("server.server.websockets.serve", new_callable=AsyncMock)
+    @patch("server.server.logger")
+    async def test_run_other_exception(self, mock_logger, mock_ws_serve, mock_server):
+        err = ValueError("test")
+        mock_ws_serve.side_effect = err
+
+        await mock_server.run()
+
+        assert mock_server.shutdown_event.is_set()
+
+        mock_ws_serve.assert_awaited_once_with(
+            mock_server.handler_client, mock_server.host, mock_server.port
+        )
+
+        mock_logger.error.assert_called_once_with(
+            f"Internal error during server run: {err}"
+        )
+
+    @pytest.mark.asyncio
+    @patch("server.server.logger")
+    async def test_handler_client_success(self, mock_logger, mock_server, mock_client):
+        pass
 
 
 class TestSession:
@@ -37,72 +219,13 @@ class TestSession:
             yield token
 
     @pytest.fixture
-    def mock_agent(self):
-        agent_instance = MagicMock()
-        agent_instance.achat = MagicMock()
-
-        return agent_instance
-
-    @pytest.fixture
-    def mock_session(self, mock_client, mock_agent):
-        with patch("server.session.AgentAPI") as mock_agent_api:
-            with patch("server.session.uuid.uuid1") as mock_uuid1:
-                with patch("server.session.logger") as mock_logger:
-                    mock_uuid1.return_value = uuid.UUID(
-                        "11111111-1111-1111-1111-111111111111"
-                    )
-                    mock_agent_api.return_value = mock_agent
-                    return Session(mock_client)
-
-    @patch("server.session.AgentAPI")
-    @patch("server.session.logger")
-    @patch("server.session.uuid.uuid1")
-    def test_init_success(
-        self, mock_uuid, mock_logger, mock_agent_api, mock_agent, mock_client
-    ):
-        test_uuid = uuid.UUID("11111111-1111-1111-1111-111111111111")
-        mock_uuid.return_value = test_uuid
-        mock_agent_api.return_value = mock_agent
-
-        session = Session(mock_client)
-
-        assert session.client is mock_client
-        assert session.thread_id == test_uuid
-        assert session.agent is mock_agent
-
-        mock_uuid.assert_called_once()
-        mock_agent_api.assert_called_once()
-
-        mock_logger.info.assert_called_once()
-        assert (
-            f"Session created with thread_id: {test_uuid}"
-            in mock_logger.info.call_args[0][0]
-        )
-        assert mock_client.is_active
-
-    @patch("server.session.AgentAPI")
-    @patch("server.session.logger")
-    @patch("server.session.uuid.uuid1")
-    def test_init_agent_error(
-        self, mock_uuid, mock_logger, mock_agent_api, mock_client
-    ):
-        err = ValueError("test")
-        test_uuid = uuid.UUID("11111111-1111-1111-1111-111111111111")
-        mock_uuid.return_value = test_uuid
-        mock_agent_api.side_effect = err
-
-        session = Session(mock_client)
-
-        assert session.client is mock_client
-        assert session.thread_id == test_uuid
-
-        mock_uuid.assert_called_once()
-
-        mock_agent_api.assert_called_once()
-
-        mock_logger.error.assert_called_once()
-        assert f"Error initializing agent: {err}" in mock_logger.error.call_args[0][0]
-        assert not mock_client.is_active
+    def mock_session(self, mock_client):
+        with patch("server.session.uuid.uuid1") as mock_uuid1:
+            with patch("server.session.logger") as mock_logger:
+                mock_uuid1.return_value = uuid.UUID(
+                    "11111111-1111-1111-1111-111111111111"
+                )
+                return Session(mock_client)
 
     @pytest.mark.asyncio
     @patch("server.session.logger")
@@ -198,15 +321,19 @@ class TestSession:
 
     @pytest.mark.asyncio
     @patch("server.session.logger")
-    async def test_handle_message_success(self, mock_logger, mock_session):
+    async def test_handle_message_success(
+        self,
+        mock_logger,
+        mock_session,
+    ):
         message = InputMessage(command="chat", message="test test test")
         tokens = ["test ", "has...", "passed"]
         mock_session.client.send_message = AsyncMock()
-        mock_session.agent.achat.return_value = self._mock_achat_gen(tokens)
+        mock_session.client.agent.achat.return_value = self._mock_achat_gen(tokens)
 
         await mock_session.handle_message(message)
 
-        mock_session.agent.achat.assert_called_once_with(
+        mock_session.client.agent.achat.assert_called_once_with(
             message.message, str(mock_session.thread_id)
         )
 
@@ -233,7 +360,7 @@ class TestSession:
         self, mock_logger, mock_session
     ):
         message = InputMessage(command="chat", message="test")
-        mock_session.agent.achat.side_effect = asyncio.CancelledError("oups")
+        mock_session.client.agent.achat.side_effect = asyncio.CancelledError("oups")
         mock_session.client.send_message = AsyncMock()
 
         with pytest.raises(asyncio.CancelledError, match="oups"):
@@ -256,7 +383,7 @@ class TestSession:
     ):
         err = ValueError("test")
         message = InputMessage(command="chat", message="test")
-        mock_session.agent.achat.side_effect = err
+        mock_session.client.agent.achat.side_effect = err
         mock_session.client.send_message = AsyncMock()
 
         await mock_session.handle_message(message)
@@ -284,12 +411,12 @@ class TestSession:
         mock_session.client.send_message = AsyncMock(
             side_effect=asyncio.CancelledError("oups")
         )
-        mock_session.agent.achat.return_value = self._mock_achat_gen(tokens)
+        mock_session.client.agent.achat.return_value = self._mock_achat_gen(tokens)
 
         with pytest.raises(asyncio.CancelledError, match="oups"):
             await mock_session.handle_message(message)
 
-        mock_session.agent.achat.assert_called_once_with(
+        mock_session.client.agent.achat.assert_called_once_with(
             message.message, str(mock_session.thread_id)
         )
 
@@ -312,12 +439,12 @@ class TestSession:
         tokens = ["test ", "has...", "passed"]
         err = ValueError("oups")
         mock_session.client.send_message = AsyncMock(side_effect=err)
-        mock_session.agent.achat.return_value = self._mock_achat_gen(tokens)
+        mock_session.client.agent.achat.return_value = self._mock_achat_gen(tokens)
 
         with pytest.raises(ValueError, match="oups"):
             await mock_session.handle_message(message)
 
-        mock_session.agent.achat.assert_called_once_with(
+        mock_session.client.agent.achat.assert_called_once_with(
             message.message, str(mock_session.thread_id)
         )
         assert mock_session.client.send_message.call_count == 2

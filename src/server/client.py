@@ -27,7 +27,7 @@ class Client:
     """Manage client session and input / ouput messages"""
 
     # Main function
-    def __init__(self, websocket):
+    def __init__(self, websocket, agent):
         self.websocket = websocket  # The WebSocket connection object
         self.session = None
         self.is_active = True  # State to track if the client is active
@@ -39,6 +39,8 @@ class Client:
         self.task_input = None
         self.task_output = None
         self.task_session = None
+
+        self.agent = agent
 
     def start(self):
         from server.session import Session

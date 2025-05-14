@@ -2,7 +2,6 @@ import asyncio
 import uuid
 
 from beartype import beartype
-from agent.api import AgentAPI
 from server.client import Client
 from lib import logger
 from server.valider import InputMessage, OutputMessage
@@ -13,15 +12,6 @@ class Session:
     def __init__(self, client: Client):
         self.client = client
         self.thread_id = uuid.uuid1()
-
-        try:
-            self.agent = AgentAPI()
-            logger.info(
-                f"Session created with thread_id: {self.thread_id} for websocket {self.client.websocket.remote_address}"
-            )
-        except Exception as e:
-            logger.error(f"Error initializing agent: {e}")
-            self.client.is_active = False
 
     async def run(self):
         while self.client.is_active:
@@ -51,7 +41,7 @@ class Session:
         logger.info(f"Received message in thread {self.thread_id}: {message}")
 
         try:
-            output_generator = self.agent.achat(message, str(self.thread_id))
+            output_generator = self.client.agent.achat(message, str(self.thread_id))
             async for token in output_generator:
                 await self.client.send_message(
                     OutputMessage(status="stream", code=200, message=token)
