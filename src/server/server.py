@@ -83,32 +83,8 @@ class Server:
 
         """Handle an incoming WebSocket client connection."""
         try:
-            try:
-                client = server.client.Client(websocket, self.agent)
-            except Exception as e:
-                logger.error(
-                    f"Failed to instantiate client for {websocket.remote_address}: {e}"
-                )
-                try:
-                    await websocket.close()
-                except Exception as e:
-                    logger.info(
-                        f"Failed to close websocket connection for {websocket.remote_address}: {e}"
-                    )
-                return
-
-            try:
-                client.start()
-            except Exception as e:
-                logger.error(
-                    f"Error starting client for {websocket.remote_address}: {e}"
-                )
-
-                if client in self.list_client:
-                    self.list_client.remove(client)
-
-                await self._close_client(client)
-                return
+            client = server.client.Client(websocket, self.agent)
+            client.start()
 
             self.list_client.append(client)
             logger.info(f"New client connected:: {websocket.remote_address}")
@@ -123,7 +99,7 @@ class Server:
                     await self._close_client(client)
             except Exception as e:
                 logger.error(
-                    f"Internal error for client {websocket.remote_address} disconnection event."
+                    f"Internal error for client {websocket.remote_address} disconnection event: {e}"
                 )
                 if client.is_active:
                     await self._close_client(client)
@@ -133,7 +109,7 @@ class Server:
                     logger.warning(
                         f"Client {websocket.remote_address} still marked active in finally. Forcing close."
                     )
-                    await self._close_client()
+                    await self._close_client(client)
 
                 elif client in self.list_client:
                     self.list_client.remove(client)
