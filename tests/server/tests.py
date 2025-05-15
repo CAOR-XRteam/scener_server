@@ -23,7 +23,7 @@ def mock_ws():
 @pytest.fixture
 def mock_agent():
     agent_instance = Mock()
-    agent_instance.achat = AsyncMock()
+    agent_instance.achat = MagicMock()
 
     return agent_instance
 
