@@ -8,10 +8,11 @@ Created: 05-05-2025
 Last Updated: 05-05-2025
 """
 
-from loguru import logger
-from colorama import Fore, Style
-from library import sql
 import os
+
+from colorama import Fore
+from library import sql
+from loguru import logger
 
 
 class Database:
