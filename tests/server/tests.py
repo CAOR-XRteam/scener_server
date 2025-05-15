@@ -1,16 +1,15 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 import pytest
-from server.valider import InputMessage, OutputMessage
+import signal
+import uuid
+import websockets.exceptions
 
+from colorama import Fore, Style
 from server.client import Client
 from server.session import Session
 from server.server import Server
-
-import websockets.exceptions
-import uuid
-import signal
-from colorama import Fore, Style
+from server.valider import InputMessage, OutputMessage
+from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 
 
 @pytest.fixture
