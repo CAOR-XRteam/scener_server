@@ -1,13 +1,3 @@
-"""
-server.py
-
-Handles websocket server connection and high-level functions.
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 import asyncio
 import signal
 import websockets
