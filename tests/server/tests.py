@@ -163,10 +163,11 @@ class TestServer:
         mock_ws_serve.assert_awaited_once_with(
             mock_server.handler_client, mock_server.host, mock_server.port
         )
+        mock_ws_server.wait_closed.assert_awaited_once()
+
         mock_logger.info.assert_called_once_with(
             f"Server running on {Fore.GREEN}ws://{mock_server.host}:{mock_server.port}{Fore.GREEN}"
         )
-        mock_ws_server.wait_closed.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch("server.server.websockets.serve", new_callable=AsyncMock)
@@ -178,7 +179,6 @@ class TestServer:
         await mock_server.run()
 
         assert mock_server.shutdown_event.is_set()
-
         mock_ws_serve.assert_awaited_once_with(
             mock_server.handler_client, mock_server.host, mock_server.port
         )
@@ -197,7 +197,6 @@ class TestServer:
         await mock_server.run()
 
         assert mock_server.shutdown_event.is_set()
-
         mock_ws_serve.assert_awaited_once_with(
             mock_server.handler_client, mock_server.host, mock_server.port
         )
@@ -236,6 +235,9 @@ class TestServer:
 
         mock_client_instance.assert_called_once_with(mock_ws, mock_server.agent)
         mock_client.start.assert_called_once()
+
+        assert not mock_server.list_client
+
         assert mock_logger.info.call_count == 3
         mock_logger.info.assert_any_call(
             f"New client connected:: {mock_ws.remote_address}"
@@ -246,8 +248,6 @@ class TestServer:
         mock_logger.info.assert_any_call(
             f"Finished closing the client {mock_ws.remote_address}."
         )
-        assert mock_client_instance not in mock_server.list_client
-        assert len(mock_server.list_client) == 0
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
@@ -269,6 +269,9 @@ class TestServer:
 
         mock_client_instance.assert_called_once_with(mock_ws, mock_server.agent)
         mock_client.start.assert_called_once()
+
+        assert not mock_server.list_client
+
         assert mock_logger.info.call_count == 2
         mock_logger.info.assert_any_call(
             f"New client connected:: {mock_ws.remote_address}"
@@ -280,8 +283,6 @@ class TestServer:
         mock_logger.info.assert_any_call(
             f"Finished closing the client {mock_ws.remote_address}."
         )
-        assert mock_client_instance not in mock_server.list_client
-        assert len(mock_server.list_client) == 0
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
@@ -298,11 +299,10 @@ class TestServer:
 
         await mock_server.handler_client(mock_ws)
 
-        mock_logger.error.assert_called_once_with(
-            f"Task cancelled for client {mock_ws.remote_address} disconnection event."
-        )
-
         mock_client.close.assert_awaited_once()
+
+        assert not mock_server.list_client
+
         assert mock_logger.info.call_count == 2
         mock_logger.info.assert_any_call(
             f"New client connected:: {mock_ws.remote_address}"
@@ -310,8 +310,9 @@ class TestServer:
         mock_logger.info.assert_any_call(
             f"Finished closing the client {mock_ws.remote_address}."
         )
-        assert mock_client_instance not in mock_server.list_client
-        assert len(mock_server.list_client) == 0
+        mock_logger.error.assert_called_once_with(
+            f"Task cancelled for client {mock_ws.remote_address} disconnection event."
+        )
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
@@ -334,6 +335,9 @@ class TestServer:
         )
 
         mock_client.close.assert_awaited_once()
+
+        assert not mock_server.list_client
+
         assert mock_logger.info.call_count == 2
         mock_logger.info.assert_any_call(
             f"New client connected:: {mock_ws.remote_address}"
@@ -341,8 +345,6 @@ class TestServer:
         mock_logger.info.assert_any_call(
             f"Finished closing the client {mock_ws.remote_address}."
         )
-        assert mock_client_instance not in mock_server.list_client
-        assert len(mock_server.list_client) == 0
 
     @pytest.mark.asyncio
     @patch("server.server.logger")
@@ -362,6 +364,8 @@ class TestServer:
 
         mock_client1.close.assert_awaited_once()
         mock_client2.close.assert_awaited_once()
+
+        assert not mock_server.list_client
 
         assert mock_logger.success.call_count == 2
         mock_logger.success.assert_any_call(f"Server shutdown")
@@ -393,12 +397,12 @@ class TestServer:
         mock_client1.close.assert_awaited_once()
         mock_client2.close.assert_awaited_once()
 
-        mock_logger.error.assert_called_once_with(f"Server shutdown task cancelled")
+        assert not mock_server.list_client
 
+        mock_logger.error.assert_called_once_with(f"Server shutdown task cancelled")
         mock_logger.success.assert_called_once_with(
             f"Server shutdown sequence completed.{Style.RESET_ALL}"
         )
-
         mock_logger.info.assert_called_once_with(
             "All client connections processed for shutdown."
         )
@@ -424,23 +428,79 @@ class TestServer:
         mock_client1.close.assert_awaited_once()
         mock_client2.close.assert_awaited_once()
 
+        assert not mock_server.list_client
+
         mock_logger.error.assert_called_once_with(
             f"Error during server shutdown: {err}"
         )
-
         mock_logger.success.assert_called_once_with(
             f"Server shutdown sequence completed.{Style.RESET_ALL}"
         )
-
         mock_logger.info.assert_called_once_with(
             "All client connections processed for shutdown."
         )
 
-    # @pytest.mark.asyncio
-    # @patch("server.client.Client")
-    # @patch("server.server.logger")
-    # async def test_shutdown_other_exception():
-    #     pass
+    @pytest.mark.asyncio
+    async def test_close_client_success(self, mock_server, mock_client):
+        mock_client.close = AsyncMock()
+        mock_server.list_client = [mock_client]
+
+        await mock_server._close_client(mock_client)
+
+        mock_client.close.assert_awaited_once()
+
+        assert not mock_server.list_client
+
+    @pytest.mark.asyncio
+    @patch("server.server.logger")
+    async def test_close_client_exception_on_client_close(
+        self, mock_logger, mock_server, mock_client
+    ):
+        err = ValueError("test")
+        mock_client.close = AsyncMock(side_effect=err)
+        mock_client.websocket.close = AsyncMock()
+        mock_client.disconnection.set = Mock()
+        mock_server.list_client = [mock_client]
+
+        await mock_server._close_client(mock_client)
+
+        mock_client.close.assert_awaited_once()
+        mock_client.websocket.close.assert_awaited_once()
+        assert not mock_client.is_active
+        mock_client.disconnection.set.assert_called_once()
+
+        assert not mock_server.list_client
+
+        mock_logger.error.assert_called_once_with(
+            f"Error closing client {mock_client.websocket.remote_address}: {err}"
+        )
+
+    @pytest.mark.asyncio
+    @patch("server.server.logger")
+    async def test_close_client_exception_on_ws_close(
+        self, mock_logger, mock_server, mock_client
+    ):
+        err = ValueError("test")
+        mock_client.close = AsyncMock(side_effect=err)
+        mock_client.websocket.close = AsyncMock(side_effect=err)
+        mock_client.disconnection.set = Mock()
+        mock_server.list_client = [mock_client]
+
+        await mock_server._close_client(mock_client)
+
+        mock_client.close.assert_awaited_once()
+        mock_client.websocket.close.assert_awaited_once()
+        assert not mock_client.is_active
+        mock_client.disconnection.set.assert_called_once()
+
+        assert not mock_server.list_client
+
+        mock_logger.error.assert_called_once_with(
+            f"Error closing client {mock_client.websocket.remote_address}: {err}"
+        )
+        mock_logger.info.assert_called_once_with(
+            f"Failed to close websocket connection for {mock_client.websocket.remote_address}: {err}"
+        )
 
 
 class TestSession:
