@@ -10,17 +10,19 @@ Last Updated: 05-05-2025
 
 import os
 
+from beartype import beartype
 from colorama import Fore
 from library import sql
 from library.library_database import Database as DB
 from loguru import logger
 
 
+@beartype
 class Library:
     def __init__(self, db: DB):
         self.db = db
 
-    def fill(self, path):
+    def fill(self, path: str):
         """Fill the database with assets from the specified directory."""
         conn = self.db._get_connection()
         cursor = self.db._get_cursor()  # fresh cursor
