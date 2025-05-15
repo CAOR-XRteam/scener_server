@@ -9,3 +9,6 @@ run_library:
 
 run_server:
 	python -m server
+
+run_client:
+	wscat -c ws:localhost:8765
