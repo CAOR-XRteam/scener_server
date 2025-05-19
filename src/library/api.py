@@ -35,4 +35,4 @@ class LibraryAPI:
 
     def delete_asset(self, name):
         """Delete an asset by its name."""
-        self.asset.delete(self, name)
+        self.asset.delete(name)

@@ -12,32 +12,53 @@ import sqlite3
 
 from beartype import beartype
 from lib import logger
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+    after_log,
+)
 
 
 @beartype
 class Sql:
+    retry_on_db_lock = retry(
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
+        retry=retry_if_exception_type(sqlite3.OperationalError),
+        before_sleep=before_sleep_log(logger, "ERROR"),
+        after=after_log(logger, "INFO"),
+        reraise=True,
+    )
+
     # Init
-    def connect_db(self, db_name: str):
-        """Connect to an SQLite database (create it if not exists) and return the connection."""
+    @staticmethod
+    def connect_db(db_name: str):
+        """Connect to an SQLite database (create it if doesn't exist) and return the connection."""
         try:
             conn = sqlite3.connect(db_name)
             logger.info(f"Connected to the database {db_name}.")
             return conn
         except sqlite3.Error as e:
-            logger.error(f"Couldn't connect to the database: {e}")
+            logger.error(f"Failed to connect to the database {db_name}: {e}")
             raise
 
+    @staticmethod
     def get_cursor(conn: sqlite3.Connection):
         """Return a cursor from the connection."""
         try:
             return conn.cursor()
         except sqlite3.Error as e:
-            logger.error(f"Couldn't get a cursor from the connection {conn}: {e}")
+            logger.error(f"Failed to get a cursor from the connection {conn}: {e}")
             raise
 
     # Operation
-    def create_table_asset(self, conn: sqlite3.Connection, cursor: sqlite3.Cursor):
-        """Create an 'assets' table if it doesn't exist."""
+    @staticmethod
+    @retry_on_db_lock
+    def create_table_asset(conn: sqlite3.Connection, cursor: sqlite3.Cursor):
+        """Create an 'asset' table if it doesn't exist."""
         try:
             cursor.execute(
                 """
@@ -51,17 +72,19 @@ class Sql:
             """
             )
             conn.commit()
+            logger.info("Created the 'asset' table.")
         except sqlite3.Error as e:
-            logger.error(f"Couldn't create an 'assets' table: {e}")
+            logger.error(f"Failed to create the 'asset' table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Couldn't rollback: {e}")
+                logger.error(f"Failed to rollback: {e}")
             finally:
                 raise
 
+    @staticmethod
+    @retry_on_db_lock
     def insert_asset(
-        self,
         conn: sqlite3.Connection,
         cursor: sqlite3.Cursor,
         name: str,
@@ -72,7 +95,7 @@ class Sql:
         """Insert a new asset into the 'asset' table if the name does not already exist."""
         if not name:
             logger.error("Trying to insert an asset with an empty name")
-            raise
+            raise ValueError("Asset name cannot be empty")
 
         # Check if asset with the same name already exists rename if it does
         try:
@@ -81,7 +104,7 @@ class Sql:
             if nb > 0:
                 name = name + f"_{nb+1}"
         except sqlite3.Error as e:
-            logger.error(f"Couldn't SELECT from asset table: {e}")
+            logger.error(f"Failed to SELECT from 'asset' table: {e}")
 
         try:
             cursor.execute(
@@ -89,28 +112,32 @@ class Sql:
                 (name, image, mesh, description),
             )
             conn.commit()
+            logger.info(f"Inserted asset {name} into the database.")
         except sqlite3.Error as e:
-            logger.error(f"Couldn't INSERT into asset table: {e}")
+            logger.error(f"Failed to INSERT into 'asset' table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Error while rollbacking: {e}")
+                logger.error(f"Faied to rollback: {e}")
             finally:
                 raise
 
-    def query_assets(self, cursor: sqlite3.Cursor):
+    @staticmethod
+    @retry_on_db_lock
+    def query_assets(cursor: sqlite3.Cursor):
         """Fetch all assets from the 'asset' table."""
         try:
             cursor.execute("SELECT * FROM asset")
             return cursor.fetchall()
         except sqlite3.Error as e:
-            logger.error("Couldn't SELECT from asset table")
+            logger.error("Failed to SELECT from 'asset' table")
             raise
 
+    @staticmethod
+    @retry_on_db_lock
     def update_asset(
-        self,
         conn: sqlite3.Connection,
-        cursor: sqlite3.Connection,
+        cursor: sqlite3.Cursor,
         name: str,
         image: str = None,
         mesh: str = None,
@@ -148,34 +175,41 @@ class Sql:
                 tuple(update_values),
             )
             conn.commit()
+            logger.info(f"Updated asset {name} in the database.")
         except sqlite3.Error as e:
-            logger.error(f"Couldn't UPDATE asset table: {e}")
+            logger.error(f"Faield to UPDATE the 'asset' table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Error while rollbacking: {e}")
+                logger.error(f"Faied to rollback: {e}")
             finally:
                 raise
 
-    def delete_asset(self, conn: sqlite3.Connection, cursor: sqlite3.Cursor, name: str):
+    @staticmethod
+    @retry_on_db_lock
+    def delete_asset(conn: sqlite3.Connection, cursor: sqlite3.Cursor, name: str):
         """Delete an asset by its name."""
         try:
             cursor.execute("DELETE FROM asset WHERE name = ?", (name,))
             conn.commit()
+            logger.info(f"Deleted asset {name} from the database.")
         except sqlite3.Error as e:
-            logger.error(f"Couldn't DELETE from asset table: {e}")
+            logger.error(f"Failed DELETE from asset table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Error while rollbacking: {e}")
+                logger.error(f"Faied to rollback: {e}")
             finally:
                 raise
 
     # Closing
-    def close_connection(self, conn: sqlite3.Connection):
+    @staticmethod
+    @retry_on_db_lock
+    def close_connection(conn: sqlite3.Connection):
         """Close the SQLite connection."""
         try:
             conn.close()
+            logger.info(f"Closed the database connection {conn}.")
         except sqlite3.Error as e:
-            logger.error(f"Couldn't close the {conn} connection: {e}")
+            logger.error(f"Failed to close the {conn} connection: {e}")
             raise
