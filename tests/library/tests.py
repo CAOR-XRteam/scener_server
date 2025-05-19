@@ -472,7 +472,7 @@ class TestAsset:
     pass
 
 
-class TestDataBase:
+class TestDatabase:
     pass
 
 
