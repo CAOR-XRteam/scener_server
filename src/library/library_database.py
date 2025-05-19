@@ -26,7 +26,7 @@ class Database:
             logger.error(f"Failed to initialize database: {e}")
             raise
 
-    def _check_connection(self):
+    def _is_opened_connection(self):
         # Check if the connection is open
         try:
             self._conn.cursos()
@@ -55,18 +55,26 @@ class Database:
             logger.success(f"Connected to database {Fore.GREEN}{self.path}{Fore.RESET}")
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
+            if self._conn:
+                try:
+                    Sql.close_connection(self._conn)
+                except Exception as close_e:
+                    logger.error(f"Failed to close connection: {close_e}")
+                    raise
+                finally:
+                    self._conn = None
             raise
 
-    def _get_connection(self):
+    def get_connection(self):
         # Create a new connection each time it's needed, no need to cache
-        if self._check_connection():
+        if self._is_opened_connection():
             return self._conn
         else:
             try:
                 self._conn = Sql.connect_db(self.path)
             except Exception as e:
                 self._conn = None
-                raise
+                raise ConnectionError(f"Failed to connect to the database: {e}")
 
     # def _get_cursor(self):
     #     # Get a fresh cursor for each operation

@@ -103,6 +103,9 @@ class Sql:
             nb = cursor.fetchone()[0]
             if nb > 0:
                 name = name + f"_{nb+1}"
+                logger.info(
+                    f"Asset name already exists. Inserting as '{name}' instead."
+                )
         except sqlite3.Error as e:
             logger.error(f"Failed to SELECT from 'asset' table: {e}")
 
