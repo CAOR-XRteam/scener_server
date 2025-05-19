@@ -5,8 +5,10 @@ SQL list management functions
 
 Author: Nathan SV
 Created: 05-05-2025
-Last Updated: 05-05-2025
+Last Updated: 19-05-2025
 """
+
+# TODO: more precise error handling to propagate to the agent
 
 import os
 import sqlite3
@@ -107,7 +109,7 @@ class Library:
                     print(f"{asset_id:<4} {name} {img} {mesh} {desc}")
             else:
                 print("No assets found.")
-        except (sqlite3.Error, ConnectionError) as e:
+        except Exception as e:
             logger.error(f"Failed to read assets from the database: {e}")
             raise
 
@@ -126,6 +128,6 @@ class Library:
                 }
                 for asset_id, name, image, mesh, description in assets
             ]
-        except (sqlite3.Error, ConnectionError) as e:
+        except Exception as e:
             logger.error(f"Failed to read assets from the database: {e}")
             raise

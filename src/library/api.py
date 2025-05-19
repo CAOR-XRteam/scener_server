@@ -1,10 +1,9 @@
+from lib import logger
 from library.library_database import Database
 from library.library_list import Library
 from library.library_asset import Asset
-from lib import logger
-import sys
-import os
-import inspect
+
+# TODO: more precise error handling to propagate to the agent
 
 
 class LibraryAPI:
@@ -15,24 +14,48 @@ class LibraryAPI:
 
     def fill(self, path):
         """Fill the database with assets from the specified directory."""
-        self.library.fill(path)
+        try:
+            self.library.fill(path)
+        except Exception as e:
+            logger.error(f"Failed to fill the database: {e}")
+            raise
 
     def read(self):
         """Print out all the assets in the database."""
-        return self.library.read()
+        try:
+            return self.library.read()
+        except Exception as e:
+            logger.error(f"Failed to read the database: {e}")
+            raise
 
     def get_list(self):
         """Return a list of all assets as dictionaries."""
-        return self.library.get_list()
+        try:
+            return self.library.get_list()
+        except Exception as e:
+            logger.error(f"Failed to get the list of assets: {e}")
+            raise
 
     def add_asset(self, name, image=None, mesh=None, description=None):
         """Add a new asset to the database."""
-        self.asset.add(name, image, mesh, description)
+        try:
+            self.asset.add(name, image, mesh, description)
+        except Exception as e:
+            logger.error(f"Failed to add asset: {e}")
+            raise
 
     def update_asset(self, name, image=None, mesh=None, description=None):
         """Update an existing asset."""
-        self.asset.update(name, image, mesh, description)
+        try:
+            self.asset.update(name, image, mesh, description)
+        except Exception as e:
+            logger.error(f"Failed to update asset: {e}")
+            raise
 
     def delete_asset(self, name):
         """Delete an asset by its name."""
-        self.asset.delete(name)
+        try:
+            self.asset.delete(name)
+        except Exception as e:
+            logger.error(f"Failed to delete asset: {e}")
+            raise

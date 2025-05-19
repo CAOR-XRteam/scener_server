@@ -5,7 +5,7 @@ Low-level SQL functions
 
 Author: Nathan SV
 Created: 05-05-2025
-Last Updated: 05-05-2025
+Last Updated: 19-05-2025
 """
 
 import sqlite3
@@ -78,7 +78,7 @@ class Sql:
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Failed to rollback: {e}")
+                logger.critical(f"Failed to rollback: {e}")
             finally:
                 raise
 
@@ -108,6 +108,7 @@ class Sql:
                 )
         except sqlite3.Error as e:
             logger.error(f"Failed to SELECT from 'asset' table: {e}")
+            raise
 
         try:
             cursor.execute(
@@ -121,9 +122,9 @@ class Sql:
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Faied to rollback: {e}")
-            finally:
+                logger.critical(f"Falied to rollback: {e}")
                 raise
+            raise
 
     @staticmethod
     @retry_on_db_lock
@@ -184,9 +185,9 @@ class Sql:
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Faied to rollback: {e}")
-            finally:
+                logger.critical(f"Failed to rollback: {e}")
                 raise
+            raise
 
     @staticmethod
     @retry_on_db_lock
@@ -201,7 +202,7 @@ class Sql:
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.error(f"Faied to rollback: {e}")
+                logger.critical(f"Faied to rollback: {e}")
             finally:
                 raise
 

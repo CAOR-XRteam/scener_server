@@ -5,8 +5,10 @@ Functions to connect to the sql database
 
 Author: Nathan SV
 Created: 05-05-2025
-Last Updated: 05-05-2025
+Last Updated: 19-05-2025
 """
+
+# TODO: more precise error handling to propagate to the agent
 
 import os
 
@@ -29,7 +31,7 @@ class Database:
     def _is_opened_connection(self):
         # Check if the connection is open
         try:
-            self._conn.cursos()
+            self._conn.cursor()
             return True
         except Exception as e:
             return False
@@ -74,12 +76,16 @@ class Database:
                 self._conn = Sql.connect_db(self.path)
             except Exception as e:
                 self._conn = None
-                raise ConnectionError(f"Failed to connect to the database: {e}")
+                raise
 
-    # def _get_cursor(self):
-    #     # Get a fresh cursor for each operation
-    #     conn = self._get_connection()
-    #     return sql.get_cursor(conn)
+    def _get_cursor(self):
+        # Get a fresh cursor for each operation
+        try:
+            conn = self._get_connection()
+            return Sql.get_cursor(conn)
+        except Exception as e:
+            logger.error(f"Failed to get a cursor: {e}")
+            raise
 
     def close(self, conn=None):
         # Close the specific connection
