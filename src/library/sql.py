@@ -79,8 +79,8 @@ class Sql:
                 conn.rollback()
             except sqlite3.Error as e:
                 logger.critical(f"Failed to rollback: {e}")
-            finally:
                 raise
+            raise
 
     @staticmethod
     @retry_on_db_lock
@@ -102,7 +102,7 @@ class Sql:
             cursor.execute("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", (name,))
             nb = cursor.fetchone()[0]
             if nb > 0:
-                name = name + f"_{nb+1}"
+                name = name + f"_{nb}"
                 logger.info(
                     f"Asset name already exists. Inserting as '{name}' instead."
                 )
@@ -116,13 +116,13 @@ class Sql:
                 (name, image, mesh, description),
             )
             conn.commit()
-            logger.info(f"Inserted asset {name} into the database.")
+            logger.info(f"Inserted asset '{name}' into the database.")
         except sqlite3.Error as e:
             logger.error(f"Failed to INSERT into 'asset' table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.critical(f"Falied to rollback: {e}")
+                logger.critical(f"Failed to rollback: {e}")
                 raise
             raise
 
@@ -166,7 +166,12 @@ class Sql:
             update_values.append(description)
 
         if not update_fields:
-            return  # If no fields to update, return early
+            logger.warning(
+                f"Attempting to update asset '{name}' with no fields to update."
+            )
+            raise ValueError(
+                "No fields to update provided to the asset '{name}'"
+            )  # If no fields to update, return early
 
         # Add the asset name at the end of the update_values to match the WHERE clause
         update_fields_str = ", ".join(update_fields)
@@ -179,7 +184,7 @@ class Sql:
                 tuple(update_values),
             )
             conn.commit()
-            logger.info(f"Updated asset {name} in the database.")
+            logger.info(f"Updated asset '{name}' in the database.")
         except sqlite3.Error as e:
             logger.error(f"Faield to UPDATE the 'asset' table: {e}")
             try:
@@ -196,15 +201,15 @@ class Sql:
         try:
             cursor.execute("DELETE FROM asset WHERE name = ?", (name,))
             conn.commit()
-            logger.info(f"Deleted asset {name} from the database.")
+            logger.info(f"Deleted asset '{name}' from the database.")
         except sqlite3.Error as e:
-            logger.error(f"Failed DELETE from asset table: {e}")
+            logger.error(f"Failed DELETE from 'asset' table: {e}")
             try:
                 conn.rollback()
             except sqlite3.Error as e:
-                logger.critical(f"Faied to rollback: {e}")
-            finally:
+                logger.critical(f"Failed to rollback: {e}")
                 raise
+            raise
 
     # Closing
     @staticmethod
