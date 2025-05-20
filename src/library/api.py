@@ -3,7 +3,7 @@ from library.library_database import Database
 from library.library_list import Library
 from library.library_asset import Asset
 
-# TODO: more precise error handling to propagate to the agent
+# TODO: more precise error handling to propagate to the agent, tests
 
 
 class LibraryAPI:

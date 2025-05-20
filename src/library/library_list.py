@@ -28,22 +28,19 @@ class Library:
     def fill(self, path: str):
         """Fill the database with assets from the specified directory."""
         try:
-            conn = self.db.get_connection()
-            cursor = Sql.get_cursor(conn)  # fresh cursor
+            cursor = self.db._get_cursor()  # fresh cursor
         except Exception as e:
             logger.error(f"Failed to get a connection or cursor: {e}")
             raise
 
-        try:
-            if not os.path.exists(path):
-                logger.error(f"Path to fill from does not exists: {path}")
-                raise FileNotFoundError(f"Path to fill from does not exists: {path}")
-            if not os.path.isdir(path):
-                logger.error(f"Path to fill from is not a directory: {path}")
-                raise NotADirectoryError(
-                    f"Path to fill from is not a directory: {path}"
-                )
+        if not os.path.exists(path):
+            logger.error(f"Path to fill from does not exists: {path}")
+            raise FileNotFoundError(f"Path to fill from does not exists: {path}")
+        if not os.path.isdir(path):
+            logger.error(f"Path to fill from is not a directory: {path}")
+            raise NotADirectoryError(f"Path to fill from is not a directory: {path}")
 
+        try:
             subfolder_names = os.listdir(path)
         except OSError as e:
             logger.error(f"Failed to list directory {path}: {e}")
@@ -66,12 +63,12 @@ class Library:
                             mesh = absolute_file_path
                         elif file_name.lower().endswith(".txt"):
                             description = absolute_file_path
-                        Sql.insert_asset(
-                            conn, cursor, subfolder_name, image, mesh, description
-                        )
-                        logger.info(
-                            f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}"
-                        )
+                    Sql.insert_asset(
+                        self.db._conn, cursor, subfolder_name, image, mesh, description
+                    )
+                    logger.info(
+                        f"Inserted asset: {Fore.GREEN}{subfolder_name}{Fore.RESET}"
+                    )
                 except OSError as e:
                     logger.error(f"Failed to list subdirectory {subpath}: {e}")
                 except sqlite3.Error as e:
@@ -81,7 +78,8 @@ class Library:
         """Print out all the assets in the database."""
         # Get fresh connection and cursor for querying assets
         try:
-            assets = Sql.query_assets(Sql.get_cursor(self.db.get_connection()))
+            cursor = self.db._get_cursor()
+            assets = Sql.query_assets(cursor)
             if assets:
                 print(
                     f"{'ID':<4} {'Name':<10} {'Image':<10} {'Mesh':<10} {'Description':<10}"
@@ -117,7 +115,8 @@ class Library:
         """Return a list of all assets as dictionaries."""
         # Get fresh connection and cursor for querying assets
         try:
-            assets = Sql.query_assets(Sql.get_cursor(self.db.get_connection()))
+            cursor = self.db._get_cursor()
+            assets = Sql.query_assets(cursor)
             return [
                 {
                     "id": asset_id,
