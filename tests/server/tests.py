@@ -14,12 +14,14 @@ from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 
 ############ MOCK stuff ############
 
+
 # Pytest fixture that mocks an asynchronous WebSocket connection
 @pytest.fixture
 def mock_ws():
     ws = AsyncMock()  # Simulates an async WebSocket instance
     ws.remote_address = ("127.0.0.1", 12345)  # Sets a fake remote address
     return ws
+
 
 # Pytest fixture that mocks an agent with a mock 'achat' method
 @pytest.fixture
@@ -28,10 +30,12 @@ def mock_agent():
     agent_instance.achat = MagicMock()  # Mocks the 'achat' method on the agent
     return agent_instance
 
+
 # Pytest fixture that creates a Client using the mocked WebSocket and agent
 @pytest.fixture
 def mock_client(mock_ws, mock_agent):
     return Client(mock_ws, mock_agent)
+
 
 # Mock class simulating a WebSocket server for testing
 class MockWsServer:
@@ -51,10 +55,17 @@ class TestServer:
         return asyncio.run(coroutine)
 
     @pytest.fixture
+    def mock_logger(self):
+        with patch("server.server.logger") as mock_logger:
+            yield mock_logger
+
+    @pytest.fixture
     def mock_server(self, mock_agent):
         """Pytest fixture that creates a mocked Server instance with patched dependencies"""
         # Patch AgentAPI to return the mock_agent
-        with patch("server.server.AgentAPI", new_callable=Mock, return_value=mock_agent):
+        with patch(
+            "server.server.AgentAPI", new_callable=Mock, return_value=mock_agent
+        ):
             # Patch logger to prevent real logging
             with patch("server.server.logger"):
                 server = Server(host="0.0.0.0", port=8765)
@@ -62,10 +73,11 @@ class TestServer:
                 return server
 
     @patch("server.server.AgentAPI")  # Patch AgentAPI for this test
-    @patch("server.server.logger")   # Patch logger for this test
-    def test_init_success(self, mock_logger, mock_agent_api, mock_agent):
+    def test_init_success(self, mock_agent_api, mock_logger, mock_agent):
         """Unit test to check server initialization when AgentAPI initializes correctly"""
-        mock_agent_api.return_value = mock_agent  # Configure AgentAPI mock to return mock_agent
+        mock_agent_api.return_value = (
+            mock_agent  # Configure AgentAPI mock to return mock_agent
+        )
 
         server = Server(host="0.0.0.0", port=8765)
 
@@ -84,8 +96,7 @@ class TestServer:
         )
 
     @patch("server.server.AgentAPI")
-    @patch("server.server.logger")
-    def test_init_agent_error(self, mock_logger, mock_agent_api):
+    def test_init_agent_error(self, mock_agent_api, mock_logger):
         """Unit test to check server behavior when AgentAPI initialization fails"""
         err = ValueError("test")
         mock_agent_api.side_effect = err  # Simulate AgentAPI throwing an error
@@ -107,9 +118,9 @@ class TestServer:
         )
 
     @patch("server.server.asyncio.get_event_loop")
-    @patch("server.server.logger")
-    def test_start_success(self, mock_logger, mock_get_event_loop, mock_server):
+    def test_start_success(self, mock_get_event_loop, mock_logger, mock_server):
         """Test: successful server start"""
+
         # Mock coroutine simulating server run
         async def mock_run_server():
             mock_server.server = mock_ws_server
@@ -137,8 +148,7 @@ class TestServer:
         mock_logger.info.assert_called_once_with("Server finished working.")
 
     @patch("server.server.asyncio.get_event_loop")
-    @patch("server.server.logger")
-    def test_start_exception(self, mock_logger, mock_get_event_loop, mock_server):
+    def test_start_exception(self, mock_get_event_loop, mock_logger, mock_server):
         mock_loop = MagicMock()
         mock_get_event_loop.return_value = mock_loop
         err = ValueError("test")
@@ -164,8 +174,7 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.server.websockets.serve", new_callable=AsyncMock)
-    @patch("server.server.logger")
-    async def test_run_success(self, mock_logger, mock_ws_serve, mock_server):
+    async def test_run_success(self, mock_ws_serve, mock_logger, mock_server):
         mock_ws_server = MockWsServer()
         mock_ws_serve.return_value = mock_ws_server
 
@@ -182,8 +191,7 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.server.websockets.serve", new_callable=AsyncMock)
-    @patch("server.server.logger")
-    async def test_run_os_error(self, mock_logger, mock_ws_serve, mock_server):
+    async def test_run_os_error(self, mock_ws_serve, mock_logger, mock_server):
         err = OSError("test")
         mock_ws_serve.side_effect = err
 
@@ -200,8 +208,7 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.server.websockets.serve", new_callable=AsyncMock)
-    @patch("server.server.logger")
-    async def test_run_other_exception(self, mock_logger, mock_ws_serve, mock_server):
+    async def test_run_other_exception(self, mock_ws_serve, mock_logger, mock_server):
         err = ValueError("test")
         mock_ws_serve.side_effect = err
 
@@ -232,9 +239,8 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
-    @patch("server.server.logger")
     async def test_handler_client_success(
-        self, mock_logger, mock_client_instance, mock_server, mock_ws
+        self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
         mock_client = self._client_instance()
         mock_client_instance.return_value = mock_client
@@ -262,9 +268,8 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
-    @patch("server.server.logger")
     async def test_handler_client_finally_closes_client(
-        self, mock_logger, mock_client_instance, mock_server, mock_ws
+        self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
         async def mock_failed_disconnection(mock_client):
             await asyncio.sleep(0.01)
@@ -297,9 +302,8 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
-    @patch("server.server.logger")
     async def test_handler_client_cancelled_error(
-        self, mock_logger, mock_client_instance, mock_server, mock_ws
+        self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
         mock_client = self._client_instance()
         mock_client.close = AsyncMock(
@@ -327,9 +331,8 @@ class TestServer:
 
     @pytest.mark.asyncio
     @patch("server.client.Client")
-    @patch("server.server.logger")
     async def test_handler_client_other_exception(
-        self, mock_logger, mock_client_instance, mock_server, mock_ws
+        self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
         err = ValueError("test")
         mock_client = self._client_instance()
@@ -358,7 +361,6 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.server.logger")
     async def test_shutdown_success(self, mock_logger, mock_server):
         mock_client1 = self._client_instance()
         mock_client2 = self._client_instance()
@@ -389,7 +391,6 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.server.logger")
     async def test_shutdown_cancelled_error(self, mock_logger, mock_server):
         mock_client1 = self._client_instance()
         mock_client2 = self._client_instance()
@@ -419,7 +420,6 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.server.logger")
     async def test_shutdown_other_exception(self, mock_logger, mock_server):
         mock_client1 = self._client_instance()
         mock_client2 = self._client_instance()
@@ -463,7 +463,6 @@ class TestServer:
         assert not mock_server.list_client
 
     @pytest.mark.asyncio
-    @patch("server.server.logger")
     async def test_close_client_exception_on_client_close(
         self, mock_logger, mock_server, mock_client
     ):
@@ -487,7 +486,6 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.server.logger")
     async def test_close_client_exception_on_ws_close(
         self, mock_logger, mock_server, mock_client
     ):
@@ -521,6 +519,11 @@ class TestSession:
             yield token
 
     @pytest.fixture
+    def mock_logger(self):
+        with patch("server.session.logger") as mock_logger:
+            yield mock_logger
+
+    @pytest.fixture
     def mock_session(self, mock_client):
         with patch("server.session.uuid.uuid1") as mock_uuid1:
             with patch("server.session.logger") as mock_logger:
@@ -530,7 +533,6 @@ class TestSession:
                 return Session(mock_client)
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_run_success(self, mock_logger, mock_session):
 
         message1 = InputMessage(command="chat", message="test1")
@@ -569,7 +571,6 @@ class TestSession:
         )
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_run_cancelled_error(self, mock_logger, mock_session):
         mock_session.client.queue_input.get = AsyncMock(
             side_effect=asyncio.CancelledError,
@@ -588,7 +589,6 @@ class TestSession:
         )
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_run_other_exception(self, mock_logger, mock_session):
         err = ValueError("test")
         message = InputMessage(command="chat", message="test")
@@ -622,7 +622,6 @@ class TestSession:
         mock_logger.error.assert_called_once_with(f"Session error: {err}")
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_handle_message_success(
         self,
         mock_logger,
@@ -657,7 +656,6 @@ class TestSession:
         )
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_handle_message_achat_cancelled_error(
         self, mock_logger, mock_session
     ):
@@ -679,7 +677,6 @@ class TestSession:
         )
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_handle_message_achat_other_exception(
         self, mock_logger, mock_session
     ):
@@ -704,7 +701,6 @@ class TestSession:
         mock_logger.error.assert_called_once_with(f"Error during chat stream: {err}")
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_handle_message_stream_cancelled_error(
         self, mock_logger, mock_session
     ):
@@ -733,7 +729,6 @@ class TestSession:
         )
 
     @pytest.mark.asyncio
-    @patch("server.session.logger")
     async def test_handle_message_stream_other_exception(
         self, mock_logger, mock_session
     ):
@@ -765,6 +760,11 @@ class TestSession:
 
 
 class TestClient:
+    @pytest.fixture
+    def mock_logger(self):
+        with patch("server.client.logger") as mock_logger:
+            yield mock_logger
+
     @patch("server.session.Session")
     @pytest.mark.asyncio
     async def test_start_client(self, mock_session, mock_client):
@@ -800,7 +800,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_send_message_cancelled_error(self, mock_logger, mock_client):
         mock_client.queue_output.put = AsyncMock(
             side_effect=asyncio.CancelledError("test")
@@ -816,7 +815,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_send_message_other_exception(
         self, mock_logger, mock_ws, mock_client
     ):
@@ -833,14 +831,13 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     @patch("server.client.Client.close", new_callable=AsyncMock)
     async def test_loop_input_success(
         self,
-        mock_close: AsyncMock,
-        mock_logger: MagicMock,
-        mock_client: Client,
-        mock_ws: AsyncMock,
+        mock_close,
+        mock_client,
+        mock_logger,
+        mock_ws,
     ):
         mock_ws.__aiter__.return_value = ["test1", "test2"]
 
@@ -867,7 +864,6 @@ class TestClient:
         ]
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_input_empty_message(self, mock_logger, mock_client, mock_ws):
         mock_ws.__aiter__.return_value = [""]
         mock_client.queue_input.put = AsyncMock()
@@ -894,7 +890,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_input_cancelled_error(self, mock_logger, mock_client, mock_ws):
         mock_ws.__aiter__.return_value = ["test"]
         mock_client.queue_input.put = AsyncMock(side_effect=asyncio.CancelledError)
@@ -910,7 +905,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_input_connection_closed(
         self, mock_logger, mock_client, mock_ws
     ):
@@ -928,7 +922,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_input_other_exception(self, mock_logger, mock_client, mock_ws):
         err = ValueError("test")
         mock_ws.__aiter__ = MagicMock(return_value=mock_ws)
@@ -944,7 +937,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_output_success(self, mock_logger, mock_client, mock_ws):
         message = OutputMessage(status="stream", code=200, message="test")
         mock_client.queue_output.get = AsyncMock(
@@ -960,7 +952,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_output_cancelled_error(self, mock_logger, mock_client, mock_ws):
         mock_client.queue_output.get = AsyncMock(side_effect=asyncio.CancelledError)
 
@@ -975,7 +966,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_output_other_exception_on_get(
         self, mock_logger, mock_client, mock_ws
     ):
@@ -993,7 +983,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_loop_output_other_exception_on_send(
         self, mock_logger, mock_client, mock_ws
     ):
@@ -1016,7 +1005,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_close_success(self, mock_logger, mock_client, mock_ws):
         mock_client.task_input = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_output = asyncio.create_task(asyncio.sleep(1))
@@ -1042,7 +1030,6 @@ class TestClient:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.logger")
     async def test_close_ws_error(self, mock_logger, mock_client, mock_ws):
         mock_client.task_input = asyncio.create_task(asyncio.sleep(1))
         mock_client.task_output = asyncio.create_task(asyncio.sleep(1))

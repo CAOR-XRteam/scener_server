@@ -1,4 +1,5 @@
 import server.server as ws
+import sys
 
 
 class ServerAPI:
@@ -11,4 +12,11 @@ class ServerAPI:
 
     def start(self):
         """Start the WebSocket server."""
-        self.server.start()
+        try:
+            self.server.start()
+        except Exception as e:
+            print(f"Error starting server: {e}")
+            sys.exit(1)
+        finally:
+            self.server.server.close()
+            print("Server stopped.")
