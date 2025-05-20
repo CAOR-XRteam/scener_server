@@ -15,6 +15,10 @@ if __name__ == "__main__":
         os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
         + "/media/asset/"
     )
+
+    if not os.path.exists(assets_path):
+        os.makedirs(assets_path)
+
     LibraryAPI.fill(assets_path)
     LibraryAPI.read()
     list = LibraryAPI.get_list()

@@ -1,7 +1,11 @@
+import library
 import pytest
 import sqlite3
+import os
 
+from colorama import Fore
 from library.sql import Sql
+from library.library_database import Database
 from unittest.mock import MagicMock, patch, call
 
 
@@ -15,6 +19,32 @@ def mock_conn():
 def mock_cursor():
     with patch("sqlite3.Cursor", spec=sqlite3.Cursor) as mock_cursor:
         yield mock_cursor
+
+
+@pytest.fixture
+def mock_os():
+    with patch("library.library_database.os", spec=os) as mock_os:
+        yield mock_os
+
+
+@pytest.fixture
+def mock_sql():
+    with patch("library.library_database.Sql", spec=library.sql.Sql) as mock_sql:
+        yield mock_sql
+
+
+DB_PATH = "test.db"
+
+
+@pytest.fixture
+def mock_db(mock_sql, mock_os, mock_conn, mock_cursor):
+    mock_os.path.exists.return_value = True
+    mock_sql.connect_db.return_value = mock_conn
+    mock_sql.get_cursor.return_value = mock_cursor
+    with patch("library.library_database.logger"):
+        db = Database(DB_PATH)
+        # db._is_opened_connection = MagicMock(return_value=True)
+        return db
 
 
 class TestSql:
@@ -468,11 +498,245 @@ class TestSql:
         assert mock_logger.info.call_count == 4
 
 
-class TestAsset:
-    pass
-
-
 class TestDatabase:
+
+    @pytest.fixture
+    def mock_logger(self):
+        with patch("library.library_database.logger") as mock_logger:
+            yield mock_logger
+
+    def test_init_success_db_exists(
+        self, mock_sql, mock_logger, mock_os, mock_conn, mock_cursor
+    ):
+        mock_os.path.exists.return_value = True
+        mock_sql.connect_db.return_value = mock_conn
+        mock_sql.get_cursor.return_value = mock_cursor
+
+        db = Database(DB_PATH)
+
+        assert db.path == DB_PATH
+        assert db._conn == mock_conn
+
+        mock_os.path.exists.assert_called_once_with(DB_PATH)
+        mock_os.makedirs.assert_called_once_with(
+            mock_os.path.dirname(DB_PATH), exist_ok=True
+        )
+
+        mock_sql.connect_db.assert_called_once_with(DB_PATH)
+        mock_sql.get_cursor.assert_called_once_with(db._conn)
+        mock_sql.create_table_asset.assert_called_once_with(mock_conn, mock_cursor)
+
+        mock_logger.info.assert_any_call(
+            f"Database initialized at {Fore.GREEN}{DB_PATH}{Fore.RESET}"
+        )
+        mock_logger.success.assert_called_once_with(
+            f"Connected to database {Fore.GREEN}{DB_PATH}{Fore.RESET}"
+        )
+
+    def test_init_success_db_not_exists(
+        self, mock_sql, mock_logger, mock_os, mock_conn, mock_cursor
+    ):
+        mock_os.path.exists.return_value = False
+        mock_sql.connect_db.return_value = mock_conn
+        mock_sql.get_cursor.return_value = mock_cursor
+
+        db = Database(DB_PATH)
+
+        assert db.path == DB_PATH
+        assert db._conn == mock_conn
+
+        mock_os.path.exists.assert_called_once_with(DB_PATH)
+        mock_os.makedirs.assert_called_once_with(
+            mock_os.path.dirname(DB_PATH), exist_ok=True
+        )
+
+        mock_sql.connect_db.assert_called_once_with(DB_PATH)
+        mock_sql.get_cursor.assert_called_once_with(db._conn)
+        mock_sql.create_table_asset.assert_called_once_with(mock_conn, mock_cursor)
+
+        mock_logger.info.assert_any_call(
+            f"Database initialized at {Fore.GREEN}{DB_PATH}{Fore.RESET}"
+        )
+        mock_logger.success.assert_called_once_with(
+            f"Connected to database {Fore.GREEN}{DB_PATH}{Fore.RESET}"
+        )
+        mock_logger.warning.assert_called_once_with(
+            f"Database file not found. Creating it at {Fore.GREEN}{DB_PATH}{Fore.RESET}."
+        )
+
+    def test_init_makedir_error(self, mock_logger, mock_os):
+        err = OSError("euh")
+        mock_os.path.exists.return_value = False
+        mock_os.makedirs.side_effect = err
+
+        with pytest.raises(OSError, match="euh"):
+            _ = Database(DB_PATH)
+
+        mock_logger.warning.assert_called_once_with(
+            f"Database file not found. Creating it at {Fore.GREEN}{DB_PATH}{Fore.RESET}."
+        )
+        assert mock_logger.error.call_count == 2
+        mock_logger.error.assert_any_call(
+            f"Failed to create directory for database: {err}"
+        )
+        mock_logger.error.assert_any_call(f"Failed to initialize database: {err}")
+
+    def test_init_connect_error(self, mock_sql, mock_logger, mock_os):
+        err = sqlite3.Error("ah")
+        mock_os.path.exists.return_value = True
+        mock_sql.connect_db.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="ah"):
+            db = Database(DB_PATH)
+            assert db._conn is None
+
+        assert mock_logger.error.call_count == 2
+        mock_logger.error.assert_any_call(f"Failed to initialize database: {err}")
+
+    def test_init_get_cursor_error_close_conn_success(
+        self, mock_sql, mock_logger, mock_os, mock_conn
+    ):
+        err = sqlite3.Error("oh")
+        mock_os.path.exists.return_value = True
+        mock_sql.connect_db.return_value = mock_conn
+        mock_sql.get_cursor.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="oh"):
+            db = Database(DB_PATH)
+            assert db._conn is None
+
+        mock_sql.connect_db.assert_called_once_with(DB_PATH)
+        mock_sql.close_connection.assert_called_once_with(mock_conn)
+
+        assert mock_logger.error.call_count == 2
+        mock_logger.error.assert_any_call(f"Failed to initialize database: {err}")
+
+    def test_init_get_cursor_error_close_conn_error(
+        self, mock_sql, mock_logger, mock_os, mock_conn
+    ):
+        get_cursor_err = sqlite3.Error("ba")
+        close_err = sqlite3.Error("daboum")
+        mock_os.path.exists.return_value = True
+        mock_sql.connect_db.return_value = mock_conn
+        mock_sql.get_cursor.side_effect = get_cursor_err
+        mock_sql.close_connection.side_effect = close_err
+
+        with pytest.raises(sqlite3.Error, match="daboum"):
+            db = Database(DB_PATH)
+            assert db._conn is None
+
+        mock_sql.connect_db.assert_called_once_with(DB_PATH)
+        mock_sql.get_cursor.assert_called_once_with(mock_conn)
+        mock_sql.close_connection.assert_called_once_with(mock_conn)
+
+        assert mock_logger.error.call_count == 3
+        mock_logger.error.assert_any_call(
+            f"Failed to initialize database: {get_cursor_err}"
+        )
+        mock_logger.error.assert_any_call(f"Failed to close connection: {close_err}")
+
+    def test_init_create_asset_error(
+        self, mock_sql, mock_logger, mock_os, mock_conn, mock_cursor
+    ):
+        err = sqlite3.Error("pims sont sous-cotés")
+        mock_os.path.exists.return_value = True
+        mock_sql.connect_db.return_value = mock_conn
+        mock_sql.get_cursor.return_value = mock_cursor
+        mock_sql.create_table_asset.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="pims sont sous-coté"):
+            db = Database(DB_PATH)
+            assert db._conn is None
+
+        mock_sql.connect_db.assert_called_once_with(DB_PATH)
+        mock_sql.get_cursor.assert_called_once_with(mock_conn)
+        mock_sql.close_connection.assert_called_once_with(mock_conn)
+
+        assert mock_logger.error.call_count == 2
+        mock_logger.error.assert_any_call(f"Failed to initialize database: {err}")
+
+    def test_get_conn_already_opened(self, mock_db, mock_sql, mock_conn):
+        conn = mock_db.get_connection()
+
+        assert conn == mock_conn
+
+        mock_sql.get_cursor.assert_called_once_with(mock_conn)
+
+        assert mock_db._is_opened_connection() is True
+
+    def test_get_conn_new_conn_success(self, mock_db, mock_sql, mock_conn):
+        mock_db._conn = None
+        mock_sql.get_cursor.side_effect = sqlite3.Error("test")
+
+        assert mock_db._is_opened_connection() is False
+
+        conn = mock_db.get_connection()
+
+        assert conn == mock_conn
+
+        mock_sql.get_cursor.assert_called_once()
+
+    def test_get_conn_new_conn_error(self, mock_db, mock_sql, mock_logger):
+        err = sqlite3.Error("test")
+        mock_db._conn = None
+        mock_sql.connect_db.side_effect = err
+        mock_sql.get_cursor.side_effect = err
+
+        assert mock_db._is_opened_connection() is False
+
+        with pytest.raises(sqlite3.Error, match="test"):
+            mock_db.get_connection()
+
+        mock_sql.get_cursor.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to create a new connection: {err}"
+        )
+
+    def test_get_cursor_success(self, mock_db, mock_sql, mock_conn, mock_cursor):
+        cursor = mock_db._get_cursor()
+
+        assert cursor == mock_cursor
+
+        assert mock_sql.get_cursor.call_count == 2
+        mock_sql.get_cursor.assert_any_call(mock_conn)
+
+    def test_get_cursor_error(self, mock_db, mock_sql, mock_conn, mock_logger):
+        err = sqlite3.Error("test")
+        mock_sql.get_cursor.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="test"):
+            mock_db._get_cursor()
+
+        assert mock_sql.get_cursor.call_count == 2
+        mock_sql.get_cursor.assert_any_call(mock_conn)
+
+        mock_logger.error.assert_called_once_with(f"Failed to get a cursor: {err}")
+
+    def test_close_connection_no_opened_connecion(self, mock_db, mock_logger):
+        mock_db._conn = None
+        mock_db.close()
+
+        mock_logger.warning.assert_called_once_with("No connection to close.")
+
+    def test_close_connection_success(self, mock_db, mock_sql):
+        mock_db.close(mock_db._conn)
+
+        mock_sql.close_connection.assert_called_once_with(mock_db._conn)
+
+    def test_close_connection_error(self, mock_db, mock_sql, mock_logger):
+        err = sqlite3.Error("test")
+        mock_sql.close_connection.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="test"):
+            mock_db.close(mock_db._conn)
+
+        mock_sql.close_connection.assert_called_once_with(mock_db._conn)
+
+        mock_logger.error.assert_called_once_with(f"Failed to close connection: {err}")
+
+
+class TestAsset:
     pass
 
 

@@ -18,16 +18,6 @@ from loguru import logger
 
 
 class Database:
-    def __init__(self, path):
-        self.path = path
-        self._conn = None
-        try:
-            self._check_path_and_init_db()
-            logger.info(f"Database initialized at {Fore.GREEN}{self.path}{Fore.RESET}")
-        except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
-            raise
-
     def _is_opened_connection(self):
         # Check if the connection is open
         try:
@@ -43,12 +33,11 @@ class Database:
                 f"Database file not found. Creating it at {Fore.GREEN}{self.path}{Fore.RESET}."
             )
 
-        if not os.path.exists(os.path.dirname(self.path)):
-            try:
-                os.makedirs(os.path.dirname(self.path))
-            except OSError as e:
-                logger.error(f"Failed to create directory for database: {e}")
-                raise
+        try:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        except OSError as e:
+            logger.error(f"Failed to create directory for database: {e}")
+            raise
 
         try:
             self._conn = Sql.connect_db(self.path)
@@ -67,6 +56,16 @@ class Database:
                     self._conn = None
             raise
 
+    def __init__(self, path):
+        self.path = path
+        self._conn = None
+        try:
+            self._check_path_and_init_db()
+            logger.info(f"Database initialized at {Fore.GREEN}{self.path}{Fore.RESET}")
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            raise
+
     def get_connection(self):
         # Create a new connection each time it's needed, no need to cache
         if self._is_opened_connection():
@@ -76,12 +75,13 @@ class Database:
                 self._conn = Sql.connect_db(self.path)
             except Exception as e:
                 self._conn = None
+                logger.error(f"Failed to create a new connection: {e}")
                 raise
 
     def _get_cursor(self):
         # Get a fresh cursor for each operation
         try:
-            conn = self._get_connection()
+            conn = self.get_connection()
             return Sql.get_cursor(conn)
         except Exception as e:
             logger.error(f"Failed to get a cursor: {e}")
@@ -94,5 +94,6 @@ class Database:
                 Sql.close_connection(conn)
             except Exception as e:
                 logger.error(f"Failed to close connection: {e}")
+                raise
         else:
             logger.warning("No connection to close.")
