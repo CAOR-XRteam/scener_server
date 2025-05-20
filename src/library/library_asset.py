@@ -35,23 +35,25 @@ class Asset:
             cursor = self.db._get_cursor()
             existing_asset = self._get_asset_by_name(cursor, name)
             if existing_asset:
-                logger.warning(
-                    f"Asset with name {Fore.YELLOW}{name}{Fore.RESET} already exists."
+                logger.error(
+                    f"Asset with name {Fore.YELLOW}'{name}'{Fore.RESET} already exists."
                 )
                 raise ValueError(
-                    f"Asset with name {Fore.YELLOW}{name}{Fore.RESET} already exists."
+                    f"Asset with name {Fore.YELLOW}'{name}'{Fore.RESET} already exists."
                 )
             try:
                 # Insert the new asset
                 Sql.insert_asset(self.db._conn, cursor, name, image, mesh, description)
                 logger.success(
-                    f"Asset {Fore.GREEN}{name}{Fore.RESET} added successfully."
+                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} added successfully."
                 )
             except Exception as e:
-                logger.error(f"Failed to add asset {name}: {e}")
+                logger.error(f"Failed to add asset '{name}': {e}")
                 raise
+        except ValueError as ve:
+            raise
         except Exception as e:
-            logger.error(f"Failed to get a cursor: {e}")
+            logger.error(f"Failed to get the asset: {e}")
             raise
 
     def delete(self, name):
@@ -67,17 +69,17 @@ class Asset:
             # Check if the asset exists
             asset = self._get_asset_by_name(cursor, name)
             if not asset:
-                logger.warning(f"Asset {Fore.RED}{name}{Fore.RESET} not found.")
-                raise ValueError(f"Asset {Fore.RED}{name}{Fore.RESET} not found.")
+                logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
+                raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
 
             # Delete the asset
             try:
                 Sql.delete_asset(self.db._conn, cursor, name)
                 logger.success(
-                    f"Asset {Fore.GREEN}{name}{Fore.RESET} deleted successfully."
+                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
                 )
             except Exception as e:
-                logger.error(f"Failed to delete asset {name}: {e}")
+                logger.error(f"Failed to delete asset '{name}': {e}")
                 raise
         except Exception as e:
             logger.error(f"Failed to get a cursor: {e}")
@@ -96,16 +98,16 @@ class Asset:
             # Check if the asset exists
             asset = self._get_asset_by_name(cursor, name)
             if not asset:
-                logger.warning(f"Asset {Fore.RED}{name}{Fore.RESET} not found.")
-                raise ValueError(f"Asset {Fore.RED}{name}{Fore.RESET} not found.")
+                logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
+                raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
             # Update the asset
             try:
                 Sql.update_asset(self.db._conn, cursor, name, image, mesh, description)
                 logger.success(
-                    f"Asset {Fore.GREEN}{name}{Fore.RESET} updated successfully."
+                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} updated successfully."
                 )
             except Exception as e:
-                logger.error(f"Failed to update asset {name}: {e}")
+                logger.error(f"Failed to update asset '{name}': {e}")
                 raise
         except Exception as e:
             logger.error(f"Failed to get a cursor: {e}")
@@ -117,5 +119,5 @@ class Asset:
             cursor.execute("SELECT * FROM asset WHERE name = ?", (name,))
             return cursor.fetchone()
         except sqlite3.Error as e:
-            logger.error(f"Failed to fetch asset {name}: {e}")
+            logger.error(f"Failed to fetch asset '{name}': {e}")
             raise

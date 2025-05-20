@@ -6,6 +6,7 @@ import os
 from colorama import Fore
 from library.sql import Sql
 from library.library_database import Database
+from library.library_asset import Asset
 from unittest.mock import MagicMock, patch, call
 
 
@@ -737,7 +738,41 @@ class TestDatabase:
 
 
 class TestAsset:
-    pass
+    patch(
+        "library.library_asset.Fore", MagicMock(GREEN="", YELLOW="", RED="", RESET="")
+    ).start()
+
+    @pytest.fixture
+    def mock_logger(self):
+        with patch("library.library_asset.logger") as mock_logger:
+            yield mock_logger
+
+    @pytest.fixture
+    def mock_asset(self, mock_db):
+        return Asset(mock_db)
+
+    def test_add_asset_empty_name(self, mock_asset, mock_logger):
+        with pytest.raises(ValueError, match="Asset name is required!"):
+            mock_asset.add("", "img.png", "mesh.obj", "desc.txt")
+
+        mock_logger.error.assert_called_once_with("Asset name is required!")
+
+    def test_add_asset_name_exists(self, mock_asset, mock_logger, mock_cursor):
+        mock_asset._get_asset_by_name = MagicMock(return_value=(1,))
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+
+        with pytest.raises(
+            ValueError,
+            match=f"Asset with name 'asset' already exists.",
+        ):
+            mock_asset.add("asset", "img.png", "mesh.obj", "desc.txt")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_logger.error.assert_called_once_with(
+            f"Asset with name 'asset' already exists."
+        )
 
 
 class TestLibrary:
