@@ -11,12 +11,15 @@ Last Updated: 19-05-2025
 # TODO: more precise error handling to propagate to the agent
 
 import os
+import sqlite3
 
+from beartype import beartype
 from colorama import Fore
 from library.sql import Sql
 from loguru import logger
 
 
+@beartype
 class Database:
     def _is_opened_connection(self):
         # Check if the connection is open
@@ -56,7 +59,7 @@ class Database:
                     self._conn = None
             raise
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
         self._conn = None
         try:
@@ -73,6 +76,7 @@ class Database:
         else:
             try:
                 self._conn = Sql.connect_db(self.path)
+                return self._conn
             except Exception as e:
                 self._conn = None
                 logger.error(f"Failed to create a new connection: {e}")
@@ -87,7 +91,7 @@ class Database:
             logger.error(f"Failed to get a cursor: {e}")
             raise
 
-    def close(self, conn=None):
+    def close(self, conn: sqlite3.Connection = None):
         # Close the specific connection
         if conn:
             try:

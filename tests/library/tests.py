@@ -7,6 +7,7 @@ from colorama import Fore
 from library.sql import Sql
 from library.library_database import Database
 from library.library_asset import Asset
+from library.library_list import Library
 from unittest.mock import MagicMock, patch, call
 
 
@@ -20,32 +21,6 @@ def mock_conn():
 def mock_cursor():
     with patch("sqlite3.Cursor", spec=sqlite3.Cursor) as mock_cursor:
         yield mock_cursor
-
-
-@pytest.fixture
-def mock_os():
-    with patch("library.library_database.os", spec=os) as mock_os:
-        yield mock_os
-
-
-@pytest.fixture
-def mock_sql():
-    with patch("library.library_database.Sql", spec=library.sql.Sql) as mock_sql:
-        yield mock_sql
-
-
-DB_PATH = "test.db"
-
-
-@pytest.fixture
-def mock_db(mock_sql, mock_os, mock_conn, mock_cursor):
-    mock_os.path.exists.return_value = True
-    mock_sql.connect_db.return_value = mock_conn
-    mock_sql.get_cursor.return_value = mock_cursor
-    with patch("library.library_database.logger"):
-        db = Database(DB_PATH)
-        # db._is_opened_connection = MagicMock(return_value=True)
-        return db
 
 
 class TestSql:
@@ -499,6 +474,32 @@ class TestSql:
         assert mock_logger.info.call_count == 4
 
 
+@pytest.fixture
+def mock_os():
+    with patch("library.library_database.os", spec=os) as mock_os:
+        yield mock_os
+
+
+@pytest.fixture
+def mock_sql():
+    with patch("library.library_database.Sql", spec=library.sql.Sql) as mock_sql:
+        yield mock_sql
+
+
+DB_PATH = "test.db"
+
+
+@pytest.fixture
+def mock_db(mock_sql, mock_os, mock_conn, mock_cursor):
+    mock_os.path.exists.return_value = True
+    mock_sql.connect_db.return_value = mock_conn
+    mock_sql.get_cursor.return_value = mock_cursor
+    with patch("library.library_database.logger"):
+        db = Database(DB_PATH)
+        # db._is_opened_connection = MagicMock(return_value=True)
+        return db
+
+
 class TestDatabase:
 
     @pytest.fixture
@@ -743,6 +744,11 @@ class TestAsset:
     ).start()
 
     @pytest.fixture
+    def mock_sql_asset(self):
+        with patch("library.library_asset.Sql", spec=library.sql.Sql) as mock_sql:
+            yield mock_sql
+
+    @pytest.fixture
     def mock_logger(self):
         with patch("library.library_asset.logger") as mock_logger:
             yield mock_logger
@@ -751,13 +757,15 @@ class TestAsset:
     def mock_asset(self, mock_db):
         return Asset(mock_db)
 
-    def test_add_asset_empty_name(self, mock_asset, mock_logger):
-        with pytest.raises(ValueError, match="Asset name is required!"):
+    def test_add_empty_name(self, mock_asset, mock_logger):
+        with pytest.raises(ValueError, match="Asset name is required for addition!"):
             mock_asset.add("", "img.png", "mesh.obj", "desc.txt")
 
-        mock_logger.error.assert_called_once_with("Asset name is required!")
+        mock_logger.error.assert_called_once_with(
+            "Asset name is required for addition!"
+        )
 
-    def test_add_asset_name_exists(self, mock_asset, mock_logger, mock_cursor):
+    def test_add_name_exists(self, mock_asset, mock_logger, mock_cursor):
         mock_asset._get_asset_by_name = MagicMock(return_value=(1,))
         mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
 
@@ -774,6 +782,491 @@ class TestAsset:
             f"Asset with name 'asset' already exists."
         )
 
+    def test_add_success(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_cursor, mock_conn
+    ):
+        mock_asset._get_asset_by_name = MagicMock(return_value=None)
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+
+        mock_asset.add("asset", "img.png", "mesh.obj", "desc.txt")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_sql_asset.insert_asset.assert_called_once_with(
+            mock_conn, mock_cursor, "asset", "img.png", "mesh.obj", "desc.txt"
+        )
+
+        mock_logger.success.assert_called_once_with(
+            f"Asset 'asset' added successfully."
+        )
+
+    def test_add_insert_error(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_conn, mock_cursor
+    ):
+        err = sqlite3.Error("inner")
+        mock_asset._get_asset_by_name = MagicMock(return_value=None)
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_sql_asset.insert_asset.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="inner"):
+            mock_asset.add("asset", "img.png", "mesh.obj", "desc.txt")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+        mock_sql_asset.insert_asset.assert_called_once_with(
+            mock_conn, mock_cursor, "asset", "img.png", "mesh.obj", "desc.txt"
+        )
+        mock_logger.error.assert_called_once_with(
+            f"Failed to add the asset 'asset': {err}"
+        )
+
+    def test_add_get_cursor_error(
+        self,
+        mock_asset,
+        mock_logger,
+    ):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.add("asset", "img.png", "mesh.obj", "desc.txt")
+
+        mock_asset.db._get_cursor.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to add the asset 'asset': {err}"
+        )
+
+    def test_add_get_asset_error(self, mock_asset, mock_logger, mock_cursor):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_asset._get_asset_by_name = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.add("asset", "img.png", "mesh.obj", "desc.txt")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to add the asset 'asset': {err}"
+        )
+
+    def test_delete_empty_name(self, mock_asset, mock_logger):
+        with pytest.raises(ValueError, match="Asset name is required for deletion!"):
+            mock_asset.delete("")
+
+        mock_logger.error.assert_called_once_with(
+            "Asset name is required for deletion!"
+        )
+
+    def test_delete_success(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_cursor, mock_conn
+    ):
+        mock_asset._get_asset_by_name = MagicMock(return_value=(1, "asset"))
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+
+        mock_asset.delete("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_sql_asset.delete_asset.assert_called_once_with(
+            mock_conn, mock_cursor, "asset"
+        )
+
+        mock_logger.success.assert_called_once_with(
+            f"Asset 'asset' deleted successfully."
+        )
+
+    def test_delete_sql_delete_error(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_conn, mock_cursor
+    ):
+        err = sqlite3.Error("inner")
+        mock_asset._get_asset_by_name = MagicMock(return_value=(1, "asset"))
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_sql_asset.delete_asset.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="inner"):
+            mock_asset.delete("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+        mock_sql_asset.delete_asset.assert_called_once_with(
+            mock_conn,
+            mock_cursor,
+            "asset",
+        )
+        mock_logger.error.assert_called_once_with(
+            f"Failed to delete the asset 'asset': {err}"
+        )
+
+    def test_delete_get_cursor_error(
+        self,
+        mock_asset,
+        mock_logger,
+    ):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.delete("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to delete the asset 'asset': {err}"
+        )
+
+    def test_delete_get_asset_error(self, mock_asset, mock_logger, mock_cursor):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_asset._get_asset_by_name = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.delete("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to delete the asset 'asset': {err}"
+        )
+
+    def test_update_empty_name(self, mock_asset, mock_logger):
+        with pytest.raises(ValueError, match="Asset name is required for update!"):
+            mock_asset.update("")
+
+        mock_logger.error.assert_called_once_with("Asset name is required for update!")
+
+    def test_update_success(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_cursor, mock_conn
+    ):
+        mock_asset._get_asset_by_name = MagicMock(return_value=(1, "asset"))
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+
+        mock_asset.update("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_sql_asset.update_asset.assert_called_once_with(
+            mock_conn,
+            mock_cursor,
+            "asset",
+            None,
+            None,
+            None,
+        )
+
+        mock_logger.success.assert_called_once_with(
+            f"Asset 'asset' updated successfully."
+        )
+
+    def test_update_sql_update_error(
+        self, mock_asset, mock_sql_asset, mock_logger, mock_conn, mock_cursor
+    ):
+        err = sqlite3.Error("inner")
+        mock_asset._get_asset_by_name = MagicMock(return_value=(1, "asset"))
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_sql_asset.update_asset.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="inner"):
+            mock_asset.update("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+        mock_sql_asset.update_asset.assert_called_once_with(
+            mock_conn, mock_cursor, "asset", None, None, None
+        )
+        mock_logger.error.assert_called_once_with(
+            f"Failed to update the asset 'asset': {err}"
+        )
+
+    def test_update_get_cursor_error(
+        self,
+        mock_asset,
+        mock_logger,
+    ):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.update("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to update the asset 'asset': {err}"
+        )
+
+    def test_update_get_asset_error(self, mock_asset, mock_logger, mock_cursor):
+        err = sqlite3.Error("aie")
+        mock_asset.db._get_cursor = MagicMock(return_value=mock_cursor)
+        mock_asset._get_asset_by_name = MagicMock(side_effect=err)
+
+        with pytest.raises(sqlite3.Error, match="aie"):
+            mock_asset.update("asset")
+
+        mock_asset.db._get_cursor.assert_called_once()
+        mock_asset._get_asset_by_name.assert_called_once_with(mock_cursor, "asset")
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to update the asset 'asset': {err}"
+        )
+
+    def test_get_asset_by_name_success(self, mock_asset, mock_cursor):
+        name = "test_asset"
+        expected_result = (1, "test_asset", "img.png", "mesh.obj", "desc.txt")
+        mock_cursor.fetchone.return_value = expected_result
+
+        result = mock_asset._get_asset_by_name(mock_cursor, name)
+
+        assert result == expected_result
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT * FROM asset WHERE name = ?", (name,)
+        )
+        mock_cursor.fetchone.assert_called_once()
+
+    def test_get_asset_by_name_exec_error(self, mock_asset, mock_logger, mock_cursor):
+        name = "test_asset"
+        err = sqlite3.Error("rrr")
+        mock_cursor.execute.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="rrr"):
+            mock_asset._get_asset_by_name(mock_cursor, name)
+
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT * FROM asset WHERE name = ?", (name,)
+        )
+        mock_cursor.fetchone.assert_not_called()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to fetch asset '{name}': {err}"
+        )
+
+    def test_get_asset_by_name_fetch_error(self, mock_asset, mock_logger, mock_cursor):
+        name = "test_asset"
+        err = sqlite3.Error("rrr")
+        mock_cursor.execute.return_value = (1,)
+        mock_cursor.fetchone.side_effect = err
+
+        with pytest.raises(sqlite3.Error, match="rrr"):
+            mock_asset._get_asset_by_name(mock_cursor, name)
+
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT * FROM asset WHERE name = ?", (name,)
+        )
+        mock_cursor.fetchone.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            f"Failed to fetch asset '{name}': {err}"
+        )
+
+
+ASSET_PATH = "tests/assets"
+
 
 class TestLibrary:
-    pass
+
+    @pytest.fixture
+    def mock_logger(self):
+        with patch("library.library_asset.logger") as mock_logger:
+            yield mock_logger
+
+    @pytest.fixture
+    def mock_lib(self, mock_db):
+        return Library(mock_db)
+
+    def test_fill_success(
+        self,
+        library_instance,
+        mock_sql_list_module,
+        mock_logger_list,
+        mock_os_list_module,
+        mock_db_list,
+    ):
+        mock_os_list_module.path.exists.return_value = True
+        mock_os_list_module.path.isdir.side_effect = [
+            True,
+            True,
+            True,
+        ]  # path, subfolder1, subfolder2
+        mock_os_list_module.listdir.side_effect = [
+            ["asset_folder1", "asset_folder2"],  # Content of ASSET_PATH
+            ["img.png", "mesh.obj", "desc.txt"],  # Content of asset_folder1
+            ["another.jpg", "model.fbx"],  # Content of asset_folder2
+        ]
+
+        # mock_os_list_module.path.join needs to return coherent paths
+        def join_side_effect(*args):
+            return os.path.join(*args)  # Use real os.path.join for logic
+
+        mock_os_list_module.path.join.side_effect = join_side_effect
+        mock_os_list_module.path.abspath.side_effect = lambda x: "/abs/" + x
+
+        library_instance.fill(ASSET_PATH)
+
+        conn_mock = mock_db_list.get_connection()
+        cursor_mock = mock_sql_list_module.get_cursor()
+
+        mock_sql_list_module.insert_asset.assert_any_call(
+            conn_mock,
+            cursor_mock,
+            "asset_folder1",
+            "/abs/" + os.path.join(ASSET_PATH, "asset_folder1", "img.png"),
+            "/abs/" + os.path.join(ASSET_PATH, "asset_folder1", "mesh.obj"),
+            "/abs/" + os.path.join(ASSET_PATH, "asset_folder1", "desc.txt"),
+        )
+        mock_sql_list_module.insert_asset.assert_any_call(
+            conn_mock,
+            cursor_mock,
+            "asset_folder2",
+            "/abs/" + os.path.join(ASSET_PATH, "asset_folder2", "another.jpg"),
+            "/abs/" + os.path.join(ASSET_PATH, "asset_folder2", "model.fbx"),
+            None,
+        )
+        assert (
+            mock_sql_list_module.insert_asset.call_count == 2
+        )  # For each folder, one final call
+        mock_logger_list.info.assert_any_call("Inserted asset: asset_folder1")
+        mock_logger_list.info.assert_any_call("Inserted asset: asset_folder2")
+
+    def test_fill_path_not_exists(
+        self, library_instance, mock_logger_list, mock_os_list_module
+    ):
+        mock_os_list_module.path.exists.return_value = False
+        with pytest.raises(FileNotFoundError):
+            library_instance.fill(ASSET_PATH)
+        mock_logger_list.error.assert_called_once_with(
+            f"Path to fill from does not exists: {ASSET_PATH}"
+        )
+
+    def test_fill_path_not_dir(
+        self, library_instance, mock_logger_list, mock_os_list_module
+    ):
+        mock_os_list_module.path.exists.return_value = True
+        mock_os_list_module.path.isdir.return_value = False
+        with pytest.raises(NotADirectoryError):
+            library_instance.fill(ASSET_PATH)
+        mock_logger_list.error.assert_called_once_with(
+            f"Path to fill from is not a directory: {ASSET_PATH}"
+        )
+
+    def test_fill_listdir_path_error(
+        self, library_instance, mock_logger_list, mock_os_list_module
+    ):
+        mock_os_list_module.path.exists.return_value = True
+        mock_os_list_module.path.isdir.return_value = True
+        error = OSError("Cannot list path")
+        mock_os_list_module.listdir.side_effect = error
+        with pytest.raises(OSError):
+            library_instance.fill(ASSET_PATH)
+        mock_logger_list.error.assert_called_once_with(
+            f"Failed to list directory {ASSET_PATH}: {error}"
+        )
+
+    def test_fill_insert_asset_error(
+        self,
+        library_instance,
+        mock_sql_list_module,
+        mock_logger_list,
+        mock_os_list_module,
+        mock_db_list,
+    ):
+        mock_os_list_module.path.exists.return_value = True
+        mock_os_list_module.path.isdir.return_value = True  # Main path is dir
+        mock_os_list_module.listdir.side_effect = [
+            ["asset_folder1"],
+            [],
+        ]  # path, then subfolder
+        mock_os_list_module.path.isdir.side_effect = [True, True]  # path, subfolder1
+
+        error = sqlite3.Error("Insert failed")
+        mock_sql_list_module.insert_asset.side_effect = error
+
+        # This should not raise out of fill, but log error and continue if possible
+        # The current code's loop structure means it might try to insert multiple times per asset folder file.
+        # For simplicity, assume one asset_folder1, one file that causes error
+        mock_os_list_module.listdir.side_effect = [["asset_folder1"], ["img.png"]]
+        mock_os_list_module.path.join.side_effect = lambda *args: os.path.join(*args)
+        mock_os_list_module.path.abspath.side_effect = lambda x: "/abs/" + x
+
+        library_instance.fill(ASSET_PATH)  # Should not raise, but log error.
+        mock_logger_list.error.assert_called_once_with(
+            f"Failed to insert asset asset_folder1: {error}"
+        )
+
+    def test_read_success_with_assets(
+        self, library_instance, mock_sql_list_module, capsys
+    ):
+        mock_assets_data = [
+            (1, "Asset1", "img1.png", "mesh1.obj", "desc1.txt"),
+            (2, "Asset2", None, "mesh2.obj", None),
+        ]
+        mock_sql_list_module.query_assets.return_value = mock_assets_data
+
+        library_instance.read()
+
+        captured = capsys.readouterr()
+        assert "ID   Name       Image      Mesh       Description" in captured.out
+        assert "1    Asset1     ok         ok         ok" in captured.out
+        assert "2    Asset2     None       ok         None" in captured.out
+        mock_sql_list_module.query_assets.assert_called_once()
+
+    def test_read_success_no_assets(
+        self, library_instance, mock_sql_list_module, capsys
+    ):
+        mock_sql_list_module.query_assets.return_value = []
+        library_instance.read()
+        captured = capsys.readouterr()
+        assert "No assets found." in captured.out
+
+    def test_read_failure_query(
+        self, library_instance, mock_sql_list_module, mock_logger_list
+    ):
+        error = Exception("DB query failed")
+        mock_sql_list_module.query_assets.side_effect = error
+        with pytest.raises(Exception, match="DB query failed"):
+            library_instance.read()
+        mock_logger_list.error.assert_called_once_with(
+            f"Failed to read assets from the database: {error}"
+        )
+
+    def test_get_list_success(self, library_instance, mock_sql_list_module):
+        mock_assets_data = [
+            (1, "Asset1", "img1.png", "mesh1.obj", "desc1.txt"),
+            (2, "Asset2", None, "mesh2.obj", None),
+        ]
+        mock_sql_list_module.query_assets.return_value = mock_assets_data
+
+        expected_list = [
+            {
+                "id": 1,
+                "name": "Asset1",
+                "image": "img1.png",
+                "mesh": "mesh1.obj",
+                "description": "desc1.txt",
+            },
+            {
+                "id": 2,
+                "name": "Asset2",
+                "image": None,
+                "mesh": "mesh2.obj",
+                "description": None,
+            },
+        ]
+        result = library_instance.get_list()
+        assert result == expected_list
+
+    def test_get_list_failure_query(
+        self, library_instance, mock_sql_list_module, mock_logger_list
+    ):
+        error = Exception("DB query failed")
+        mock_sql_list_module.query_assets.side_effect = error
+        with pytest.raises(Exception, match="DB query failed"):
+            library_instance.get_list()
+        mock_logger_list.error.assert_called_once_with(
+            f"Failed to read assets from the database: {error}"
+        )

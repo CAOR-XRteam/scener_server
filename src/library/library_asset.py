@@ -13,21 +13,25 @@ Last Updated: 19-05-2025
 
 import sqlite3
 
+from beartype import beartype
 from colorama import Fore
 from library.sql import Sql
 from library.library_database import Database as DB
 from loguru import logger
 
 
+@beartype
 class Asset:
     def __init__(self, db: DB):
         self.db = db
 
-    def add(self, name, image=None, mesh=None, description=None):
+    def add(
+        self, name: str, image: str = None, mesh: str = None, description: str = None
+    ):
         """Add a new asset to the database."""
         if not name:
-            logger.error("Asset name is required!")
-            raise ValueError("Asset name is required!")
+            logger.error("Asset name is required for addition!")
+            raise ValueError("Asset name is required for addition!")
 
         # Get a fresh connection and cursor for this operation
         try:
@@ -41,22 +45,18 @@ class Asset:
                 raise ValueError(
                     f"Asset with name {Fore.YELLOW}'{name}'{Fore.RESET} already exists."
                 )
-            try:
-                # Insert the new asset
-                Sql.insert_asset(self.db._conn, cursor, name, image, mesh, description)
-                logger.success(
-                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} added successfully."
-                )
-            except Exception as e:
-                logger.error(f"Failed to add asset '{name}': {e}")
-                raise
+            # Insert the new asset
+            Sql.insert_asset(self.db._conn, cursor, name, image, mesh, description)
+            logger.success(
+                f"Asset {Fore.GREEN}'{name}'{Fore.RESET} added successfully."
+            )
         except ValueError as ve:
             raise
         except Exception as e:
-            logger.error(f"Failed to get the asset: {e}")
+            logger.error(f"Failed to add the asset '{name}': {e}")
             raise
 
-    def delete(self, name):
+    def delete(self, name: str):
         """Delete an asset by its name."""
         if not name:
             logger.error("Asset name is required for deletion!")
@@ -73,19 +73,19 @@ class Asset:
                 raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
 
             # Delete the asset
-            try:
-                Sql.delete_asset(self.db._conn, cursor, name)
-                logger.success(
-                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
-                )
-            except Exception as e:
-                logger.error(f"Failed to delete asset '{name}': {e}")
-                raise
+            Sql.delete_asset(self.db._conn, cursor, name)
+            logger.success(
+                f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
+            )
+        except ValueError as ve:
+            raise
         except Exception as e:
-            logger.error(f"Failed to get a cursor: {e}")
+            logger.error(f"Failed to delete the asset '{name}': {e}")
             raise
 
-    def update(self, name, image=None, mesh=None, description=None):
+    def update(
+        self, name: str, image: str = None, mesh: str = None, description: str = None
+    ):
         """Update an existing asset."""
         if not name:
             logger.error("Asset name is required for update!")
@@ -101,19 +101,17 @@ class Asset:
                 logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
                 raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
             # Update the asset
-            try:
-                Sql.update_asset(self.db._conn, cursor, name, image, mesh, description)
-                logger.success(
-                    f"Asset {Fore.GREEN}'{name}'{Fore.RESET} updated successfully."
-                )
-            except Exception as e:
-                logger.error(f"Failed to update asset '{name}': {e}")
-                raise
+            Sql.update_asset(self.db._conn, cursor, name, image, mesh, description)
+            logger.success(
+                f"Asset {Fore.GREEN}'{name}'{Fore.RESET} updated successfully."
+            )
+        except ValueError as ve:
+            raise
         except Exception as e:
-            logger.error(f"Failed to get a cursor: {e}")
+            logger.error(f"Failed to update the asset '{name}': {e}")
             raise
 
-    def _get_asset_by_name(self, cursor, name):
+    def _get_asset_by_name(self, cursor: sqlite3.Cursor, name: str):
         """Helper method to fetch an asset by its name."""
         try:
             cursor.execute("SELECT * FROM asset WHERE name = ?", (name,))
