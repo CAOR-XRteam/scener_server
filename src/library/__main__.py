@@ -4,16 +4,17 @@ import os
 from library.library_database import Database
 
 if __name__ == "__main__":
+    """ test the library with root media fodler """
     db_path = (
         os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        + "/media/database.db"
+        + "/../../media/database.db"
     )
     db = Database(db_path)
     LibraryAPI = LibraryAPI(db)
 
     assets_path = (
         os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        + "/media/asset/"
+        + "/../../media/asset/"
     )
 
     if not os.path.exists(assets_path):

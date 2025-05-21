@@ -1,13 +1,3 @@
-"""
-agent.py
-
-Main AI agent, in charge of managing user input and use appropriate tools
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 from agent.llm.model import initialize_agent
 from agent.tools import *
 from langchain_core.tools import Tool
@@ -59,7 +49,7 @@ WORKFLOW:
 4. **Improve Stage:**
     - **Thought:** "I have received the scene decomposition from the 'decompose' tool. I must call `improve` tool with the FULL scene decomposition recieved from 'decompose' tool."
     - WAIT for tool output (expect a valid JSON).
-   
+
 5. **Generate Image Stage:**
     - **Thought:** "I have received the improved scene decomposition from the 'improve' tool. I MUST retrieve the exact JSON that was the output of the `improve` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'improved_decomposed_input', and its value MUST be the retrieved JSON."
     - WAIT for the tool to finish.

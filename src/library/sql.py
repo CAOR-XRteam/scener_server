@@ -1,13 +1,3 @@
-"""
-sql.py
-
-Low-level SQL functions
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 19-05-2025
-"""
-
 import sqlite3
 
 from beartype import beartype
@@ -88,9 +78,9 @@ class Sql:
         conn: sqlite3.Connection,
         cursor: sqlite3.Cursor,
         name: str,
-        image: str,
-        mesh: str,
-        description: str,
+        image: str|None,
+        mesh: str|None,
+        description: str|None,
     ):
         """Insert a new asset into the 'asset' table if the name does not already exist."""
         if not name:
@@ -99,17 +89,23 @@ class Sql:
 
         # Check if asset with the same name already exists rename if it does
         try:
-            cursor.execute("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", (name,))
+            cursor.execute("SELECT COUNT(*) FROM asset WHERE name LIKE ?", (name,))
             nb = cursor.fetchone()[0]
+            if nb > 0:
+                logger.info(f"Asset name '{name}' already exists.")
+                return
+
+            """
             if nb > 0:
                 name = name + f"_{nb}"
                 logger.info(
                     f"Asset name already exists. Inserting as '{name}' instead."
-                )
+                )"""
         except sqlite3.Error as e:
             logger.error(f"Failed to SELECT from 'asset' table: {e}")
             raise
 
+        # Then, insert operation
         try:
             cursor.execute(
                 "INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",

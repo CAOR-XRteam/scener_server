@@ -1,13 +1,3 @@
-"""
-library_list.py
-
-SQL list management functions
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 19-05-2025
-"""
-
 # TODO: more precise error handling to propagate to the agent
 
 import os
