@@ -89,7 +89,7 @@ class Sql:
 
         # Check if asset with the same name already exists rename if it does
         try:
-            cursor.execute("SELECT COUNT(*) FROM asset WHERE name LIKE ?", (name,))
+            cursor.execute("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", (name,))
             nb = cursor.fetchone()[0]
             if nb > 0:
                 logger.info(f"Asset name '{name}' already exists.")
