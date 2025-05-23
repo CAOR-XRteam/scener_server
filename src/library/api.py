@@ -1,7 +1,7 @@
 from lib import logger
-from library.library_database import Database
-from library.library_list import Library
-from library.library_asset import Asset
+from library.manager.database import Database
+from library.manager.library import Library
+from library.manager.asset import Asset
 
 # TODO: more precise error handling to propagate to the agent, tests
 

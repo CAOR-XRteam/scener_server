@@ -1,13 +1,12 @@
 # TODO: more precise error handling to propagate to the agent
 
-import os
-import sqlite3
-
 from beartype import beartype
 from colorama import Fore
-from library.sql import Sql
-from library.library_database import Database as DB
+from library.sql.row import SQL
+from library.manager.database import Database as DB
 from loguru import logger
+import sqlite3
+import os
 
 
 @beartype
@@ -53,7 +52,7 @@ class Library:
                             mesh = absolute_file_path
                         elif file_name.lower().endswith(".txt"):
                             description = absolute_file_path
-                    Sql.insert_asset(
+                    SQL.insert_asset(
                         self.db._conn, cursor, subfolder_name, image, mesh, description
                     )
                     logger.info(
@@ -69,7 +68,7 @@ class Library:
         # Get fresh connection and cursor for querying assets
         try:
             cursor = self.db._get_cursor()
-            assets = Sql.query_assets(cursor)
+            assets = SQL.query_assets(cursor)
             if assets:
                 print(
                     f"{'ID':<4} {'Name':<10} {'Image':<10} {'Mesh':<10} {'Description':<10}"
@@ -106,7 +105,7 @@ class Library:
         # Get fresh connection and cursor for querying assets
         try:
             cursor = self.db._get_cursor()
-            assets = Sql.query_assets(cursor)
+            assets = SQL.query_assets(cursor)
             return [
                 {
                     "id": asset_id,

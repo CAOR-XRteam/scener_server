@@ -1,12 +1,9 @@
 # TODO: more precise error handling to propagate to the agent
 
-
-import sqlite3
-
 from beartype import beartype
 from colorama import Fore
-from library.sql import Sql
-from library.library_database import Database as DB
+from library.sql.row import SQL
+from library.manager.database import Database as DB
 from loguru import logger
 
 
@@ -14,6 +11,17 @@ from loguru import logger
 class Asset:
     def __init__(self, db: DB):
         self.db = db
+
+        """ A mettre qql part de mieux """
+        from library import path_asset
+        from library.manager.library import Library
+        import os
+        if not os.path.exists(path_asset):
+            os.makedirs(path_asset)
+        library = Library(db)
+        library.fill(path_asset)
+
+
 
     def add(
         self, name: str, image: str = None, mesh: str = None, description: str = None
@@ -27,7 +35,7 @@ class Asset:
         try:
             # Check if the asset with the same name already exists
             cursor = self.db._get_cursor()
-            existing_asset = self._get_asset_by_name(cursor, name)
+            existing_asset = SQL.query_asset_by_name(cursor, name)
             if existing_asset:
                 logger.error(
                     f"Asset with name {Fore.YELLOW}'{name}'{Fore.RESET} already exists."
@@ -36,7 +44,7 @@ class Asset:
                     f"Asset with name {Fore.YELLOW}'{name}'{Fore.RESET} already exists."
                 )
             # Insert the new asset
-            Sql.insert_asset(self.db._conn, cursor, name, image, mesh, description)
+            SQL.insert_asset(self.db._conn, cursor, name, image, mesh, description)
             logger.success(
                 f"Asset {Fore.GREEN}'{name}'{Fore.RESET} added successfully."
             )
@@ -57,13 +65,13 @@ class Asset:
             cursor = self.db._get_cursor()
 
             # Check if the asset exists
-            asset = self._get_asset_by_name(cursor, name)
+            asset = SQL.query_asset_by_name(cursor, name)
             if not asset:
                 logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
                 raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
 
             # Delete the asset
-            Sql.delete_asset(self.db._conn, cursor, name)
+            SQL.delete_asset(self.db._conn, cursor, name)
             logger.success(
                 f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
             )
@@ -86,12 +94,12 @@ class Asset:
             cursor = self.db._get_cursor()
 
             # Check if the asset exists
-            asset = self._get_asset_by_name(cursor, name)
+            asset = SQL.query_asset_by_name(cursor, name)
             if not asset:
                 logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
                 raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
             # Update the asset
-            Sql.update_asset(self.db._conn, cursor, name, image, mesh, description)
+            SQL.update_asset(self.db._conn, cursor, name, image, mesh, description)
             logger.success(
                 f"Asset {Fore.GREEN}'{name}'{Fore.RESET} updated successfully."
             )
@@ -99,13 +107,4 @@ class Asset:
             raise
         except Exception as e:
             logger.error(f"Failed to update the asset '{name}': {e}")
-            raise
-
-    def _get_asset_by_name(self, cursor: sqlite3.Cursor, name: str):
-        """Helper method to fetch an asset by its name."""
-        try:
-            cursor.execute("SELECT * FROM asset WHERE name = ?", (name,))
-            return cursor.fetchone()
-        except sqlite3.Error as e:
-            logger.error(f"Failed to fetch asset '{name}': {e}")
             raise

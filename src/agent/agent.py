@@ -97,10 +97,10 @@ FAILURE MODES TO AVOID:
         self.tools = [
             decomposer_tool,  # OK
             improver_tool,  # OK
-            # date,  # OK
+            date,  # OK
             generate_image,  # OK
             image_analysis,  # OK
-            # list_assets,
+            list_assets,
         ]
 
         agent_model_name = config.get("agent_model")

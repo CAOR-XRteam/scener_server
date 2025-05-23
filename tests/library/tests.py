@@ -4,7 +4,7 @@ import sqlite3
 import os
 
 from colorama import Fore
-from library.sql import Sql
+from library.sql.function import SQL
 from library.library_database import Database
 from library.library_asset import Asset
 from library.library_list import Library

@@ -13,7 +13,7 @@ from tenacity import (
 
 
 @beartype
-class Sql:
+class SQL:
     retry_on_db_lock = retry(
         stop=stop_after_attempt(4),
         wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
@@ -131,6 +131,17 @@ class Sql:
             return cursor.fetchall()
         except sqlite3.Error as e:
             logger.error("Failed to SELECT from 'asset' table")
+            raise
+
+    @staticmethod
+    @retry_on_db_lock
+    def query_asset_by_name(cursor: sqlite3.Cursor, name: str):
+        """Helper method to fetch an asset by its name."""
+        try:
+            cursor.execute("SELECT * FROM asset WHERE name = ?", (name,))
+            return cursor.fetchone()
+        except sqlite3.Error as e:
+            logger.error(f"Failed to fetch asset '{name}': {e}")
             raise
 
     @staticmethod
