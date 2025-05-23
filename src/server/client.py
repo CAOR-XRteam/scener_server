@@ -1,17 +1,7 @@
-"""
-client.py
-
-Handles websocket clients.
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 import asyncio
 import websockets
 
-
+from agent.api import AgentAPI
 from beartype import beartype
 from colorama import Fore
 from lib import logger
@@ -27,7 +17,7 @@ class Client:
     """Manage client session and input / ouput messages"""
 
     # Main function
-    def __init__(self, websocket, agent):
+    def __init__(self, websocket: websockets.ServerConnection, agent: AgentAPI):
         self.websocket = websocket  # The WebSocket connection object
         self.session = None
         self.is_active = True  # State to track if the client is active

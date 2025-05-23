@@ -1,13 +1,3 @@
-"""
-server.py
-
-Handles websocket server connection and high-level functions.
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 import asyncio
 import signal
 import websockets
@@ -30,7 +20,7 @@ class Server:
         self.port = port
         self.list_client: list[Client] = []
         self.shutdown_event = asyncio.Event()
-        self.server = None
+        self.server: websockets.ServerConnection = None
 
         try:
             self.agent = AgentAPI()
@@ -78,7 +68,7 @@ class Server:
             logger.error(f"Internal error during server run: {e}")
             self.shutdown_event.set()
 
-    async def handler_client(self, websocket):
+    async def handler_client(self, websocket: websockets.ServerConnection):
         import server.client
 
         """Handle an incoming WebSocket client connection."""
@@ -142,7 +132,7 @@ class Server:
         print("---------------------------------------------")
         logger.success(f"Server shutdown sequence completed.{Style.RESET_ALL}")
 
-    async def _close_client(self, client):
+    async def _close_client(self, client: Client):
         try:
             if client.is_active:
                 await client.close()

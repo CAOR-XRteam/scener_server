@@ -1,13 +1,3 @@
-"""
-server.py
-
-websocket "Utils" functions, may be deleted later
-
-Author: Nathan SV
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 import json
 
 from pydantic import BaseModel, field_validator
