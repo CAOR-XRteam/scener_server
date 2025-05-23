@@ -5,7 +5,7 @@ from agent.api import AgentAPI
 from beartype import beartype
 from colorama import Fore
 from lib import logger
-from server.valider import InputMessage, OutputMessage
+from server.valider import InputMessage, OutputMessage, OutputMessageWrapper
 from pydantic import ValidationError
 
 
@@ -41,10 +41,12 @@ class Client:
         self.task_output = asyncio.create_task(self.loop_output())
         self.task_session = asyncio.create_task(self.session.run())
 
-    async def send_message(self, output_message: OutputMessage):
+    async def send_message(self, output_message: OutputMessageWrapper):
         """Queue a message to be sent to the client."""
         try:
-            await self.queue_output.put(output_message)
+            await self.queue_output.put(
+                output_message,
+            )
         except asyncio.CancelledError:
             logger.error(
                 f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}"
@@ -96,13 +98,34 @@ class Client:
         """Process the outgoing messages in the client's queue."""
         while self.is_active:
             try:
-                message: OutputMessage = (
+                message: OutputMessageWrapper = (
                     await self.queue_output.get()
                 )  # Wait for a message to send
-                await self.websocket.send(message.message)
-                logger.info(
-                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {message}"
-                )
+                output_message_json = message.output_message.model_dump_json()
+                if (
+                    message.output_message.action == "thinking_process"
+                    or message.output_message.action == "agent_response"
+                ):
+
+                    await self.websocket.send(output_message_json)
+                    logger.info(
+                        f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                    )
+                elif message.output_message.action == "image_generation":
+                    # Handle image generation
+                    if message.additional_data:
+                        try:
+                            await self.websocket.send(output_message_json)
+                            await self.websocket.send(str(len(message.additional_data)))
+                            for image in message.additional_data:
+                                await self.websocket.send(image)
+                        except Exception as e:
+                            logger.error(
+                                f"Error sending image to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
+                            )
+                    else:
+                        await self.websocket.send(output_message_json)
+
             except asyncio.CancelledError:
                 logger.info(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"

@@ -8,6 +8,7 @@ from lib import logger
 from server.valider import (
     InputMessage,
     OutputMessage,
+    OutputMessageWrapper,
     parse_agent_response,
     convert_image_to_bytes,
 )
@@ -52,64 +53,81 @@ class Session:
         try:
             output_generator = self.client.agent.achat(message, str(self.thread_id))
             async for token in output_generator:
+                logger.info(f"Token received in thread {self.thread_id}: {token}")
                 thinking, final_answer = parse_agent_response(
                     token
                 )  # When using stream with qwen, it returns the thinking part and the final answer as one token
-                await self.client.send_message(
-                    OutputMessage(
-                        status="stream",
-                        code=200,
-                        action="thinking_process",
-                        message=thinking,
-                    )
-                )
-                try:
-                    generated_images_data = final_answer.get("generated_images_data")
-                    data = []
-                    for image_data in generated_images_data:
-                        image_path = image_data.get("path")
-                        if image_path:
-                            data.append(convert_image_to_bytes(image_path))
 
-                    self.client.send_message(
-                        OutputMessage(
+                await self.client.send_message(
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
                             status="stream",
                             code=200,
-                            action="image_generation",
-                            message=final_answer,
-                            data=data,
-                        )
-                    )
-                except Exception as e:
-                    logger.error(f"Error converting image to bytes: {e}")
-                    data = None
-                await self.client.send_message(
-                    OutputMessage(
-                        status="stream",
-                        code=200,
-                        action="image_generation",
-                        message=final_answer,
-                        data=convert_image_to_bytes(final_answer.get("path")),
+                            action="thinking_process",
+                            message=thinking,
+                        ),
+                        additional_data=None,
                     )
                 )
 
                 json_response = json.loads(final_answer)
                 if json_response.get("action") == "image_generation":
+                    try:
+                        generated_images_data = json_response.get(
+                            "generated_images_data"
+                        )
+                        data = []
+                        for image_data in generated_images_data:
+                            image_path = image_data.get("path")
+                            if image_path:
+                                data.append(convert_image_to_bytes(image_path))
+
+                        await self.client.send_message(
+                            OutputMessageWrapper(
+                                output_message=OutputMessage(
+                                    status="stream",
+                                    code=200,
+                                    action="image_generation",
+                                    message=json_response.get("message"),
+                                ),
+                                additional_data=data,
+                            )
+                        )
+                    except Exception as e:
+                        logger.error(f"Error converting image to bytes: {e}")
+                        await self.client.send_message(
+                            OutputMessageWrapper(
+                                output_message=OutputMessage(
+                                    status="error",
+                                    code=500,
+                                    action="image_generation",
+                                    message=f"Error converting image to bytes: {e}",
+                                ),
+                                additional_data=None,
+                            )
+                        )
+                elif json_response.get("action") == "agent_response":
                     await self.client.send_message(
-                        OutputMessage(
-                            status="stream",
-                            code=200,
-                            action="agent_response",
-                            message=json_response.get("message"),
+                        OutputMessageWrapper(
+                            output_message=OutputMessage(
+                                status="stream",
+                                code=200,
+                                action="agent_response",
+                                message=json_response.get("message"),
+                            ),
+                            additional_data=None,
                         )
                     )
                 else:
                     await self.client.send_message(
-                        OutputMessage(
-                            status="stream",
-                            code=200,
-                            action="agent_response",
-                            message=json_response.get("message"),
+                        OutputMessageWrapper(
+                            output_message=OutputMessage(
+                                status="error",
+                                code=400,
+                                action="agent_response",
+                                message=f"Unknown action in response: {json_response.get('action')}",
+                            ),
+                            additional_data=None,
                         )
                     )
 
@@ -122,9 +140,13 @@ class Session:
         except Exception as e:
             logger.error(f"Error during chat stream: {e}")
             await self.client.send_message(
-                OutputMessage(
-                    status="error",
-                    code=500,
-                    message=f"Error during chat stream in thread {self.thread_id}",
+                OutputMessageWrapper(
+                    OutputMessage(
+                        status="error",
+                        code=500,
+                        action="agent_response",
+                        message=f"Error during chat stream in thread {self.thread_id}",
+                    ),
+                    additional_data=None,
                 )
             )

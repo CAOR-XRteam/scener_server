@@ -9,6 +9,9 @@ from lib import logger
 from server.client import Client
 
 
+# TODO: cancel agent task if client disconnects
+
+
 @beartype
 class Server:
     """Manage server start / stop and handle clients"""
