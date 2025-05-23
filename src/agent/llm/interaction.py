@@ -13,9 +13,7 @@ def chat(agent: Agent, user_input: str, thread_id: str = 0):
     final_response_content = ""
 
     try:
-        for token in agent.executor.stream(
-            agent_input, config=config, stream_mode="values"
-        ):
+        for token in agent.executor.stream(agent_input, config=config, stream_mode="values"):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -24,6 +22,7 @@ def chat(agent: Agent, user_input: str, thread_id: str = 0):
                     print(new_content, end="", flush=True)
                     final_response_content += new_content
         print("")
+
     except Exception as e:
         logger.info(f"\nAgent error occurred: {e}")
         return f"[Error during agent execution: {e}]"
@@ -43,9 +42,7 @@ async def achat(agent: Agent, user_input: str, thread_id: str = 0):
 
     try:
 
-        async for token in agent.executor.astream(
-            agent_input, config=config, stream_mode="values"
-        ):
+        async for token in agent.executor.astream(agent_input, config=config, stream_mode="values"):
 
             last_message = token["messages"][-1]
 
