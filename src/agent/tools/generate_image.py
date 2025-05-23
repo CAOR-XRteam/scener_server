@@ -38,9 +38,13 @@ def generate_image(improved_decomposed_input: dict):
         )
         return "[No objects to generate images for.]"
 
+    generated_images_data = []
+    successful_images = 0
+
     # Objects generation
     for i, obj in enumerate(objects_to_generate):
-        if isinstance(obj, dict) and obj.get("prompt"):
+        obj_prompt = obj.get("prompt")
+        if isinstance(obj, dict) and obj_prompt:
             logger.info(f"Agent: Generating image for object {i+1}: {obj['prompt']}")
             obj_name = obj.get("name", f"object_{i+1}").replace(" ", "_").lower()
             dir_path = str(Path(__file__).resolve().parents[3] / "media" / "temp")
@@ -48,15 +52,42 @@ def generate_image(improved_decomposed_input: dict):
             filename = dir_path + "/" + obj_name + ".png"
             try:
                 black_forest.generate(obj["prompt"], filename)
+
+                with open(filename, "rb") as f:
+                    image_binary_data = f.read()
+
+                generated_images_data.append(
+                    {
+                        "name": obj_name,
+                        "prompt": obj_prompt,
+                        "filename": f"{obj_name}.png",
+                        "binary_data": image_binary_data,
+                        "error": None,
+                    }
+                )
+                successful_images += 1
             except Exception as e:
                 logger.error(f"Failed to generate image:{e}")
+                generated_images_data.append(
+                    {
+                        "name": obj_name,
+                        "prompt": obj_prompt,
+                        "filename": f"{obj_name}.png",
+                        "binary_data": image_binary_data,
+                        "error": f"Failed to generate image: {e}",
+                    }
+                )
                 pass
         else:
             logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
             logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
     logger.info("\nAgent: Image generation process complete.")
-    return f"Image generation process complete."
+    return {
+        "action": "image_generation",
+        "message": f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
+        "generated_images": generated_images_data,
+    }
 
 
 if __name__ == "__main__":

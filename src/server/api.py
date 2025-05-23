@@ -1,4 +1,4 @@
-import server.server as ws
+from server.server import Server
 import sys
 
 
@@ -8,7 +8,7 @@ class ServerAPI:
     def __init__(self, host: str = "localhost", port: int = 8765):
         self.host = host
         self.port = port
-        self.server = ws.Server(host, port)
+        self.server = Server(host, port)
 
     def start(self):
         """Start the WebSocket server."""
