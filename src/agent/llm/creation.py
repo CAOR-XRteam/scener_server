@@ -1,13 +1,3 @@
-"""
-model.py
-
-LLM models and Langchain agent configuration
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 from beartype import beartype
 from langchain_core.tools import BaseTool
 from langchain_ollama import ChatOllama

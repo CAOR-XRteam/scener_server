@@ -1,5 +1,5 @@
 from agent.agent import Agent
-from agent.llm.chat import chat, achat
+from agent.llm.interaction import chat, achat
 from beartype import beartype
 
 
@@ -16,3 +16,6 @@ class AgentAPI:
 
     def run(self):
         self.agent.run()
+
+    def ask(self, query : str) -> str:
+        return self.agent.ask(query)

@@ -1,13 +1,3 @@
-"""
-chat.py
-
-LLM chat functions
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 from agent.agent import Agent
 from beartype import beartype
 from colorama import Fore
@@ -23,7 +13,7 @@ def chat(agent: Agent, user_input: str, thread_id: str = 0):
     final_response_content = ""
 
     try:
-        for token in agent.agent_executor.stream(
+        for token in agent.executor.stream(
             agent_input, config=config, stream_mode="values"
         ):
             last_message = token["messages"][-1]
@@ -53,7 +43,7 @@ async def achat(agent: Agent, user_input: str, thread_id: str = 0):
 
     try:
 
-        async for token in agent.agent_executor.astream(
+        async for token in agent.executor.astream(
             agent_input, config=config, stream_mode="values"
         ):
 
@@ -100,3 +90,7 @@ def run(agent: Agent):
         except KeyboardInterrupt:
             print("\nSession interrupted")
             break
+
+@beartype
+def ask(agent: Agent, query : str):
+    return chat(agent, query)

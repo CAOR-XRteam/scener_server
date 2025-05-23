@@ -1,4 +1,4 @@
-from agent.llm.model import initialize_agent
+from agent.llm.creation import initialize_agent
 from agent.tools import *
 from langchain_core.tools import Tool
 from lib import load_config
@@ -106,14 +106,17 @@ FAILURE MODES TO AVOID:
         ]
 
         agent_model_name = config.get("agent_model")
-        self.agent_executor = initialize_agent(
+        self.executor = initialize_agent(
             agent_model_name, self.tools, self.preprompt
         )
 
     def run(self):
-        from agent.llm import chat
+        from agent.llm import interaction
+        interaction.run(self)
 
-        chat.run(self)
+    def ask(self, query : str) -> str:
+        from agent.llm import interaction
+        return interaction.ask(self, query)
 
 
 # Usage
