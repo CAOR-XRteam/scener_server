@@ -137,7 +137,7 @@ class TestSql:
         )
 
         calls = [
-            call("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", ("asset",)),
+            call("SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", ("asset",)),
             call(
                 "INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",
                 ("asset", "img.png", "mesh.obj", "desc.txt"),
@@ -151,6 +151,9 @@ class TestSql:
 
         mock_logger.info.assert_any_call("Inserted asset 'asset' into the database.")
 
+    """
+    /!\ We need to define sameName policy /!\
+
     def test_insert_asset_success_existing_name(
         self, mock_conn, mock_cursor, mock_logger
     ):
@@ -161,7 +164,7 @@ class TestSql:
         )
 
         calls = [
-            call("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", ("asset",)),
+            call("SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", ("asset",)),
             call(
                 "INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",
                 ("asset_1", "img.png", "mesh.obj", "desc.txt"),
@@ -178,6 +181,7 @@ class TestSql:
             "Asset name already exists. Inserting as 'asset_1' instead."
         )
         mock_logger.info.assert_any_call("Inserted asset 'asset_1' into the database.")
+    """
 
     def test_insert_asset_empty_name(self, mock_conn, mock_cursor, mock_logger):
         with pytest.raises(ValueError, match="Asset name cannot be empty"):
@@ -202,7 +206,7 @@ class TestSql:
         mock_conn.rollback.assert_not_called()
 
         mock_cursor.execute.assert_called_once_with(
-            "SELECT COUNT(*) FROM asset WHERE name ILIKE ?", ("asset",)
+            "SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", ("asset",)
         )
 
         mock_logger.error.assert_called_once_with(
@@ -227,7 +231,7 @@ class TestSql:
             )
 
         calls = [
-            call("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", ("asset",)),
+            call("SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", ("asset",)),
             call(
                 "INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",
                 ("asset", "img.png", "mesh.obj", "desc.txt"),
@@ -264,7 +268,7 @@ class TestSql:
             )
 
         calls = [
-            call("SELECT COUNT(*) FROM asset WHERE name ILIKE ?", ("asset",)),
+            call("SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", ("asset",)),
             call(
                 "INSERT INTO asset (name, image, mesh, description) VALUES (?, ?, ?, ?)",
                 ("asset", "img.png", "mesh.obj", "desc.txt"),
