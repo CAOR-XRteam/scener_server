@@ -1,4 +1,5 @@
 from lib import logger
+from library import db
 from library.manager.database import Database
 from library.manager.library import Library
 from library.manager.asset import Asset
@@ -7,7 +8,7 @@ from library.manager.asset import Asset
 
 
 class LibraryAPI:
-    def __init__(self, db: Database):
+    def __init__(self):
         self.db = db
         self.library = Library(db)
         self.asset = Asset(db)
