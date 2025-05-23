@@ -1,9 +1,10 @@
+import os
+import torch
+
 from beartype import beartype
 from huggingface_hub import login
 from diffusers import StableDiffusionPipeline
 from dotenv import load_dotenv
-import os
-import torch
 
 
 load_dotenv()
@@ -32,6 +33,9 @@ def generate(prompt: str, filename: str):
 
     image.show()
     image.save(filename)
+
+    del pipe
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

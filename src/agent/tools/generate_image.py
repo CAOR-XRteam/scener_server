@@ -19,7 +19,7 @@ def generate_image(improved_decomposed_input: dict):
 
     logger.info(f"Using tool {Fore.GREEN}{'image_generation'}{Fore.RESET}")
     logger.info(
-        f"\nAgent: Decomposed JSON received: {improved_decomposed_input}. Generating image..."
+        f"\nDecomposed JSON received: {improved_decomposed_input}. Generating image..."
     )
 
     # Retrieve list of to-generated objects
@@ -27,14 +27,14 @@ def generate_image(improved_decomposed_input: dict):
         objects_to_generate = improved_decomposed_input.get("scene", {}).get(
             "objects", []
         )
-        logger.info(f"Agent: Decomposed objects to generate: {objects_to_generate}")
+        logger.info(f"Decomposed objects to generate: {objects_to_generate}")
     except Exception as e:
         logger.error(f"Failed to extract objects from JSON: {e}")
         return f"[Error during image generation: {e}]"
 
     if not objects_to_generate:
         logger.info(
-            "Agent: The decomposition resulted in no specific objects to generate images for."
+            "The decomposition resulted in no specific objects to generate images for."
         )
         return "[No objects to generate images for.]"
 
@@ -45,7 +45,7 @@ def generate_image(improved_decomposed_input: dict):
     for i, obj in enumerate(objects_to_generate):
         obj_prompt = obj.get("prompt")
         if isinstance(obj, dict) and obj_prompt:
-            logger.info(f"Agent: Generating image for object {i+1}: {obj['prompt']}")
+            logger.info(f"Generating image for object {i+1}: {obj['prompt']}")
             obj_name = obj.get("name", f"object_{i+1}").replace(" ", "_").lower()
             dir_path = str(Path(__file__).resolve().parents[3] / "media" / "temp")
             os.makedirs(dir_path, exist_ok=True)
@@ -53,15 +53,12 @@ def generate_image(improved_decomposed_input: dict):
             try:
                 black_forest.generate(obj["prompt"], filename)
 
-                with open(filename, "rb") as f:
-                    image_binary_data = f.read()
-
                 generated_images_data.append(
                     {
                         "name": obj_name,
                         "prompt": obj_prompt,
                         "filename": f"{obj_name}.png",
-                        "binary_data": image_binary_data,
+                        "path": filename,
                         "error": None,
                     }
                 )
@@ -73,7 +70,7 @@ def generate_image(improved_decomposed_input: dict):
                         "name": obj_name,
                         "prompt": obj_prompt,
                         "filename": f"{obj_name}.png",
-                        "binary_data": image_binary_data,
+                        "path": filename,
                         "error": f"Failed to generate image: {e}",
                     }
                 )
@@ -82,12 +79,13 @@ def generate_image(improved_decomposed_input: dict):
             logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
             logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-    logger.info("\nAgent: Image generation process complete.")
+    logger.info("\nImage generation process complete.")
     return {
         "action": "image_generation",
         "message": f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
-        "generated_images": generated_images_data,
+        "generated_images_data": generated_images_data,
     }
+    # return generated_images_data
 
 
 if __name__ == "__main__":
