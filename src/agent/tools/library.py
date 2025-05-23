@@ -1,14 +1,15 @@
 from langchain_core.tools import tool
-from library import api
+from library.api import LibraryAPI
 from loguru import logger
 from colorama import Fore
 
 
 @tool
 def list_assets() -> str:
-    """Retrieve the list of assets with their element paths in the database."""
+    """Retrieve the library list of assets, containing their element (image, description, mesh) paths in the SQL database."""
     logger.info(f"Using tool {Fore.GREEN}{'list_asset'}{Fore.RESET}")
-    return api.list_asset()
+    api = LibraryAPI()
+    return api.get_list()
 
 
 @tool

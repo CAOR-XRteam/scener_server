@@ -1,13 +1,3 @@
-"""
-agent.py
-
-Main AI agent, in charge of managing user input and use appropriate tools
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
 from agent.llm.model import initialize_agent
 from agent.tools import *
 from langchain_core.tools import Tool
@@ -107,11 +97,11 @@ FAILURE MODES TO AVOID:
         self.tools = [
             decomposer_tool,  # OK
             improver_tool,  # OK
-            # date,  # OK
+            date,  # OK
             generate_image,  # OK
             image_analysis,  # OK
             speech_to_texte,
-            # list_assets,
+            list_assets,
         ]
 
         agent_model_name = config.get("agent_model")
