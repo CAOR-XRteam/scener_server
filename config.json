@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 {
     "host": "localhost",
     "port": 8765,
@@ -8,8 +7,3 @@
     "decomposer_model": "llama3.1",
     "improver_model": "llama3.1"
 }
-=======
-{"agent_model": "qwen3:4b",
-"decomposer_model": "llama3.1",
-"improver_model": "llama3.1"}
->>>>>>> a402adb18627b9104f982b0e903c53a40f828847
