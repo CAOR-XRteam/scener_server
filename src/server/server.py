@@ -9,7 +9,8 @@ from lib import logger
 from server.client import Client
 
 
-# TODO: cancel agent task if client disconnects
+# TODO: cancel agent task if client disconnects,
+# TODO: send an error message to the client if the server shutdowns while the connections is still active
 
 
 @beartype
