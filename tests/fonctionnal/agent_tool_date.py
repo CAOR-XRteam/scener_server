@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def llm_agent():
     def ask(prompt: str) -> str:
         api = AgentAPI()
