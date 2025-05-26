@@ -11,7 +11,6 @@ from loguru import logger
 def speech_to_texte(path: str) -> str:
     """Convert a vocal speech to text."""
 
-    logger.info(f"Using tool {Fore.GREEN}{'speech_to_texte'}{Fore.RESET}")
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 

@@ -17,9 +17,7 @@ class GenerateImageToolInput(BaseModel):
 def generate_image(improved_decomposed_input: dict):
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
 
-    logger.info(
-        f"\nAgent: Decomposed JSON received: {improved_decomposed_input}. Generating image..."
-    )
+    logger.info(f"\nAgent: Decomposed JSON received: {improved_decomposed_input}. Generating image...")
 
     # Retrieve list of to-generated objects
     try:

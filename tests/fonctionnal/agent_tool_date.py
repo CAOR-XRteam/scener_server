@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture(scope="function")
 def llm_agent():
-    def ask(prompt: str) -> str:
+    def ask(prompt: str) -> dict:
         api = AgentAPI()
         return api.ask(prompt)
     return ask
@@ -14,9 +14,9 @@ def llm_agent():
 def test_agent_uses_date_tool(llm_agent):
     """Basic test to check if the agent uses the date tool correctly."""
     prompt = "What is today's date?"
-    response = llm_agent(prompt)
+    ret = llm_agent(prompt)
+    tools_used = [tool.lower() for tool in ret["tools"]]
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    month_day = datetime.now().strftime("%B %d")
-
-    assert today in response or month_day in response
+    # Should call date tool only
+    assert "date" in tools_used
+    assert len(tools_used) == 1

@@ -74,7 +74,6 @@ class Improver:
 
     def improve(self, decomposed_input: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
         logger.info(f"Improving decomposed scene: {decomposed_input}")
 
         try:

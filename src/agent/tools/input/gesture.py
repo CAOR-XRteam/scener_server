@@ -18,7 +18,6 @@ def hand_gesture(path: str) -> str:
     options = vision.GestureRecognizerOptions(base_options=base_options)
     recognizer = vision.GestureRecognizer.create_from_options(options)
 
-    logger.info(f"Using tool {Fore.GREEN}{'hand_gesture'}{Fore.RESET}")
     # Convert image to RGB and wrap as MediaPipe image
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)

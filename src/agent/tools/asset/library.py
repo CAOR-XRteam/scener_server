@@ -7,17 +7,13 @@ from colorama import Fore
 @tool
 def list_assets() -> str:
     """Retrieve the library list of assets, containing their element (image, description, mesh) paths in the SQL database."""
-    logger.info(f"Using tool {Fore.GREEN}{'list_asset'}{Fore.RESET}")
     api = LibraryAPI()
     return api.get_list()
 
 
 @tool
-def update_asset(
-    name: str, image_path: str, mesh_path: str, description_path: str
-) -> str:
+def update_asset(name: str, image_path: str, mesh_path: str, description_path: str) -> str:
     """Update an existing asset by name with image path, mesh path, and description path."""
-    logger.info(f"Using tool {Fore.GREEN}{'update_asset'}{Fore.RESET}")
     api.update_asset(name, image_path, mesh_path, description_path)
     return "asset updated"
 
@@ -25,7 +21,6 @@ def update_asset(
 @tool
 def create_description_file(path_with_name: str, asset_description: str) -> str:
     """Create a text file with the given content. The name of the file should be the same than the asset name"""
-    logger.info(f"Using tool {Fore.GREEN}{'create_description_file'}{Fore.RESET}")
     try:
         with open(path_with_name, "w") as file:
             file.write(asset_description)

@@ -79,7 +79,7 @@ def ask(agent: Agent, query: str, thread_id: str = 0):
         logger.info(f"\nAgent error occurred: {e}")
         return f"[Error during agent execution: {e}]"
 
-    return final_content
+    return {"answer": final_content, "tools": callback.used_tools}
 
 @beartype
 def run(agent: Agent):

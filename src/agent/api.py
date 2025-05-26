@@ -17,5 +17,5 @@ class AgentAPI:
     def run(self):
         self.agent.run()
 
-    def ask(self, query : str) -> str:
+    def ask(self, query : str) -> dict:
         return self.agent.ask(query)
