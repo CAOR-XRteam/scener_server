@@ -12,6 +12,8 @@ from server.server import Server
 from server.valider import InputMessage, OutputMessage, OutputMessageWrapper
 from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 
+# TODO: fix session tests
+
 
 ############ MOCK stuff ############
 
