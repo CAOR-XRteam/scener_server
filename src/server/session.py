@@ -46,7 +46,7 @@ class Session:
                 break
 
     def parse_input_message(self, token: str) -> list[OutputMessageWrapper]:
-        """Parse an agent token and return a (list of) OutPutMessageWrapper ready to be sent to the client"""
+        """Parse an agent token and return a (list of) OutputMessageWrapper ready to be sent to the client"""
         responses_to_send = []
         try:
             thinking, final_answer = parse_agent_response(

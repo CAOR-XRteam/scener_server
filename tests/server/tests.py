@@ -4,11 +4,12 @@ import signal
 import uuid
 import websockets.exceptions
 
+from agent.api import AgentAPI
 from colorama import Fore, Style
 from server.client import Client
 from server.session import Session
 from server.server import Server
-from server.valider import InputMessage, OutputMessage
+from server.valider import InputMessage, OutputMessage, OutputMessageWrapper
 from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 
 
@@ -18,7 +19,9 @@ from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 # Pytest fixture that mocks an asynchronous WebSocket connection
 @pytest.fixture
 def mock_ws():
-    ws = AsyncMock()  # Simulates an async WebSocket instance
+    ws = AsyncMock(
+        spec=websockets.ServerConnection
+    )  # Simulates an async WebSocket instance
     ws.remote_address = ("127.0.0.1", 12345)  # Sets a fake remote address
     return ws
 
@@ -26,7 +29,9 @@ def mock_ws():
 # Pytest fixture that mocks an agent with a mock 'achat' method
 @pytest.fixture
 def mock_agent():
-    agent_instance = Mock()  # Creates a general-purpose mock object for the agent
+    agent_instance = Mock(
+        spec=AgentAPI
+    )  # Creates a general-purpose mock object for the agent
     agent_instance.achat = MagicMock()  # Mocks the 'achat' method on the agent
     return agent_instance
 
@@ -72,7 +77,7 @@ class TestServer:
                 server.handler_shutdown = Mock()  # Mock the shutdown handler method
                 return server
 
-    @patch("server.server.AgentAPI")  # Patch AgentAPI for this test
+    @patch("server.server.AgentAPI", spec=AgentAPI)  # Patch AgentAPI for this test
     def test_init_success(self, mock_agent_api, mock_logger, mock_agent):
         """Unit test to check server initialization when AgentAPI initializes correctly"""
         mock_agent_api.return_value = (
@@ -95,7 +100,7 @@ class TestServer:
             "AgentAPI initialized successfully at server startup."
         )
 
-    @patch("server.server.AgentAPI")
+    @patch("server.server.AgentAPI", spec=AgentAPI)
     def test_init_agent_error(self, mock_agent_api, mock_logger):
         """Unit test to check server behavior when AgentAPI initialization fails"""
         err = ValueError("test")
@@ -229,7 +234,7 @@ class TestServer:
         mock_client.disconnection.set()
 
     def _client_instance(self):
-        mock_client = MagicMock()
+        mock_client = MagicMock(spec=Client)
         mock_client.websocket = mock_ws
         mock_client.disconnection = asyncio.Event()
         mock_client.is_active = True
@@ -238,7 +243,7 @@ class TestServer:
         return mock_client
 
     @pytest.mark.asyncio
-    @patch("server.client.Client")
+    @patch("server.client.Client", spec=Client)
     async def test_handler_client_success(
         self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
@@ -267,7 +272,7 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.Client")
+    @patch("server.client.Client", spec=Client)
     async def test_handler_client_finally_closes_client(
         self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
@@ -301,7 +306,7 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.Client")
+    @patch("server.client.Client", spec=Client)
     async def test_handler_client_cancelled_error(
         self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
@@ -330,7 +335,7 @@ class TestServer:
         )
 
     @pytest.mark.asyncio
-    @patch("server.client.Client")
+    @patch("server.client.Client", spec=Client)
     async def test_handler_client_other_exception(
         self, mock_client_instance, mock_logger, mock_server, mock_ws
     ):
@@ -788,15 +793,23 @@ class TestClient:
 
     @pytest.mark.asyncio
     async def test_send_message_success(self, mock_client):
-        message = OutputMessage(status="stream", code=200, message="test")
+        message = OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream", code=200, action="agent_response", message="test"
+            ),
+            additional_data=None,
+        )
         await mock_client.send_message(message)
 
         assert not mock_client.queue_output.empty()
 
         queued_message = await mock_client.queue_output.get()
 
-        assert queued_message == OutputMessage(
-            status="stream", code=200, message="test"
+        assert queued_message == OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream", code=200, action="agent_response", message="test"
+            ),
+            additional_data=None,
         )
 
     @pytest.mark.asyncio
@@ -804,7 +817,12 @@ class TestClient:
         mock_client.queue_output.put = AsyncMock(
             side_effect=asyncio.CancelledError("test")
         )
-        message = OutputMessage(status="stream", code=200, message="test")
+        message = OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream", code=200, action="agent_response", message="test"
+            ),
+            additional_data=None,
+        )
 
         with pytest.raises(asyncio.CancelledError, match="test"):
             await mock_client.send_message(message)
@@ -820,7 +838,12 @@ class TestClient:
     ):
         err = ValueError("error")
         mock_client.queue_output.put = AsyncMock(side_effect=err)
-        message = OutputMessage(status="stream", code=200, message="test")
+        message = OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream", code=200, action="agent_response", message="test"
+            ),
+            additional_data=None,
+        )
 
         await mock_client.send_message(message)
 
@@ -875,10 +898,10 @@ class TestClient:
         mock_client.send_message.assert_awaited_once()
 
         error_message = mock_client.send_message.await_args.args[0]
-        assert isinstance(error_message, OutputMessage)
-        assert error_message.status == "error"
-        assert error_message.code == 400
-        assert "Invalid input" in error_message.message
+        assert isinstance(error_message, OutputMessageWrapper)
+        assert error_message.output_message.status == "error"
+        assert error_message.output_message.code == 400
+        assert "Invalid input" in error_message.output_message.message
 
         assert mock_client.is_active is False
 
@@ -908,9 +931,10 @@ class TestClient:
     async def test_loop_input_connection_closed(
         self, mock_logger, mock_client, mock_ws
     ):
-        mock_ws.__aiter__ = MagicMock(return_value=mock_ws)
+        # mock_ws.__aiter__ = MagicMock(return_value=mock_ws)
         err = websockets.exceptions.ConnectionClosed(rcvd=None, sent=None)
-        mock_ws.__anext__.side_effect = err
+        # mock_ws.__anext__.side_effect = err
+        mock_ws.__aiter__.side_effect = err
 
         await mock_client.loop_input()
 
@@ -924,8 +948,9 @@ class TestClient:
     @pytest.mark.asyncio
     async def test_loop_input_other_exception(self, mock_logger, mock_client, mock_ws):
         err = ValueError("test")
-        mock_ws.__aiter__ = MagicMock(return_value=mock_ws)
-        mock_ws.__anext__.side_effect = err
+        mock_ws.__aiter__.side_effect = err
+        # = MagicMock(return_value=mock_ws)
+        # mock_ws.__anext__.side_effect = err
 
         await mock_client.loop_input()
 
@@ -1013,7 +1038,12 @@ class TestClient:
 
         await mock_client.queue_input.put(InputMessage(command="chat", message="test"))
         await mock_client.queue_output.put(
-            OutputMessage(status="stream", code=123, message="test")
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream", code=123, action="agent_response", message="test"
+                ),
+                additional_data=None,
+            )
         )
 
         await mock_client.close()
@@ -1041,7 +1071,12 @@ class TestClient:
 
         await mock_client.queue_input.put(InputMessage(command="chat", message="test"))
         await mock_client.queue_output.put(
-            OutputMessage(status="stream", code=123, message="test")
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream", code=123, action="agent_response", message="test"
+                ),
+                additional_data=None,
+            )
         )
 
         await mock_client.close()

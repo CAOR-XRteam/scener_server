@@ -11,8 +11,10 @@ def validate_message(m):
 
 
 def parse_agent_response(m: str):
-    thinking, final_aswer = m.split("\nFinal Answer:")
-    return thinking, final_aswer
+    try:
+        return m.split("\nFinal Answer:")
+    except Exception as e:
+        raise ValueError(f"Error parsing agent response: {e}")
 
 
 class OutputMessage(BaseModel):

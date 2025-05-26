@@ -22,8 +22,12 @@ class Client:
         self.session = None
         self.is_active = True  # State to track if the client is active
 
-        self.queue_input = asyncio.Queue()  # Message queue for this client
-        self.queue_output = asyncio.Queue()  # Message queue for this client
+        self.queue_input: asyncio.Queue[InputMessage] = (
+            asyncio.Queue()
+        )  # Message queue for this client
+        self.queue_output: asyncio.Queue[OutputMessageWrapper] = (
+            asyncio.Queue()
+        )  # Message queue for this client
         self.disconnection = asyncio.Event()
 
         self.task_input = None
@@ -70,10 +74,14 @@ class Client:
                     f"Validation error for client {self.websocket.remote_address}: {e}"
                 )
                 await self.send_message(
-                    OutputMessage(
-                        status="error",
-                        code=400,
-                        message=f"Invalid input: {e}",
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
+                            status="error",
+                            code=400,
+                            action="agent_response",
+                            message=f"Invalid input: {e}",
+                        ),
+                        additional_data=None,
                     )
                 )
             except asyncio.CancelledError:
@@ -112,7 +120,6 @@ class Client:
                         f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
                     )
                 elif message.output_message.action == "image_generation":
-                    # Handle image generation
                     if message.additional_data:
                         try:
                             await self.websocket.send(output_message_json)
