@@ -1,7 +1,5 @@
 import json
-import io
 
-from PIL import Image
 from pydantic import BaseModel, field_validator
 from typing import Literal
 
@@ -15,17 +13,6 @@ def validate_message(m):
 def parse_agent_response(m: str):
     thinking, final_aswer = m.split("\nFinal Answer:")
     return thinking, final_aswer
-
-
-def convert_image_to_bytes(image_path):
-    try:
-        with Image.open(image_path) as image:
-            byte_arr = io.BytesIO()
-            image.save(byte_arr, format="PNG")
-            return byte_arr.getvalue()
-    except Exception as e:
-        print(f"Error converting image to bytes: {e}")
-        raise
 
 
 class OutputMessage(BaseModel):
