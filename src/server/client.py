@@ -68,7 +68,6 @@ class Client:
             logger.error(
                 f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
             )
-            raise
 
     # Subfunction
     async def loop_input(self):
