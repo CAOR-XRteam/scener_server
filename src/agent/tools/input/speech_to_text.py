@@ -33,5 +33,5 @@ def speech_to_texte(path: str) -> str:
     )
 
     result = pipe(path, return_timestamps=True)
-    #print(result["text"])
+    # print(result["text"])
     return result

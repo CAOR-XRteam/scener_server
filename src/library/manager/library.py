@@ -44,7 +44,9 @@ class Library:
                         file_path = os.path.join(subpath, file_name)
                         absolute_file_path = os.path.abspath(file_path)
 
-                        if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                        if file_name.lower().endswith(
+                            (".png", ".jpg", ".jpeg", ".webp")
+                        ):
                             image = absolute_file_path
                         elif file_name.lower().endswith(
                             (".obj", ".fbx", ".stl", ".ply", ".glb")

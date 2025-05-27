@@ -78,9 +78,9 @@ class SQL:
         conn: sqlite3.Connection,
         cursor: sqlite3.Cursor,
         name: str,
-        image: str|None,
-        mesh: str|None,
-        description: str|None,
+        image: str | None,
+        mesh: str | None,
+        description: str | None,
     ):
         """Insert a new asset into the 'asset' table if the name does not already exist."""
         if not name:
@@ -89,7 +89,9 @@ class SQL:
 
         # Check if asset with the same name already exists rename if it does
         try:
-            cursor.execute("SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", (name,))
+            cursor.execute(
+                "SELECT COUNT(*) FROM asset WHERE LOWER(name) = LOWER(?)", (name,)
+            )
             nb = cursor.fetchone()[0]
             if nb > 0:
                 logger.info(f"Asset name '{name}' already exists.")

@@ -10,12 +10,12 @@ from server.valider import InputMessage, OutputMessage
 @beartype
 class Session:
     def __init__(self, client: Client):
-        """ init session by client and assign an ID """
+        """init session by client and assign an ID"""
         self.client = client
         self.thread_id = uuid.uuid1()
 
     async def run(self):
-        """ While client keep being actif, handle input messages """
+        """While client keep being actif, handle input messages"""
         while self.client.is_active:
             try:
                 message = await self.client.queue_input.get()
@@ -39,7 +39,7 @@ class Session:
                 break
 
     async def handle_message(self, input_message: InputMessage):
-        """ handle one client input message - send it to async chat """
+        """handle one client input message - send it to async chat"""
         message = input_message.message
         logger.info(f"Received message in thread {self.thread_id}: {message}")
 

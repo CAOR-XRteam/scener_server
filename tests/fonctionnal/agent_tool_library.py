@@ -9,7 +9,9 @@ def llm_agent():
     def ask(prompt: str) -> str:
         api = AgentAPI()
         return api.ask(prompt)
+
     return ask
+
 
 def test_agent_lists_assets(llm_agent):
     prompt = "What assets are in the library?"
@@ -17,8 +19,15 @@ def test_agent_lists_assets(llm_agent):
 
     # Keywords we expect to appear if the tool was called correctly
     expected_keywords = [
-        "Theatre", "Robot", "Lego", "Astronaut", "Samurai",
-        ".glb", ".webp", ".png", ".txt"
+        "Theatre",
+        "Robot",
+        "Lego",
+        "Astronaut",
+        "Samurai",
+        ".glb",
+        ".webp",
+        ".png",
+        ".txt",
     ]
 
     for keyword in expected_keywords:

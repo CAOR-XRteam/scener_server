@@ -9,7 +9,9 @@ def llm_agent():
     def ask(prompt: str) -> dict:
         api = AgentAPI()
         return api.ask(prompt)
+
     return ask
+
 
 def test_agent_uses_date_tool(llm_agent):
     """Basic test to check if the agent uses the date tool correctly."""

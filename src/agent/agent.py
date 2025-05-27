@@ -106,16 +106,16 @@ FAILURE MODES TO AVOID:
         ]
 
         agent_model_name = config.get("agent_model")
-        self.executor = initialize_agent(
-            agent_model_name, self.tools, self.preprompt
-        )
+        self.executor = initialize_agent(agent_model_name, self.tools, self.preprompt)
 
     def run(self):
         from agent.llm import interaction
+
         interaction.run(self)
 
-    def ask(self, query : str) -> str:
+    def ask(self, query: str) -> str:
         from agent.llm import interaction
+
         return interaction.ask(self, query)
 
 

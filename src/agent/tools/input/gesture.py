@@ -14,7 +14,9 @@ def hand_gesture(path: str) -> str:
     """Convert an image to a hand gesture info"""
 
     # Load the model
-    base_options = python.BaseOptions(model_asset_path='../model/mediapipe/gesture_recognizer.task')
+    base_options = python.BaseOptions(
+        model_asset_path="../model/mediapipe/gesture_recognizer.task"
+    )
     options = vision.GestureRecognizerOptions(base_options=base_options)
     recognizer = vision.GestureRecognizer.create_from_options(options)
 

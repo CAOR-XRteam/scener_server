@@ -16,7 +16,9 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
     final_response_content = ""
 
     try:
-        for token in agent.executor.stream(agent_input, config=config, stream_mode="values"):
+        for token in agent.executor.stream(
+            agent_input, config=config, stream_mode="values"
+        ):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -32,6 +34,7 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
 
     return final_response_content
 
+
 @beartype
 async def achat(agent: Agent, query: str, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
@@ -43,7 +46,9 @@ async def achat(agent: Agent, query: str, thread_id: str = 0):
 
     try:
 
-        async for token in agent.executor.astream(agent_input, config=config, stream_mode="values"):
+        async for token in agent.executor.astream(
+            agent_input, config=config, stream_mode="values"
+        ):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -56,6 +61,7 @@ async def achat(agent: Agent, query: str, thread_id: str = 0):
     except Exception as e:
         logger.info(f"\nAgent error occurred: {e}")
         raise
+
 
 @beartype
 def ask(agent: Agent, query: str, thread_id: str = 0):
@@ -80,6 +86,7 @@ def ask(agent: Agent, query: str, thread_id: str = 0):
         return f"[Error during agent execution: {e}]"
 
     return {"answer": final_content, "tools": callback.used_tools}
+
 
 @beartype
 def run(agent: Agent):
