@@ -84,7 +84,7 @@ class Client:
                     if isinstance(message, str):
                         if awaitingText:
                             logger.info(
-                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent text data {message}."
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent text data: {message}."
                             )
 
                             awaitingText = False
@@ -159,7 +159,23 @@ class Client:
                                 f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data converted to text: {text["text"]}"
                             )
 
-                            message = InputMessage(command="chat", message=text["text"])
+                            converted_speech_message = text["text"]
+
+                            await self.send_message(
+                                OutputMessageWrapper(
+                                    output_message=OutputMessage(
+                                        status="stream",
+                                        code=200,
+                                        action="converted_speech",
+                                        message=converted_speech_message,
+                                    ),
+                                    additional_data=None,
+                                )
+                            )
+
+                            message = InputMessage(
+                                command="chat", message=converted_speech_message
+                            )
 
                             await self.queue_input.put(message)
 
@@ -223,7 +239,12 @@ class Client:
                 output_message_json = message.output_message.model_dump_json()
 
                 match message.output_message.action:
-                    case "agent_response" | "thinking_process" | "unknown_action":
+                    case (
+                        "agent_response"
+                        | "thinking_process"
+                        | "converted_speech"
+                        | "unknown_action"
+                    ):
                         await self.websocket.send(output_message_json)
                         logger.info(
                             f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"

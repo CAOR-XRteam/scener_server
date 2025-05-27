@@ -14,7 +14,11 @@ class OutputMessage(BaseModel):
     status: Literal["stream", "error"]
     code: int
     action: Literal[
-        "agent_response", "image_generation", "thinking_process", "unknown_action"
+        "agent_response",
+        "image_generation",
+        "thinking_process",
+        "converted_speech",
+        "unknown_action",
     ]
     message: str
     _validate_message = field_validator("message")(validate_message)
@@ -28,8 +32,6 @@ class OutputMessageWrapper(BaseModel):
 class InputMessageMeta(BaseModel):
     command: Literal["chat"]
     type: Literal["text", "audio"]
-
-    _validate_message = field_validator("message")(validate_message)
 
 
 class InputMessage(BaseModel):
