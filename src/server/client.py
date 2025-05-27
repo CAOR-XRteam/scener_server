@@ -73,7 +73,7 @@ class Client:
     async def loop_input(self):
         """Handle incoming messages for this specific client."""
 
-        # possible timeouts in case when one of the markers is True but the next message is never received should probably be handled well my websockets library
+        # possible timeouts in case when one of the markers is True but the next message is never received should probably be handled by websockets library
         awaitingAudio = False
         awaitingText = False
 
