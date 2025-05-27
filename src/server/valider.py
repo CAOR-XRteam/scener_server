@@ -25,6 +25,13 @@ class OutputMessageWrapper(BaseModel):
     additional_data: list[bytes] | None = None
 
 
+class InputMessageMeta(BaseModel):
+    command: Literal["chat"]
+    type: Literal["text", "audio"]
+
+    _validate_message = field_validator("message")(validate_message)
+
+
 class InputMessage(BaseModel):
     command: Literal["chat"]
     message: str

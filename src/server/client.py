@@ -1,14 +1,19 @@
 import asyncio
+import json
 import os
 import uuid
 import websockets
 
 from agent.api import AgentAPI
-from agent.tools.speech_to_text import speech_to_text
 from beartype import beartype
 from colorama import Fore
-from lib import logger
-from server.valider import InputMessage, OutputMessage, OutputMessageWrapper
+from lib import logger, speech_to_text
+from server.valider import (
+    InputMessage,
+    InputMessageMeta,
+    OutputMessage,
+    OutputMessageWrapper,
+)
 from pydantic import ValidationError
 
 
@@ -68,57 +73,128 @@ class Client:
     # Subfunction
     async def loop_input(self):
         """Handle incoming messages for this specific client."""
+
+        # possible timeouts in case when one of the markers is True but the next message is never received should probably be handled well my websockets library
         awaitingAudio = False
+        awaitingText = False
 
         while self.is_active:
             try:
-                # rather use ifinstance str or bytes
                 async for message in self.websocket:
+                    if isinstance(message, str):
+                        if awaitingText:
+                            logger.info(
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent text data {message}."
+                            )
 
-                    if message == "audio":
-                        logger.info(
-                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} is sending audio data."
-                        )
-                        awaitingAudio = True
-                        continue
-                    if awaitingAudio:
-                        logger.info(
-                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} has sent audio data."
-                        )
-                        awaitingAudio = False
-                        os.makedirs("media/temp_audio", exist_ok=True)
-                        temp_audio_filename = (
-                            f"media/temp_audio/temp_audio_{uuid.uuid4().hex}.wav"
+                            awaitingText = False
+
+                            message = InputMessage(command="chat", message=message)
+
+                            await self.queue_input.put(message)
+
+                            continue
+
+                        try:
+                            input_message_meta = InputMessageMeta.model_validate_json(
+                                message
+                            )
+                            match input_message_meta.type:
+                                case "audio":
+                                    logger.info(
+                                        f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} is sending audio data."
+                                    )
+
+                                    awaitingAudio = True
+                                    awaitingText = False
+
+                                    continue
+                                case "text":
+                                    logger.info(
+                                        f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} is sending text data."
+                                    )
+
+                                    awaitingAudio = False
+                                    awaitingText = True
+
+                                    continue
+                        except ValidationError as e:
+                            logger.error(
+                                f"Validation error for client {self.websocket.remote_address}: {e}"
+                            )
+
+                            awaitingText = False
+                            awaitingAudio = False
+
+                            await self.send_message(
+                                OutputMessageWrapper(
+                                    output_message=OutputMessage(
+                                        status="error",
+                                        code=400,
+                                        action="agent_response",
+                                        message=f"Invalid input: {e}",
+                                    ),
+                                    additional_data=None,
+                                )
+                            )
+                    elif isinstance(message, bytes):
+                        if awaitingAudio:
+                            logger.info(
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data."
+                            )
+
+                            awaitingAudio = False
+
+                            os.makedirs("media/temp_audio", exist_ok=True)
+                            temp_audio_filename = (
+                                f"media/temp_audio/temp_audio_{uuid.uuid4().hex}.wav"
+                            )
+
+                            with open(temp_audio_filename, "wb") as f:
+                                f.write(message)
+
+                            text = speech_to_text(temp_audio_filename)
+
+                            logger.info(
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data converted to text: {text["text"]}"
+                            )
+
+                            message = InputMessage(command="chat", message=text["text"])
+
+                            await self.queue_input.put(message)
+
+                            continue
+                        else:
+                            logger.warning(
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent binary data without awaiting audio."
+                            )
+                            await self.send_message(
+                                OutputMessageWrapper(
+                                    output_message=OutputMessage(
+                                        status="error",
+                                        code=400,
+                                        action="agent_response",
+                                        message="Unexpected binary data received.",
+                                    ),
+                                    additional_data=None,
+                                )
+                            )
+                    else:
+                        logger.warning(
+                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent an unsupported message type: {type(message)}"
                         )
 
-                        with open(temp_audio_filename, "wb") as f:
-                            f.write(message)
-
-                        text = speech_to_text(temp_audio_filename)
-                        logger.info(
-                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} has sent audio data converted to text: {text}"
+                        await self.send_message(
+                            OutputMessageWrapper(
+                                output_message=OutputMessage(
+                                    status="error",
+                                    code=400,
+                                    action="agent_response",
+                                    message="Unsupported message type received.",
+                                ),
+                                additional_data=None,
+                            )
                         )
-                        message = InputMessage(command="chat", message=text["text"])
-                        await self.queue_input.put(message)
-                        continue
-
-                    message = InputMessage(command="chat", message=message)
-                    await self.queue_input.put(message)
-            except ValidationError as e:
-                logger.error(
-                    f"Validation error for client {self.websocket.remote_address}: {e}"
-                )
-                await self.send_message(
-                    OutputMessageWrapper(
-                        output_message=OutputMessage(
-                            status="error",
-                            code=400,
-                            action="agent_response",
-                            message=f"Invalid input: {e}",
-                        ),
-                        additional_data=None,
-                    )
-                )
             except asyncio.CancelledError:
                 logger.error(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"

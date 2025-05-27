@@ -1,8 +1,12 @@
-import sys
-import os
 import json
+import os
+import sys
+import torch
 
+from colorama import Fore
+from langchain_core.tools import tool
 from loguru import logger
+from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.json")
@@ -23,3 +27,39 @@ logger.add(
     format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | <cyan>{module}</cyan>:<cyan>{function}</cyan> | {message}",
     backtrace=True,
 )
+
+
+def speech_to_text(path: str) -> str:
+    """Convert a vocal speech to text."""
+    logger.info(
+        f"{Fore.YELLOW}Speech to text conversion started for file: {path}{Fore.RESET}"
+    )
+
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+
+    model_id = "openai/whisper-large-v3-turbo"
+
+    model = AutoModelForSpeechSeq2Seq.from_pretrained(
+        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    )
+    model.to(device)
+
+    processor = AutoProcessor.from_pretrained(model_id)
+
+    pipe = pipeline(
+        "automatic-speech-recognition",
+        model=model,
+        tokenizer=processor.tokenizer,
+        feature_extractor=processor.feature_extractor,
+        torch_dtype=torch_dtype,
+        device=device,
+    )
+
+    result = pipe(path, return_timestamps=True)
+
+    logger.info(
+        f"{Fore.GREEN}Speech to text conversion completed: {result["text"]}{Fore.RESET}"
+    )
+
+    return result
