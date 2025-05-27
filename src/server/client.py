@@ -1,7 +1,10 @@
 import asyncio
+import os
+import uuid
 import websockets
 
 from agent.api import AgentAPI
+from agent.tools.speech_to_text import speech_to_text
 from beartype import beartype
 from colorama import Fore
 from lib import logger
@@ -65,9 +68,40 @@ class Client:
     # Subfunction
     async def loop_input(self):
         """Handle incoming messages for this specific client."""
+        awaitingAudio = False
+
         while self.is_active:
             try:
+                # rather use ifinstance str or bytes
                 async for message in self.websocket:
+
+                    if message == "audio":
+                        logger.info(
+                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} is sending audio data."
+                        )
+                        awaitingAudio = True
+                        continue
+                    if awaitingAudio:
+                        logger.info(
+                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} has sent audio data."
+                        )
+                        awaitingAudio = False
+                        os.makedirs("media/temp_audio", exist_ok=True)
+                        temp_audio_filename = (
+                            f"media/temp_audio/temp_audio_{uuid.uuid4().hex}.wav"
+                        )
+
+                        with open(temp_audio_filename, "wb") as f:
+                            f.write(message)
+
+                        text = speech_to_text(temp_audio_filename)
+                        logger.info(
+                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} has sent audio data converted to text: {text}"
+                        )
+                        message = InputMessage(command="chat", message=text["text"])
+                        await self.queue_input.put(message)
+                        continue
+
                     message = InputMessage(command="chat", message=message)
                     await self.queue_input.put(message)
             except ValidationError as e:

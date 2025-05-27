@@ -55,7 +55,7 @@ class Server:
         """Run the WebSocket server."""
         try:
             self.server = await websockets.serve(
-                self.handler_client, "0.0.0.0", self.port
+                self.handler_client, "0.0.0.0", self.port, max_size=10 * 1024 * 1024
             )
             logger.info(
                 f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
