@@ -10,17 +10,12 @@ def validate_message(m):
     return m
 
 
-def parse_agent_response(m: str):
-    try:
-        return m.split("\nFinal Answer:")
-    except Exception as e:
-        raise ValueError(f"Error parsing agent response: {e}")
-
-
 class OutputMessage(BaseModel):
     status: Literal["stream", "error"]
     code: int
-    action: Literal["agent_response", "image_generation", "thinking_process"]
+    action: Literal[
+        "agent_response", "image_generation", "thinking_process", "unknown_action"
+    ]
     message: str
     _validate_message = field_validator("message")(validate_message)
 

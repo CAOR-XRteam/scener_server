@@ -45,87 +45,106 @@ class Session:
                 )
                 break
 
-    def parse_input_message(self, token: str) -> list[OutputMessageWrapper]:
+    def _thinking_response(self, thinking: str) -> OutputMessageWrapper:
+        """Create a thinking response message"""
+        return OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream",
+                code=200,
+                action="thinking_process",
+                message=thinking,
+            ),
+            additional_data=None,
+        )
+
+    def _agent_response(self, message: str) -> OutputMessageWrapper:
+        """Create an agent response message"""
+        return OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream",
+                code=200,
+                action="agent_response",
+                message=message,
+            ),
+            additional_data=None,
+        )
+
+    def _image_generation_response(self, json_response: dict) -> OutputMessageWrapper:
+        try:
+            generated_images_data = json_response.get("generated_images_data")
+            data = []
+            for image_data in generated_images_data:
+                image_path = image_data.get("path")
+                if image_path:
+                    data.append(convert_image_to_bytes(image_path))
+
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream",
+                    code=200,
+                    action="image_generation",
+                    message=json_response.get("message"),
+                ),
+                additional_data=data,
+            )
+        except Exception as e:
+            logger.error(f"Error converting image to bytes: {e}")
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="error",
+                    code=500,
+                    action="image_generation",
+                    message=f"Error converting image {image_data.get("name")} to bytes: {e}",
+                ),
+                additional_data=None,
+            )
+
+    def _unknown_action_response(self, action: str) -> OutputMessageWrapper:
+        """Create a response for unknown actions"""
+        return OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="error",
+                code=400,
+                action="unknown_action",
+                message=f"Unknown action in agent response: {action}",
+            ),
+            additional_data=None,
+        )
+
+    def _parse_agent_token(self, token: str) -> list[OutputMessageWrapper]:
         """Parse an agent token and return a (list of) OutputMessageWrapper ready to be sent to the client"""
+
+        def parse_agent_response(m: str):
+            try:
+                return m.split("\nFinal Answer:")
+            except Exception as e:
+                raise ValueError(f"Error parsing agent response: {e}")
+
         responses_to_send = []
         try:
             thinking, final_answer = parse_agent_response(
                 token
             )  # When using stream with qwen, it returns the thinking part and the final answer as one token
 
-            responses_to_send.append(
-                OutputMessageWrapper(
-                    output_message=OutputMessage(
-                        status="stream",
-                        code=200,
-                        action="thinking_process",
-                        message=thinking,
-                    ),
-                    additional_data=None,
-                )
-            )
+            responses_to_send.append(self._thinking_response(thinking))
 
             json_response = json.loads(final_answer)
-            if json_response.get("action") == "image_generation":
-                try:
-                    generated_images_data = json_response.get("generated_images_data")
-                    data = []
-                    for image_data in generated_images_data:
-                        image_path = image_data.get("path")
-                        if image_path:
-                            data.append(convert_image_to_bytes(image_path))
 
+            match json_response.get("action"):
+                case "agent_response":
                     responses_to_send.append(
-                        OutputMessageWrapper(
-                            output_message=OutputMessage(
-                                status="stream",
-                                code=200,
-                                action="image_generation",
-                                message=json_response.get("message"),
-                            ),
-                            additional_data=data,
-                        )
+                        self._agent_response(json_response.get("message"))
                     )
-                except Exception as e:
-                    logger.error(f"Error converting image to bytes: {e}")
+                case "image_generation":
                     responses_to_send.append(
-                        OutputMessageWrapper(
-                            output_message=OutputMessage(
-                                status="error",
-                                code=500,
-                                action="image_generation",
-                                message=f"Error converting image to bytes: {e}",
-                            ),
-                            additional_data=None,
-                        )
+                        self._image_generation_response(json_response)
                     )
-
-            elif json_response.get("action") == "agent_response":
-                responses_to_send.append(
-                    OutputMessageWrapper(
-                        output_message=OutputMessage(
-                            status="stream",
-                            code=200,
-                            action="agent_response",
-                            message=json_response.get("message"),
-                        ),
-                        additional_data=None,
+                case _:
+                    responses_to_send.append(
+                        self._unknown_action_response(json_response.get("action"))
                     )
-                )
-            else:
-                responses_to_send.append(
-                    OutputMessageWrapper(
-                        output_message=OutputMessage(
-                            status="error",
-                            code=400,
-                            action="agent_response",
-                            message=f"Unknown action in response: {json_response.get('action')}",
-                        ),
-                        additional_data=None,
-                    )
-                )
-        except Exception as e:
-            logger.error(f"Parsing error: {e}")
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Error parsing agent response: {e}")
             responses_to_send.append(
                 OutputMessageWrapper(
                     output_message=OutputMessage(
@@ -133,6 +152,19 @@ class Session:
                         code=400,
                         action="agent_response",
                         message=f"Error parsing agent response: {e}",
+                    ),
+                    additional_data=None,
+                )
+            )
+        except Exception as e:
+            logger.error(f"Internal error: {e}")
+            responses_to_send.append(
+                OutputMessageWrapper(
+                    output_message=OutputMessage(
+                        status="error",
+                        code=400,
+                        action="agent_response",
+                        message=f"Internal error: {e}",
                     ),
                     additional_data=None,
                 )
@@ -149,7 +181,7 @@ class Session:
             output_generator = self.client.agent.achat(message, str(self.thread_id))
             async for token in output_generator:
                 logger.info(f"Received token in thread {self.thread_id}: {token}")
-                responses_to_send = self.parse_input_message(token)
+                responses_to_send = self._parse_agent_token(token)
                 for response in responses_to_send:
                     await self.client.send_message(response)
 
@@ -167,7 +199,7 @@ class Session:
                         status="error",
                         code=500,
                         action="agent_response",
-                        message=f"Error during chat stream in thread {self.thread_id}",
+                        message=f"Error during chat stream in thread {self.thread_id}: {e}",
                     ),
                     additional_data=None,
                 )

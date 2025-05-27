@@ -60,6 +60,7 @@ class Client:
             logger.error(
                 f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
             )
+            raise
 
     # Subfunction
     async def loop_input(self):
@@ -110,29 +111,28 @@ class Client:
                     await self.queue_output.get()
                 )  # Wait for a message to send
                 output_message_json = message.output_message.model_dump_json()
-                if (
-                    message.output_message.action == "thinking_process"
-                    or message.output_message.action == "agent_response"
-                ):
 
-                    await self.websocket.send(output_message_json)
-                    logger.info(
-                        f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
-                    )
-                elif message.output_message.action == "image_generation":
-                    if message.additional_data:
-                        try:
-                            await self.websocket.send(output_message_json)
-                            await self.websocket.send(str(len(message.additional_data)))
-                            for image in message.additional_data:
-                                await self.websocket.send(image)
-                        except Exception as e:
-                            logger.error(
-                                f"Error sending image to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
-                            )
-                    else:
+                match message.output_message.action:
+                    case "agent_response" | "thinking_process" | "unknown_action":
                         await self.websocket.send(output_message_json)
-
+                        logger.info(
+                            f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                        )
+                    case "image_generation":
+                        if message.additional_data:
+                            try:
+                                await self.websocket.send(output_message_json)
+                                await self.websocket.send(
+                                    str(len(message.additional_data))
+                                )
+                                for image in message.additional_data:
+                                    await self.websocket.send(image)
+                            except Exception as e:
+                                logger.error(
+                                    f"Error sending image to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
+                                )
+                            else:
+                                await self.websocket.send(output_message_json)
             except asyncio.CancelledError:
                 logger.info(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
