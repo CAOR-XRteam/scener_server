@@ -77,7 +77,7 @@ class Session:
                 if image_path:
                     data.append(convert_image_to_bytes(image_path))
 
-            OutputMessageWrapper(
+            return OutputMessageWrapper(
                 output_message=OutputMessage(
                     status="stream",
                     code=200,
@@ -88,7 +88,7 @@ class Session:
             )
         except Exception as e:
             logger.error(f"Error converting image to bytes: {e}")
-            OutputMessageWrapper(
+            return OutputMessageWrapper(
                 output_message=OutputMessage(
                     status="error",
                     code=500,

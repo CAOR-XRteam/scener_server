@@ -122,17 +122,29 @@ class Client:
                         if message.additional_data:
                             try:
                                 await self.websocket.send(output_message_json)
+                                logger.info(
+                                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                                )
                                 await self.websocket.send(
                                     str(len(message.additional_data))
                                 )
+                                logger.info(
+                                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {str(len(message.additional_data))}"
+                                )
                                 for image in message.additional_data:
                                     await self.websocket.send(image)
+                                logger.info(
+                                    f"Sent binary data to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
+                                )
                             except Exception as e:
                                 logger.error(
                                     f"Error sending image to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
                                 )
-                            else:
-                                await self.websocket.send(output_message_json)
+                        else:
+                            await self.websocket.send(output_message_json)
+                            logger.info(
+                                f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                            )
             except asyncio.CancelledError:
                 logger.info(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
