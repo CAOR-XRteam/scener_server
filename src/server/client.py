@@ -78,10 +78,16 @@ class Client:
         awaitingText = False
 
         while self.is_active:
+            assert not (
+                awaitingAudio and awaitingText
+            ), "State violation: awaitingAudio and awaitingText cannot both be true"
             try:
                 async for message in self.websocket:
                     if isinstance(message, str):
                         if awaitingText:
+                            assert (
+                                not awaitingAudio
+                            ), "State violation: awaitingAudio and awaitingText cannot both be true"
                             logger.info(
                                 f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent text data: {message}."
                             )
@@ -138,6 +144,9 @@ class Client:
                             )
                     elif isinstance(message, bytes):
                         if awaitingAudio:
+                            assert (
+                                not awaitingText
+                            ), "State violation: awaitingAudio and awaitingText cannot both be true"
                             logger.info(
                                 f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data."
                             )
@@ -196,8 +205,11 @@ class Client:
                             )
                     else:
                         logger.warning(
-                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent an unsupported message type: {type(message)}"
+                            f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent an unsupported message type: {message}"
                         )
+
+                        awaitingText = False
+                        awaitingAudio = False
 
                         await self.send_message(
                             OutputMessageWrapper(
