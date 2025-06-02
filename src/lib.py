@@ -73,8 +73,4 @@ def speech_to_text(path: str) -> str:
         f"{Fore.GREEN}Speech to text conversion completed: {result["text"]}{Fore.RESET}"
     )
 
-    for r in result["segment"]:
-        if r["no_speech_prob"] >= 0.9:
-            logger.info(f"Probably not a speech segment: {r}")
-
     return result["text"]
