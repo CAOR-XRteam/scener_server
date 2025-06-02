@@ -163,10 +163,8 @@ class Client:
                             text = speech_to_text(temp_audio_filename)
 
                             logger.info(
-                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data converted to text: {text["text"]}"
+                                f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} sent audio data converted to text: {text}"
                             )
-
-                            converted_speech_message = text["text"]
 
                             await self.send_message(
                                 OutputMessageWrapper(
@@ -174,15 +172,13 @@ class Client:
                                         status="stream",
                                         code=200,
                                         action="converted_speech",
-                                        message=converted_speech_message,
+                                        message=text,
                                     ),
                                     additional_data=None,
                                 )
                             )
 
-                            message = InputMessage(
-                                command="chat", message=converted_speech_message
-                            )
+                            message = InputMessage(command="chat", message=text)
 
                             await self.queue_input.put(message)
 

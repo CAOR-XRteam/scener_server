@@ -31,6 +31,8 @@ logger.add(
 
 def speech_to_text(path: str) -> str:
     """Convert a vocal speech to text."""
+    import whisper
+
     logger.info(
         f"{Fore.YELLOW}Speech to text conversion started for file: {path}{Fore.RESET}"
     )
@@ -38,28 +40,41 @@ def speech_to_text(path: str) -> str:
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
-    model_id = "openai/whisper-large-v3-turbo"
+    # model_id = "openai/whisper-large-v3-turbo"
 
-    model = AutoModelForSpeechSeq2Seq.from_pretrained(
-        model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    # model = AutoModelForSpeechSeq2Seq.from_pretrained(
+    #     model_id, torch_dtype=torch_dtype, low_cpu_mem_usage=True, use_safetensors=True
+    # )
+    # model.to(device)
+
+    # processor = AutoProcessor.from_pretrained(model_id)
+
+    # pipe = pipeline(
+    #     "automatic-speech-recognition",
+    #     model=model,
+    #     tokenizer=processor.tokenizer,
+    #     feature_extractor=processor.feature_extractor,
+    #     torch_dtype=torch_dtype,
+    #     device=device,
+    # )
+
+    # result = pipe(path, return_timestamps=True)
+
+    model = whisper.load_model("turbo", device=device)
+    result = model.transcribe(
+        path,
+        no_speech_threshold=0.1,
+        condition_on_previous_text=False,
+        logprob_threshold=-1.00,
+        without_timestamps=True,
     )
-    model.to(device)
-
-    processor = AutoProcessor.from_pretrained(model_id)
-
-    pipe = pipeline(
-        "automatic-speech-recognition",
-        model=model,
-        tokenizer=processor.tokenizer,
-        feature_extractor=processor.feature_extractor,
-        torch_dtype=torch_dtype,
-        device=device,
-    )
-
-    result = pipe(path, return_timestamps=True)
 
     logger.info(
         f"{Fore.GREEN}Speech to text conversion completed: {result["text"]}{Fore.RESET}"
     )
 
-    return result
+    for r in result["segment"]:
+        if r["no_speech_prob"] >= 0.9:
+            logger.info(f"Probably not a speech segment: {r}")
+
+    return result["text"]
