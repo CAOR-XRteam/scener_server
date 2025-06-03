@@ -72,6 +72,7 @@ def ask(agent: Agent, query: str, thread_id: str = 0):
         ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
         if ai_messages:
             final_content = ai_messages[-1].content
+            print(final_content)
         else:
             print("No AIMessage found.")
 

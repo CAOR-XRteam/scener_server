@@ -1,4 +1,3 @@
-# tests/functional/agent_tool_date.py
 from agent.api import AgentAPI
 from datetime import datetime
 import pytest

@@ -10,13 +10,11 @@ def list_assets() -> str:
     api = LibraryAPI()
     return api.get_list()
 
-
 @tool
 def update_asset(name: str, image_path: str, mesh_path: str, description_path: str) -> str:
     """Update an existing asset by name with image path, mesh path, and description path."""
     api.update_asset(name, image_path, mesh_path, description_path)
     return "asset updated"
-
 
 @tool
 def create_description_file(path_with_name: str, asset_description: str) -> str:

@@ -20,7 +20,7 @@ class Server:
         self.port = port
         self.list_client: list[Client] = []
         self.shutdown_event = asyncio.Event()
-        self.server: websockets.ServerConnection = None
+        self.connection: websockets.ServerConnection = None
 
         try:
             self.agent = AgentAPI()
@@ -38,8 +38,8 @@ class Server:
         except Exception as e:
             logger.error(f"Error in server's main execution: {e}")
         finally:
-            if not self.server.is_serving():
-                loop.run_until_complete(self.server.wait_closed())
+            if not self.connection.is_serving():
+                loop.run_until_complete(self.connection.wait_closed())
             logger.info("Server finished working.")
 
     # Subfunction
@@ -50,14 +50,14 @@ class Server:
     async def run(self):
         """Run the WebSocket server."""
         try:
-            self.server = await websockets.serve(
+            self.connection = await websockets.serve(
                 self.handler_client, "0.0.0.0", self.port
             )
             logger.info(
                 f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
             )
             print("---------------------------------------------")
-            await self.server.wait_closed()
+            await self.connection.wait_closed()
         except OSError as e:
             logger.error(
                 f"Could not start server on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}: {e}."
@@ -111,10 +111,10 @@ class Server:
 
     async def shutdown(self):
         """Gracefully shut down the server."""
-        if self.server:
-            self.server.close()
+        if self.connection:
+            self.connection.close()
             try:
-                await self.server.wait_closed()
+                await self.connection.wait_closed()
                 print("---------------------------------------------")
                 logger.success(f"Server shutdown")
             except asyncio.CancelledError:
