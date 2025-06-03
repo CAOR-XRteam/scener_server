@@ -10,3 +10,5 @@ from agent.tools.input.gesture import hand_gesture
 from agent.tools.asset.image import image_analysis
 from agent.tools.asset.generate_image import generate_image
 from agent.tools.asset.library import list_assets
+
+from agent.tools.processing.image_to_depth import image_to_depth

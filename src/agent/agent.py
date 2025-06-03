@@ -103,6 +103,7 @@ FAILURE MODES TO AVOID:
             image_analysis,  # OK
             speech_to_texte,
             list_assets,
+            image_to_depth,
         ]
 
         agent_model_name = config.get("agent_model")
