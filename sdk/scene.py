@@ -46,7 +46,7 @@ class SceneObject(BaseModel):
     def check_conditional_fields(self):
         if self.type == "primitive" and self.shape is None:
             raise ValueError("shape must be set for primitive objects")
-        if self.object_type == "dynamic" and self.asset_id is None:
+        if self.object_type == "dynamic" and self.id is None:
             raise ValueError("id must be set for dynamic objects")
         return self
 
