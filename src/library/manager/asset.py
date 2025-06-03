@@ -16,12 +16,11 @@ class Asset:
         from library import path_asset
         from library.manager.library import Library
         import os
+
         if not os.path.exists(path_asset):
             os.makedirs(path_asset)
         library = Library(db)
         library.fill(path_asset)
-
-
 
     def add(
         self, name: str, image: str = None, mesh: str = None, description: str = None

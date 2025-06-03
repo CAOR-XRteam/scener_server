@@ -20,7 +20,7 @@ class Database:
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
-            
+
     def _is_opened_connection(self):
         # Check if the connection is open
         try:
