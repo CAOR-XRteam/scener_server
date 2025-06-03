@@ -8,12 +8,10 @@ import subprocess
 @tool
 def image_to_depth():
     """Compute a depth image from a color image"""
-    
-    subprocess.run(["/path/to/venv/bin/python", "script/depth/run.py", ...])
-
 
     subprocess.run([
-        "python", "model/Marigold/script/depth/run.py",
+        "model/Marigold/venv/bin/python",
+        "model/Marigold/script/depth/run.py",
         "--checkpoint", "prs-eth/marigold-depth-v1-1",
         "--input_rgb_dir", "model/Marigold/input/one",
         "--output_dir", "model/Marigold/output/one",
