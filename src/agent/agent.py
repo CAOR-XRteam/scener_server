@@ -96,10 +96,12 @@ FAILURE MODES TO AVOID:
         """
         config = load_config()
 
-        decomposer_model_name = config.get("decomposer_model")
-        decomposer_instance = InitialDecomposer(model_name=decomposer_model_name)
+        initial_decomposer_model_name = config.get("decomposer_model")
+        initial_decomposer_instance = InitialDecomposer(
+            model_name=initial_decomposer_model_name
+        )
         initial_decomposer_tool = Tool.from_function(
-            func=decomposer_instance.decompose,
+            func=initial_decomposer_instance.decompose,
             name="decomposer",
             description="Decomposes a user's scene description prompt into manageable elements for 3D scene creation.",
             args_schema=InitialDecomposeToolInput,
@@ -114,7 +116,10 @@ FAILURE MODES TO AVOID:
             args_schema=ImproveToolInput,
         )
 
-        final_decomposer_instance = FinalDecomposer(model_name=decomposer_model_name)
+        final_decomposer_model_name = config.get("final_decomposer_model")
+        final_decomposer_instance = FinalDecomposer(
+            model_name=final_decomposer_model_name
+        )
         final_decomposer_tool = Tool.from_function(
             func=final_decomposer_instance.decompose,
             name="final_decomposer",
