@@ -111,7 +111,7 @@ class Session:
                 ),
                 additional_data=json_response.get("final_scene_data"),
             )
-        except Exception as e:
+        except json.JSONDecodeError as e:
             logger.error(
                 f"Error extracting scene description from the agent's response: {e}"
             )
@@ -146,16 +146,9 @@ class Session:
             except Exception as e:
                 raise ValueError(f"Error parsing agent response: {e}")
 
-        responses_to_send = []
-        try:
-            thinking, final_answer = parse_agent_response(
-                token
-            )  # When using stream with qwen, it returns the thinking part and the final answer as one token
-
-            responses_to_send.append(self._thinking_response(thinking))
-
-            json_response = json.loads(final_answer)
-
+        def _parse_actionable_json(
+            json_response: dict, responses_to_send: list[OutputMessageWrapper]
+        ):
             match json_response.get("action"):
                 case "agent_response":
                     responses_to_send.append(
@@ -165,10 +158,46 @@ class Session:
                     responses_to_send.append(
                         self._image_generation_response(json_response)
                     )
+                case "scene_generation":
+                    self._scene_description_response(json_response)
                 case _:
                     responses_to_send.append(
                         self._unknown_action_response(json_response.get("action"))
                     )
+
+        responses_to_send = []
+        try:
+            thinking, final_answer = parse_agent_response(
+                token
+            )  # When using stream with qwen, it returns the thinking part and the final answer as one token
+
+            responses_to_send.append(self._thinking_response(thinking))
+
+            try:
+                json_response = json.loads(final_answer)
+            except json.JSONDecodeError as e:
+                logger.error(
+                    f"Final Answer is not a valid JSON: {final_answer}. Error: {e}"
+                )
+                responses_to_send.append(
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
+                            status="error",
+                            code=400,
+                            action="agent_response",
+                            message=f"Agent's final response is not a valid JSON.",
+                        ),
+                        additional_data=None,
+                    )
+                )
+                return responses_to_send
+
+            if "action" in json_response:
+                _parse_actionable_json(json_response, responses_to_send)
+            else:
+                for value in json_response.values():
+                    _parse_actionable_json(value, responses_to_send)
+
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Error parsing agent response: {e}")
             responses_to_send.append(

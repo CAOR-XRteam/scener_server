@@ -161,7 +161,7 @@ WORKFLOW:
     ]
     }
     }' 
-    which you saved as 'final_scene_data_json', then your entire response MUST be: Final Answer: {"image_generation_status": 'image_generation_status_json', "final_scene_data": 'final_scene_data_json'}
+    which you saved as 'final_scene_data_json', then your entire response MUST be: `Final Answer: {"image_generation_status": 'image_generation_status_json', "final_scene_data": 'final_scene_data_json'}`
         - Do NOT add emojis. Do NOT add any text before "Final Answer: ". Do NOT add any text after the JSON.
         - Do NOT reword or summarize the tool output. Copy/paste it literally after "Final Answer: ".
         - STOP all processing. This is the final step.
