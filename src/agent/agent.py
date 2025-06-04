@@ -70,16 +70,103 @@ WORKFLOW:
     - WAIT for the tool to output (expect a valid JSON). Store this as `image_generation_status_json`.
 
 7.  **Final Decompose Stage**:
-    -   **Thought:** "Component image generation has been initiated. Now I need to create the full 3D scene layout for Unity. I must call `final_decomposer` tool with `improved_decomposition_result` as the `improved_decomposition` argument."
-    -   Action: Call `final_decomposer` tool.
-    -   WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
+    - **Thought:** "Component image generation has been initiated. Now I need to create the full 3D scene layout for Unity. I must call `final_decomposer` tool with `improved_decomposition_result` as the `improved_decomposition` argument."
+    - Action: Call `final_decomposer` tool.
+    - WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
 
-8. **Report Generation Status:**
-    -   **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."
-    -   **Final Answer:** {{
-            "image_generation_status": [content of `image_generation_status_json`],
-            "final_scene_data": [content of `final_scene_data_json`]
-          }}
+8. **Final Answer Construction :**
+    - **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."
+    - **Your Output MUST be formatted EXACTLY like this:**
+            `Final Answer: {"image_generation_status": <content of 'image_generation_status_json' (this should be a JSON object)>, "final_scene_data": <content of 'final_scene_data_json' (this should be a JSON object)>}
+    - **Example:** If `generate_image` tool returns the JSON `{"action": "image_generation", "message": "Process complete.", "generated_images_data": [{"id": 1}]}` that you saved as "image_generation_status_json", and "final_decomposer" tool returns the JSON 
+    '{
+    "action": "scene_generation", 
+    "message": "Scene description has been successfully generated.",
+    "final_scene_json": 
+    "skybox": {
+        "type": "sun",
+        "top_color": { "r": 0.25, "g": 0.5, "b": 0.95, "a": 1.0 },
+        "top_exponent": 1.5,
+        "horizon_color": { "r": 0.6, "g": 0.75, "b": 0.9, "a": 1.0 },
+        "bottom_color": { "r": 0.7, "g": 0.65, "b": 0.6, "a": 1.0 },
+        "bottom_exponent": 1.2,
+        "sky_intensity": 1.1,
+        "sun_color": { "r": 1.0, "g": 0.95, "b": 0.85, "a": 1.0 },
+        "sun_intensity": 1.8,
+        "sun_alpha": 20.0,
+        "sun_beta": 15.0,
+        "sun_vector": { "x": 0.577, "y": -0.577, "z": -0.577, "w": 0.0 }
+    },
+    "lights": [
+        {
+        "id": "directional_sun_light_01",
+        "type": "directional",
+        "position": { "x": 0.0, "y": 10.0, "z": 0.0 },
+        "rotation": { "x": 50.0, "y": -30.0, "z": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+        "color": { "r": 0.98, "g": 0.92, "b": 0.85, "a": 1.0 },
+        "intensity": 1.2,
+        "indirect_multiplier": 1.0,
+        "mode": "realtime",
+        "shadow_type": "soft_shadows"
+        },
+        {
+        "id": "living_room_point_light_01",
+        "type": "point",
+        "position": { "x": -1.5, "y": 2.0, "z": 1.0 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 },
+        "color": { "r": 1.0, "g": 0.85, "b": 0.7, "a": 1.0 },
+        "intensity": 0.9,
+        "indirect_multiplier": 0.8,
+        "range": 8.0,
+        "mode": "mixed",
+        "shadow_type": "hard_shadows"
+        }
+    ],
+    "objects": [
+        {
+        "id": "cozy_living_room_primitive_01",
+        "name": "cozy_living_room",
+        "type": "primitive",
+        "position": { "x": 0.0, "y": 1.5, "z": 0.0 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "scale": { "x": 10.0, "y": 3.0, "z": 8.0 },
+        "path": null,
+        "shape": "cube",
+        "prompt": "a cozy living room with large windows"
+        },
+        {
+        "id": "beige_fabric_couch_dynamic_01",
+        "name": "beige_couch",
+        "type": "dynamic",
+        "position": { "x": 0.0, "y": 0.5, "z": -2.0 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "scale": { "x": 2.0, "y": 0.8, "z": 0.9 },
+        "path": null,
+        "shape": null,
+        "prompt": "a plush beige fabric couch"
+        },
+        {
+        "id": "black_domestic_cat_dynamic_01",
+        "name": "black_cat",
+        "type": "dynamic",
+        "position": { "x": 0.2, "y": 0.95, "z": -1.9 },
+        "rotation": { "x": 0.0, "y": 25.0, "z": 0.0 },
+        "scale": { "x": 0.4, "y": 0.3, "z": 0.5 },
+        "path": null,
+        "shape": null,
+        "prompt": "a sleek black domestic cat"
+        }
+    ]
+    }
+    }' 
+    which you saved as 'final_scene_data_json', then your entire response MUST be: Final Answer: {"image_generation_status": 'image_generation_status_json', "final_scene_data": 'final_scene_data_json'}
+        - Do NOT add emojis. Do NOT add any text before "Final Answer: ". Do NOT add any text after the JSON.
+        - Do NOT reword or summarize the tool output. Copy/paste it literally after "Final Answer: ".
+        - STOP all processing. This is the final step.
+
+
 
 IMPORTANT RULES:
 ----------------

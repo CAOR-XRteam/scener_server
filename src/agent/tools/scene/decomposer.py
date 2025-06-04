@@ -253,14 +253,18 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self, improved_decomposition_result: InitialDecompositionOutput
-    ) -> Scene:
+    ) -> dict:
         try:
             logger.info(f"Decomposing input: {improved_decomposition_result}")
-            result: dict = self.chain.invoke(
+            result: Scene = self.chain.invoke(
                 {"user_input": improved_decomposition_result}
             )
             logger.info(f"Decomposition result: {result}")
-            return result
+            return {
+                "action": "scene_generation",
+                "message": "Scene description has been successfully generated.",
+                "final_scene_json": result.model_dump_json(),
+            }
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise

@@ -70,7 +70,9 @@ class Session:
 
     def _image_generation_response(self, json_response: dict) -> OutputMessageWrapper:
         try:
-            generated_images_data = json_response.get("generated_images_data")
+            generated_images_data = json_response.get(
+                "image_generation_status_json"
+            ).get("generated_images_data")
             data = []
             for image_data in generated_images_data:
                 image_path = image_data.get("path")
@@ -94,6 +96,31 @@ class Session:
                     code=500,
                     action="image_generation",
                     message=f"Error converting image {image_data.get("name")} to bytes: {e}",
+                ),
+                additional_data=None,
+            )
+
+    def _scene_description_response(self, json_response: dict) -> OutputMessageWrapper:
+        try:
+            return OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream",
+                    code=200,
+                    action="scene_generation",
+                    message="Scene JSON has been generated.",
+                ),
+                additional_data=json_response.get("final_scene_data"),
+            )
+        except Exception as e:
+            logger.error(
+                f"Error extracting scene description from the agent's response: {e}"
+            )
+            return OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="error",
+                    code=500,
+                    action="scene_generation",
+                    message=f"Error extracting scene description from the agent's response: {e}",
                 ),
                 additional_data=None,
             )
