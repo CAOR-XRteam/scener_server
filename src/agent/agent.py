@@ -72,7 +72,7 @@ WORKFLOW:
     -   WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
 
 8. **Report Generation Status:**
- -   **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."
+    -   **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."
     -   **Final Answer:** {{
             "image_generation_status": [content of `image_generation_status_json`],
             "final_scene_data": [content of `final_scene_data_json`]
@@ -82,8 +82,8 @@ IMPORTANT RULES:
 ----------------
 - NEVER DECOMPOSE, PARSE, MODIFY, or REFORMAT DATA YOURSELF. ONLY USE TOOLS.
 - NEVER CALL `improve` MORE THAN ONCE PER DESCRIPTION.
-- ALWAYS PASS TOOL OUTPUTS EXACTLY AS RECEIVED TO THE NEXT TOOL.
-- ONLY RESPOND USING "Final Answer:" when not calling a tool at this step.
+- The `improved_decomposition_result` from `improver` is the input for BOTH `generate_image` and `final_decomposer` tools.
+- Only use "Final Answer:" when the ENTIRE requested workflow is complete or if you need to respond DIRECTLY WITHOUT CALLING A TOOL.
 - IF IN DOUBT about user intent → ask clarifying questions.
 - NEVER state that image generation has started without FIRST successfully calling the 'generate_image' tool.
 
