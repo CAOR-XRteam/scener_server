@@ -4,6 +4,21 @@ from typing import Literal, Union
 # TODO: change literals to enums, more constraints on fields with Field
 
 
+class DecomposedObject(BaseModel):
+    name: str
+    type: str
+    material: str
+    prompt: str
+
+
+class InitialDecompositionData(BaseModel):
+    objects: list[DecomposedObject]
+
+
+class InitialDecompositionOutput(BaseModel):
+    scene: InitialDecompositionData
+
+
 class ColorRGBA(BaseModel):
     r: float
     g: float
@@ -46,7 +61,7 @@ class SceneObject(BaseModel):
     def check_conditional_fields(self):
         if self.type == "primitive" and self.shape is None:
             raise ValueError("shape must be set for primitive objects")
-        if self.object_type == "dynamic" and self.id is None:
+        if self.type == "dynamic" and self.id is None:
             raise ValueError("id must be set for dynamic objects")
         return self
 
@@ -56,7 +71,7 @@ class GradientSkybox(BaseModel):
     color1: ColorRGBA
     color2: ColorRGBA
     up_vector: Vector4
-    intesity: float
+    intensity: float
     exponent: float
 
 
@@ -71,7 +86,7 @@ class SunSkybox(BaseModel):
     sun_color: ColorRGBA
     sun_intensity: float
     sun_alpha: float
-    sub_beta: float
+    sun_beta: float
     sun_vector: Vector4
 
 

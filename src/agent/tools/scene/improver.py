@@ -5,10 +5,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field
+from sdk.scene import InitialDecompositionOutput
 
 
 class ImproveToolInput(BaseModel):
-    decomposed_input: dict = Field(
+    initial_decomposition_output: InitialDecompositionOutput = Field(
         description="A decomposed scene description ready to be improved for clarity and detail."
     )
 
@@ -72,12 +73,16 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(self, decomposed_input: dict) -> dict:
+    def improve(
+        self, initial_decomposition_output: InitialDecompositionOutput
+    ) -> InitialDecompositionOutput:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        logger.info(f"Improving decomposed scene: {decomposed_input}")
+        logger.info(f"Improving decomposed scene: {initial_decomposition_output}")
 
         try:
-            objects_to_improve = decomposed_input.get("scene", {}).get("objects", [])
+            objects_to_improve = initial_decomposition_output.get("scene", {}).get(
+                "objects", []
+            )
             logger.info(f"Agent: Decomposed objects to improve: {objects_to_improve}")
         except Exception as e:
             logger.error(f"Failed to extract objects from JSON: {e}")
@@ -100,9 +105,11 @@ class Improver:
                 logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
                 logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-        logger.info(f"Decomposed scene with enhanced prompts: {decomposed_input}")
+        logger.info(
+            f"Decomposed scene with enhanced prompts: {initial_decomposition_output}"
+        )
 
-        return decomposed_input
+        return initial_decomposition_output
 
 
 if __name__ == "__main__":
