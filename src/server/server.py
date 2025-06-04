@@ -9,6 +9,10 @@ from lib import logger
 from server.client import Client
 
 
+# TODO: cancel agent task if client disconnects,
+# TODO: send an error message to the client if the server shutdowns while the connections is still active
+
+
 @beartype
 class Server:
     """Manage server start / stop and handle clients"""
@@ -51,7 +55,7 @@ class Server:
         """Run the WebSocket server."""
         try:
             self.server = await websockets.serve(
-                self.handler_client, "0.0.0.0", self.port
+                self.handler_client, "0.0.0.0", self.port, max_size=10 * 1024 * 1024
             )
             logger.info(
                 f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"

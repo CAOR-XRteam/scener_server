@@ -1,12 +1,26 @@
-from beartype import beartype
-from huggingface_hub import login
-from diffusers import StableDiffusionPipeline
-from dotenv import load_dotenv
+import io
 import os
 import torch
 
+from beartype import beartype
+from diffusers import StableDiffusionPipeline
+from dotenv import load_dotenv
+from huggingface_hub import login
+from PIL import Image
+
 
 load_dotenv()
+
+
+def convert_image_to_bytes(image_path):
+    try:
+        with Image.open(image_path) as image:
+            byte_arr = io.BytesIO()
+            image.save(byte_arr, format="PNG")
+            return byte_arr.getvalue()
+    except Exception as e:
+        print(f"Error converting image to bytes: {e}")
+        raise
 
 
 @beartype
@@ -32,6 +46,9 @@ def generate(prompt: str, filename: str):
 
     image.show()
     image.save(filename)
+
+    del pipe
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
