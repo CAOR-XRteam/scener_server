@@ -1,4 +1,5 @@
 import json
+import uuid
 
 from agent.llm.creation import initialize_model
 from beartype import beartype
@@ -69,18 +70,21 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
   "scene": {{
     "objects": [
       {{
+        "id": 1,
         "name": "black_cat",
         "type": "prop",
         "material": "fur",
         "prompt": "a sleek black domestic cat"
       }},
       {{
+        "id": 2,
         "name": "beige_couch",
         "type": "furniture",
         "material": "fabric",
         "prompt": "a beige couch"
       }},
        {{
+        "id": 3,
         "name": "living_room",
         "type": "room",
         "material": "walls",
@@ -111,6 +115,13 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
                 {"user_input": user_input}
             )
             logger.info(f"Decomposition result: {result}")
+
+            # Not relying on the llm to provide unique id for every object
+            for obj_dict in result["scene"]["objects"]:
+                obj_dict["id"] = (
+                    f"{obj_dict.get('name', 'obj').replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
+                )
+
             return result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
@@ -121,6 +132,9 @@ class FinalDecomposeToolInput(BaseModel):
     improved_decomposition_result: InitialDecompositionOutput = Field(
         description="Initial decomposition of user's request with enhaced prompts."
     )
+    original_user_prompt: str = Field(
+        description="The raw, original text prompt submitted by the user at the beginning of the workflow."
+    )
 
 
 @beartype
@@ -130,16 +144,33 @@ class FinalDecomposer:
 You are a Spatial Layout and Scene Enrichment AI for a 3D rendering engine.
 
 YOUR ROLE:
-Given an initial user's structured scene decomposition JSON (which may have already had its object prompts enhanced), your task is to enrich it into a full 3D scene layout. This includes:
+Given an initial user's structured scene decomposition JSON (which may have already had its object prompts enhanced), your task is to enrich it into a full 3D scene layout based on the inital user's prompt. This includes:
 - Object positions, rotations, and scales.
 - Classification of each object from the input as either 'primitive' or 'dynamic'.
 - Generating unique IDs for all objects and lights.
 - A suitable lighting setup (1-2 lights like sun, point, spot, or area).
 - One skybox configuration (gradient, sun, or cubed).
 
+INPUTS:
+You will receive a JSON object (`improved_decomposition_result`) containing a list of pre-identified scene objects. Each object in `improved_decomposition_result` ALREADY HAS A UNIQUE `id` FIELD, a `name`, and a `prompt`. You will also receive the `original_user_prompt`.
+
+YOUR CRITICAL TASK for objects from `improved_decomposition`:
+- For each object provided in the `improved_decomposition.scene.objects` list:
+
+  3. Determine its `type` ("dynamic" or "primitive") and `shape` (if primitive) based on its nature and prompt.
+  4. Infer `position`, `rotation`, and `scale`.
+  5. Set `path` to null for now.
+
+YOUR TASK for NEW elements YOU create (lights, skybox components if they need IDs, additional primitives like ground planes):
+- For any new elements you add to the scene (like lights, or perhaps a default ground plane if no 'room' was specified):
+  1. **Generate a NEW, unique string `id` for each of these new elements.** (e.g., "directional_light_abc", "ground_plane_xyz").
+  2. Populate all other required fields for these elements (position, color, intensity, type, etc.).
+
 CRITICAL RULES:
 ---------------
 1.  **PRESERVE PROMPTS:** You MUST use the `prompt` field for each object exactly as provided in the input JSON. Do NOT alter these prompt strings.
+1.  **PRESERVE IDS:** You MUST use the `id` field for each object exactly as provided in the input JSON. Do NOT change or regenerate this ID.
+2.  **PRESERVE NAMS:** You MUST use the `name` field for each object exactly as provided in the input JSON. Do NOT alter these name strings.
 2.  **OBJECT TRANSFORMS:**
     -   `id`: Generate a unique string ID for each object (e.g., `objectName_randomSuffix`).
     -   `name`: Use the name from the input object.
@@ -239,7 +270,15 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
   ]
 }}
 """
-        self.user_prompt = "User: {user_input}"
+        self.user_prompt = """
+        Original User Prompt:
+        {original_user_prompt}
+
+        Decomposed Objects with IDs and Improved Prompts (Preserve these IDs for these objects):
+        {improved_decomposition_json_str}
+
+        Based on ALL the above information, generate the full scene JSON.
+        """
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", self.system_prompt),
@@ -252,12 +291,19 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
         self.chain = self.prompt | self.model | self.parser
 
     def decompose(
-        self, improved_decomposition_result: InitialDecompositionOutput
+        self,
+        final_decompose_tool_input: FinalDecomposeToolInput,
     ) -> dict:
         try:
-            logger.info(f"Decomposing input: {improved_decomposition_result}")
+            logger.info(
+                f"Final Decomposing with input: original_prompt='{final_decompose_tool_input.original_user_prompt}', improved_decomposition: {final_decompose_tool_input.original_user_prompt}."
+            )
+
             result: Scene = self.chain.invoke(
-                {"user_input": improved_decomposition_result}
+                {
+                    "original_user_prompt": final_decompose_tool_input.original_user_prompt,
+                    "improved_decomposition_json_str": final_decompose_tool_input.improved_decomposition_result,
+                }
             )
             logger.info(f"Decomposition result: {result}")
             return {

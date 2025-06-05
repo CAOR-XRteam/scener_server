@@ -45,7 +45,9 @@ You have access to the following tools. ONLY use them exactly as instructed in t
 
 WORKFLOW:
 ---------
-1. **Receive User Input.**
+1.  **Receive User Input.**
+    -   **Thought:** "I have received the user's input. I MUST store this raw input string as `original_user_input` for later use."
+    -   *(Agent stores the input, e.g., in its scratchpad or memory)*
 
 2. **Assess Intent:**
     - If a NEW SCENE DESCRIPTION → Step 3.
@@ -69,10 +71,12 @@ WORKFLOW:
     - Action: Call 'generate_image' tool.
     - WAIT for the tool to output (expect a valid JSON). Store this as `image_generation_status_json`.
 
-7.  **Final Decompose Stage**:
-    - **Thought:** "Component image generation has been initiated. Now I need to create the full 3D scene layout for Unity. I must call `final_decomposer` tool with `improved_decomposition_result` as the `improved_decomposition` argument."
-    - Action: Call `final_decomposer` tool.
-    - WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
+5.  **Final Decompose Stage**:
+    -   **Thought:** "I have `improved_decomposition_result`. I also need the `original_user_input` that I stored at the beginning. I will now call `final_decomposer`. The tool expects an input object with two fields: `improved_decomposition_result` and `original_user_prompt`."
+    -   Action: Call `final_decomposer` with arguments:
+        -   `improved_decomposition_result` = `improved_decomposition_result`
+        -   `original_user_prompt` = `original_user_input`
+    -   WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
 
 8. **Final Answer Construction :**
     - **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."
