@@ -12,7 +12,8 @@ from PIL import Image
 load_dotenv()
 
 
-def convert_image_to_bytes(image_path):
+@beartype
+def convert_image_to_bytes(image_path: str):
     try:
         with Image.open(image_path) as image:
             byte_arr = io.BytesIO()
