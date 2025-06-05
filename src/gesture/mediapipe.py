@@ -1,14 +1,12 @@
-from gesture.dynamic import Dynamic
 from gesture.hand import Hand
 from gesture.image import crop_hand
-from gesture.utils import compute_rotation, compute_position
 from mediapipe.tasks.python import vision
 from mediapipe.framework.formats import landmark_pb2
 import mediapipe as mp
 import numpy as np
-import cv2
-import time
 import threading
+import time
+import cv2
 
 
 class Mediapipe:
@@ -38,8 +36,8 @@ class Mediapipe:
         # Async stuff
         self.frame = None
         self.detection = None
-        self.lock = threading.Lock()
         self.duration = None
+        self.lock = threading.Lock()
 
     #Processing draw_hand_stuff
     def callback_detection(self, detection, output_image, timestamp_ms):
@@ -70,7 +68,7 @@ class Mediapipe:
 
         #Fill hand stuff
         if len(list_landmarks) >= hand.index+1:
-            hand.landmarks = list_landmarks[hand.index]
+            hand.add_landmark(list_landmarks[hand.index])
             hand.image = crop_hand(frame, hand.landmarks)
             self.process_gesture(hand)
     def process_gesture(self, hand):
@@ -79,8 +77,9 @@ class Mediapipe:
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
         detection = self.recognizer.recognize(mp_image)
         if detection.gestures:
-            hand.gesture = detection.gestures[0][0].category_name
-            hand.score = detection.gestures[0][0].score
+            gesture = detection.gestures[0][0]
+            hand.add_gesture(gesture.category_name)
+            hand.score = gesture.score
 
     #Drawing stuff
     def draw_result(self, frame):
@@ -118,31 +117,31 @@ class Mediapipe:
 
             #Draw hand label
             score_text = f"{hand.score:.2f}" if hand.score is not None else "N/A"
+            grabbing_text = f"Grabbing" if hand.grabbing is True else ""
             cv2.putText(frame, hand.label, (x - 100, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, hand.gesture, (x - 100, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, score_text, (x - 100, y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, grabbing_text, (x - 100, y + 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     def draw_fps(self, frame):
         fps = 1.0 / self.duration
         text = f"FPS: {fps:.2f} | {(self.duration)*1000:.2f} ms"
-        cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
     def test(self):
         """Test with webcam"""
         # Webcam feed
         cap = cv2.VideoCapture(0)
-        dyn = Dynamic()
 
         while cap.isOpened():
-            start = time.time()
-
             # New frame
+            start = time.time()
+            self.hand_left.reset()
+            self.hand_right.reset()
             ret, frame = cap.read()
             if not ret:
                 break
-            self.hand_left.reset()
-            self.hand_right.reset()
 
-            # Hand skeletons
+            # Hand detection
             detection = self.process_detection(frame, cap)
 
             # Show frame
@@ -152,9 +151,10 @@ class Mediapipe:
                     self.process_hand(self.detection, self.frame, self.hand_right)
                     self.draw_result(self.frame)
 
+            # Loop exit
+            self.duration = time.time() - start
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
-            self.duration = time.time() - start
 
         cap.release()
         cv2.destroyAllWindows()
