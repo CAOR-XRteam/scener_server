@@ -25,6 +25,9 @@ class Hand:
         self.list_rotation = deque(maxlen=50)
         self.dyn = Dynamic()
 
+        if label not in ("Right", "Left"):
+            raise ValueError("name must be 'Right' or 'Left'")
+
     def reset(self):
         self.index = None
         self.image = None

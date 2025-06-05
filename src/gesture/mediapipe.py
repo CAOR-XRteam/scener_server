@@ -2,8 +2,8 @@ from gesture.dynamic import Dynamic
 from gesture.hand import Hand
 from gesture.image import crop_hand
 from gesture.utils import compute_rotation, compute_position
-from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+from mediapipe.framework.formats import landmark_pb2
 import mediapipe as mp
 import numpy as np
 import cv2
@@ -16,50 +16,71 @@ class Mediapipe:
     def __init__(self):
         """Initialize parameters"""
 
-        # Gesture Recognizer setup
-        base_options = python.BaseOptions(model_asset_path='model/mediapipe/gesture_recognizer.task')
-        options = vision.GestureRecognizerOptions(base_options=base_options)
-        self.recognizer = vision.GestureRecognizer.create_from_options(options)
-
-        # Initialize drawing utils and solutions
+        # Mediapipe - utils
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_hands = mp.solutions.hands
         self.mp_drawing_styles = mp.solutions.drawing_styles
 
-        # Instantiate hand detection
-        self.hands_skeleton = self.mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.5)
+        # Mediapipe - Gesture Recognizer setup
+        base_options = mp.tasks.BaseOptions(model_asset_path='model/mediapipe/gesture_recognizer.task', delegate=mp.tasks.BaseOptions.Delegate.GPU)
+        options = vision.GestureRecognizerOptions(base_options=base_options)
+        self.recognizer = vision.GestureRecognizer.create_from_options(options)
+
+        # Mediapipe - Hand detector
+        base_options=mp.tasks.BaseOptions(model_asset_path='model/mediapipe/hand_landmarker.task', delegate=mp.tasks.BaseOptions.Delegate.GPU)
+        options = vision.HandLandmarkerOptions(base_options=base_options, running_mode=mp.tasks.vision.RunningMode.LIVE_STREAM, num_hands=2, result_callback=self.callback_detection)
+        self.detector = vision.HandLandmarker.create_from_options(options)
+
+        # Instantiate hand objects
         self.hand_right = Hand("Right")
         self.hand_left = Hand("Left")
 
-    #Processing stuff
-    def process_gesture(self, hand):
-        """Recognize gesture in an image as input"""
-        rgb_frame = cv2.cvtColor(hand.image, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
-        res_gesture = self.recognizer.recognize(mp_image)
-        if res_gesture.gestures:
-            hand.gesture = res_gesture.gestures[0][0].category_name
-            hand.score = res_gesture.gestures[0][0].score
-    def process_skeleton(self, frame):
-        """Recognize gesture in an image as input"""
-        result = self.hands_skeleton.process(frame)
-        return result
-    def process_hand(self, blob, frame, hand):
+        # Async stuff
+        self.frame = None
+        self.detection = None
+        self.lock = threading.Lock()
+        self.duration = None
+
+    #Processing draw_hand_stuff
+    def callback_detection(self, detection, output_image, timestamp_ms):
+        with self.lock:
+            np_image = output_image.numpy_view()
+            self.frame = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
+            self.detection = detection
+    def process_detection(self, frame, cap):
+        """Detect hand landmarks"""
+        mp_image = mp.Image(
+            image_format = mp.ImageFormat.SRGB,
+            data = np.array(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
+        )
+        timestamp = int(time.time() * 1000)
+        detection = self.detector.detect_async(mp_image, timestamp)
+        return detection
+    def process_hand(self, detection, frame, hand):
+        """Store results in Hand object"""
         #Find hand index
-        if hand.label not in ("Right", "Left"):
-            raise ValueError("name must be 'Right' or 'Left'")
-        for i, handedness in enumerate(blob.multi_handedness):
-            if handedness.classification[0].label == hand.label:
+        list_landmarks = detection.hand_landmarks
+        list_handedness = detection.handedness
+        for i in range(len(list_landmarks)):
+            if list_handedness[i][0].category_name == hand.label:
                 hand.index = i
                 break
         if hand.index is None:
             return
 
         #Fill hand stuff
-        if hand.index is not None and len(blob.multi_hand_landmarks) >= hand.index+1:
-            hand.landmarks = blob.multi_hand_landmarks[hand.index]
+        if len(list_landmarks) >= hand.index+1:
+            hand.landmarks = list_landmarks[hand.index]
             hand.image = crop_hand(frame, hand.landmarks)
             self.process_gesture(hand)
+    def process_gesture(self, hand):
+        """Recognize hand gesture"""
+        rgb_frame = cv2.cvtColor(hand.image, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        detection = self.recognizer.recognize(mp_image)
+        if detection.gestures:
+            hand.gesture = detection.gestures[0][0].category_name
+            hand.score = detection.gestures[0][0].score
 
     #Drawing stuff
     def draw_result(self, frame):
@@ -67,23 +88,43 @@ class Mediapipe:
         bw = cv2.cvtColor(bw, cv2.COLOR_GRAY2BGR)
         self.draw_hand_stuff(bw, self.hand_left)
         self.draw_hand_stuff(bw, self.hand_right)
+        self.draw_fps(bw)
         cv2.imshow("Hand gesture", bw)
+    def draw_subimages(self):
+        if self.hand_left.image is not None:
+            cv2.imshow(self.hand_left.label, self.hand_left.image)
+        if self.hand_right.image is not None:
+            cv2.imshow(self.hand_right.label, self.hand_right.image)
     def draw_hand_stuff(self, frame, hand):
         #Draw hand landmarks
         if hand.landmarks is not None:
+            hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            hand_landmarks_proto.landmark.extend([
+              landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand.landmarks
+            ])
             self.mp_drawing.draw_landmarks(
-                frame, hand.landmarks, self.mp_hands.HAND_CONNECTIONS,
+                frame,
+                hand_landmarks_proto,
+                self.mp_hands.HAND_CONNECTIONS,
                 self.mp_drawing_styles.get_default_hand_landmarks_style(),
                 self.mp_drawing_styles.get_default_hand_connections_style())
 
+            # Get the top left corner of the detected hand's bounding box.
+            height, width, _ = frame.shape
+            x_coordinates = [landmark.x for landmark in hand.landmarks]
+            y_coordinates = [landmark.y for landmark in hand.landmarks]
+            x = int(min(x_coordinates) * width)
+            y = int(min(y_coordinates) * height) - 10
+
             #Draw hand label
-            wrist = hand.landmarks.landmark[self.mp_hands.HandLandmark.WRIST]
             score_text = f"{hand.score:.2f}" if hand.score is not None else "N/A"
-            x = int(wrist.x * frame.shape[1])
-            y = int(wrist.y * frame.shape[0])
             cv2.putText(frame, hand.label, (x - 100, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, hand.gesture, (x - 100, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(frame, score_text, (x - 100, y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+    def draw_fps(self, frame):
+        fps = 1.0 / self.duration
+        text = f"FPS: {fps:.2f} | {(self.duration)*1000:.2f} ms"
+        cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
     def test(self):
         """Test with webcam"""
@@ -102,19 +143,18 @@ class Mediapipe:
             self.hand_right.reset()
 
             # Hand skeletons
-            res_skeleton = self.process_skeleton(frame)
-            if res_skeleton.multi_hand_landmarks:
-                self.process_hand(res_skeleton, frame, self.hand_left)
-                self.process_hand(res_skeleton, frame, self.hand_right)
+            detection = self.process_detection(frame, cap)
 
             # Show frame
-            self.draw_result(frame)
+            with self.lock:
+                if self.frame is not None:
+                    self.process_hand(self.detection, self.frame, self.hand_left)
+                    self.process_hand(self.detection, self.frame, self.hand_right)
+                    self.draw_result(self.frame)
+
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
-
-            end = time.time()
-            print(f"Execution time: {(end - start)*1000:.2f} ms")
+            self.duration = time.time() - start
 
         cap.release()
         cv2.destroyAllWindows()
-        self.hands_skeleton.close()

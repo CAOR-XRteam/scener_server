@@ -4,6 +4,8 @@ import numpy as np
 import time
 import threading
 
+""" WIP not good currently """
+
 class Dynamic:
     """In charge of computing the relative hand displacment and rotation"""
     def __init__(self, max_len=50):
