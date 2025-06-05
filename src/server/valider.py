@@ -16,6 +16,8 @@ class OutputMessage(BaseModel):
     action: Literal[
         "agent_response",
         "image_generation",
+        "scene_generation",
+        "3d_object_generation",
         "thinking_process",
         "converted_speech",
         "unknown_action",

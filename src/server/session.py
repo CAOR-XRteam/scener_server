@@ -125,6 +125,10 @@ class Session:
                 additional_data=None,
             )
 
+    def _3d_object_generation(self, json_response: dict) -> OutputMessageWrapper:
+        # TODO
+        pass
+
     def _unknown_action_response(self, action: str) -> OutputMessageWrapper:
         """Create a response for unknown actions"""
         return OutputMessageWrapper(
@@ -160,6 +164,8 @@ class Session:
                     )
                 case "scene_generation":
                     self._scene_description_response(json_response)
+                case "3d_object_generation":
+                    self._3d_object_generation(json_response)
                 case _:
                     responses_to_send.append(
                         self._unknown_action_response(json_response.get("action"))

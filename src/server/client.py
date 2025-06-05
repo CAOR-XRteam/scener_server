@@ -249,6 +249,7 @@ class Client:
                         "agent_response"
                         | "thinking_process"
                         | "converted_speech"
+                        | "scene_generation"
                         | "unknown_action"
                     ):
                         await self.websocket.send(output_message_json)
@@ -282,6 +283,9 @@ class Client:
                             logger.info(
                                 f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
                             )
+                    case "3d_object_generation":
+                        # TODO
+                        pass
             except asyncio.CancelledError:
                 logger.info(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
