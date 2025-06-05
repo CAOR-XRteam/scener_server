@@ -284,8 +284,33 @@ class Client:
                                 f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
                             )
                     case "3d_object_generation":
-                        # TODO
-                        pass
+                        if message.additional_data:
+                            try:
+                                await self.websocket.send(output_message_json)
+                                logger.info(
+                                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                                )
+                                await self.websocket.send(
+                                    message.additional_data.get("id")
+                                )
+                                logger.info(
+                                    f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {str(len(message.additional_data))}"
+                                )
+                                await self.websocket.send(
+                                    message.additional_data.get("bytes")
+                                )
+                                logger.info(
+                                    f"Sent binary data to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    f"Error sending image to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
+                                )
+                        else:
+                            await self.websocket.send(output_message_json)
+                            logger.info(
+                                f"Sent message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}:\n {output_message_json}"
+                            )
             except asyncio.CancelledError:
                 logger.info(
                     f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"

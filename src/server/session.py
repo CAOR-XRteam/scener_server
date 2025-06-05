@@ -2,6 +2,8 @@ import asyncio
 import uuid
 import json
 
+from agent.tools.asset.generate_image import ImageMetaData
+from agent.tools.asset.generate_3d_object import TDObjectMetaData
 from beartype import beartype
 from model.black_forest import convert_image_to_bytes
 from lib import logger
@@ -70,11 +72,9 @@ class Session:
 
     def _image_generation_response(self, json_response: dict) -> OutputMessageWrapper:
         try:
-            generated_images_data = json_response.get(
-                "image_generation_status_json"
-            ).get("generated_images_data")
+            generated_images_status = json_response.get("image_generation_status_json")
             data = []
-            for image_data in generated_images_data:
+            for image_data in generated_images_status.get("generated_images_data"):
                 image_path = image_data.get("path")
                 if image_path:
                     data.append(convert_image_to_bytes(image_path))
@@ -84,7 +84,9 @@ class Session:
                     status="stream",
                     code=200,
                     action="image_generation",
-                    message=json_response.get("message"),
+                    message=generated_images_status.get(
+                        "image_generation_status_json"
+                    ).get("message"),
                 ),
                 additional_data=data,
             )
@@ -125,9 +127,35 @@ class Session:
                 additional_data=None,
             )
 
-    def _3d_object_generation(self, json_response: dict) -> OutputMessageWrapper:
-        # TODO
-        pass
+    def _3d_object_generation(
+        self,
+        object_data: TDObjectMetaData,
+    ) -> OutputMessageWrapper:
+        object_path = object_data.get("path")
+        if object_path:
+            with open(object_path, "rb") as f:
+                glb_bytes = f.read()
+
+        return [
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream",
+                    code=200,
+                    action="3d_object_generation",
+                    message="Generated 3D object id",
+                ),
+                additional_data=object_data.id,
+            ),
+            OutputMessageWrapper(
+                output_message=OutputMessage(
+                    status="stream",
+                    code=200,
+                    action="3d_object_generation",
+                    message="Gerenated 3D object bytes",
+                ),
+                additional_data=glb_bytes,
+            ),
+        ]
 
     def _unknown_action_response(self, action: str) -> OutputMessageWrapper:
         """Create a response for unknown actions"""
@@ -151,7 +179,9 @@ class Session:
                 raise ValueError(f"Error parsing agent response: {e}")
 
         def _parse_actionable_json(
-            json_response: dict, responses_to_send: list[OutputMessageWrapper]
+            json_response: dict,
+            responses_to_send: list[OutputMessageWrapper],
+            several_actions: bool,
         ):
             match json_response.get("action"):
                 case "agent_response":
@@ -163,9 +193,30 @@ class Session:
                         self._image_generation_response(json_response)
                     )
                 case "scene_generation":
-                    self._scene_description_response(json_response)
+                    responses_to_send.append(
+                        self._scene_description_response(json_response)
+                    )
                 case "3d_object_generation":
-                    self._3d_object_generation(json_response)
+                    responses_to_send.append(
+                        OutputMessageWrapper(
+                            output_message=OutputMessage(
+                                status="stream",
+                                code=200,
+                                action="3d_object_generation",
+                                message=json_response.get("message"),
+                            ),
+                            additional_data=None,
+                        )
+                    )
+                    generated_objects_data = (
+                        json_response.get("3d_objects_generation_status").get(
+                            "generated_objects_data"
+                        )
+                        if several_actions
+                        else json_response.get("generated_objects_data")
+                    )
+                    for object in generated_objects_data:
+                        responses_to_send.extend(self._3d_object_generation(object))
                 case _:
                     responses_to_send.append(
                         self._unknown_action_response(json_response.get("action"))
@@ -199,10 +250,10 @@ class Session:
                 return responses_to_send
 
             if "action" in json_response:
-                _parse_actionable_json(json_response, responses_to_send)
+                _parse_actionable_json(json_response, responses_to_send, False)
             else:
                 for value in json_response.values():
-                    _parse_actionable_json(value, responses_to_send)
+                    _parse_actionable_json(value, responses_to_send, True)
 
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Error parsing agent response: {e}")

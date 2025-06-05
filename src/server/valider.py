@@ -28,7 +28,7 @@ class OutputMessage(BaseModel):
 
 class OutputMessageWrapper(BaseModel):
     output_message: OutputMessage
-    additional_data: list[bytes] | None = None
+    additional_data: list[bytes] | dict | None = None
 
 
 class InputMessageMeta(BaseModel):

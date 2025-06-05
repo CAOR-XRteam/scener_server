@@ -17,15 +17,15 @@ class TDObjectMetaData:
 
 
 class Generate3dObjectToolInput(BaseModel):
-    image_data: list[ImageMetaData] = Field(
-        description="The list of metadata of images to create 3D objects from."
+    image_generation_result: dict = Field(
+        description="The JSON containing the result of 'generate_image' tool call"
     )
 
 
 @tool(args_schema=Generate3dObjectToolInput)
-def generate_3d_object(image_data: list[ImageMetaData]) -> dict:
+def generate_3d_object(image_generation_result: dict) -> dict:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-
+    image_data = image_generation_result.get("generated_images_data")
     generated_objects_data = []
     successful_objects = 0
 
@@ -64,9 +64,8 @@ def generate_3d_object(image_data: list[ImageMetaData]) -> dict:
     return {
         "action": "3d_object_generation",
         "message": f"3D object generation process complete. Generated {successful_objects} 3d objects from {len(image_data)} images.",
-        "generated_images_data": generated_objects_data,
+        "generated_objects_data": generated_objects_data,
     }
-    # return generated_images_data
 
 
 # TODO: modify
