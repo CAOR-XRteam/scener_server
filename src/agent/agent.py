@@ -230,6 +230,7 @@ FAILURE MODES TO AVOID:
             final_decomposer_tool,
             date,  # OK
             generate_image,  # OK
+            # generate_3d_object
             image_analysis,  # OK
             speech_to_texte,
             list_assets,

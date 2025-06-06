@@ -108,7 +108,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         self.parser = JsonOutputParser(pydantic_object=InitialDecompositionOutput)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> dict:
+    def decompose(self, user_input: str) -> InitialDecompositionOutput:
         try:
             logger.info(f"Decomposing input: {user_input}")
             result: InitialDecompositionOutput = self.chain.invoke(
