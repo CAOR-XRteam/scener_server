@@ -1,10 +1,9 @@
 from colorama import Fore
 from langchain_core.tools import tool
-from typing import Literal
 from lib import logger
 from model import trellis
 from sdk.scene import InitialDecompositionOutput
-from agent.tools.asset.generate_image import ImageMetaData, ImageGenerationSummary
+from agent.tools.asset.generate_image import ImageMetaData
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -17,12 +16,6 @@ class TDObjectMetaData:
     error: str
 
 
-class TDObjectGenerationSummary:
-    action: Literal["3d_object_generation"]
-    message: str
-    generated_objects_data: list[TDObjectMetaData]
-
-
 class Generate3dObjectToolInput(BaseModel):
     image_generation_result: dict = Field(
         description="The JSON containing the result of 'generate_image' tool call"
@@ -30,11 +23,9 @@ class Generate3dObjectToolInput(BaseModel):
 
 
 @tool(args_schema=Generate3dObjectToolInput)
-def generate_3d_object(
-    image_generation_result: ImageGenerationSummary,
-) -> TDObjectGenerationSummary:
+def generate_3d_object(image_generation_result: dict) -> dict:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-    image_data = image_generation_result.generated_images_data
+    image_data = image_generation_result.get("generated_images_data")
     generated_objects_data = []
     successful_objects = 0
 
@@ -70,11 +61,11 @@ def generate_3d_object(
             pass
 
     logger.info("3D object generation process complete.")
-    return TDObjectGenerationSummary(
-        action="3d_object_generation",
-        message=f"Image generation process complete. Generated {successful_objects} from {len(image_data)} images.",
-        generated_images_data=generated_objects_data,
-    )
+    return {
+        "action": "3d_object_generation",
+        "message": f"3D object generation process complete. Generated {successful_objects} 3d objects from {len(image_data)} images.",
+        "generated_objects_data": generated_objects_data,
+    }
 
 
 # TODO: modify

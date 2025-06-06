@@ -79,14 +79,7 @@ class Improver:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
         logger.info(f"Improving decomposed scene: {initial_decomposition_output}")
 
-        try:
-            objects_to_improve = initial_decomposition_output.get("scene", {}).get(
-                "objects", []
-            )
-            logger.info(f"Agent: Decomposed objects to improve: {objects_to_improve}")
-        except Exception as e:
-            logger.error(f"Failed to extract objects from JSON: {e}")
-            return f"[Error during image generation: {e}]"
+        objects_to_improve = initial_decomposition_output.scene.objects
 
         if not objects_to_improve:
             logger.info(

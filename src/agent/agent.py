@@ -34,7 +34,7 @@ You have access to the following tools. ONLY use them exactly as instructed in t
 3.  **`final_decomposer`**:
     -   Role: Takes the output from `improver` (which contains objects with potentially improved prompts) and constructs a complete 3D scene JSON for Unity, including object transforms (position, rotation, scale), types (dynamic/primitive), lighting, and a skybox.
     -   Input: `improved_decomposition` (JSON object: the exact output from `improver`).
-    -   Output: A JSON object (Type: `Scene`) representing the full 3D scene parameters.
+    -   Output: A JSON object (Type: `dict`) containing {"action": "scene_generation", "message": "Scene description has been successfully generated.", "final_scene_json": <object of type `Scene`>} representing the scene generation summary and the full 3D scene parameters.
 
 4.  **`generate_image`**:
     -   Role: Generates individual 2D images for each object component based on their prompts.
@@ -76,7 +76,7 @@ WORKFLOW:
     -   Action: Call `final_decomposer` with arguments:
         -   `improved_decomposition_result` = `improved_decomposition_result`
         -   `original_user_prompt` = `original_user_input`
-    -   WAIT for JSON output (the full `Scene` JSON). Store this as `final_scene_data_json`.
+    -   WAIT for JSON output (the summary with the full `Scene` JSON). Store this as `final_scene_data_json`.
 
 8. **Final Answer Construction :**
     - **Thought:** "Both image generation and 3D scene finalization have been processed by their respective tools. I will now provide a final summary."

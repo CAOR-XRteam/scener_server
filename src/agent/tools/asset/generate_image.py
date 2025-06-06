@@ -2,7 +2,6 @@ from colorama import Fore
 from langchain_core.tools import tool
 from lib import logger
 from model import black_forest
-from typing import Literal
 from sdk.scene import InitialDecompositionOutput
 import os
 from pathlib import Path
@@ -17,12 +16,6 @@ class ImageMetaData(BaseModel):
     error: str | None
 
 
-class ImageGenerationSummary(BaseModel):
-    action: Literal["image_generation"]
-    message: str
-    generated_images_data: list[ImageMetaData]
-
-
 class GenerateImageToolInput(BaseModel):
     improved_decomposed_input: InitialDecompositionOutput = Field(
         description="The JSON representing the decomposed scene."
@@ -30,9 +23,7 @@ class GenerateImageToolInput(BaseModel):
 
 
 @tool(args_schema=GenerateImageToolInput)
-def generate_image(
-    improved_decomposed_input: InitialDecompositionOutput,
-) -> ImageGenerationSummary:
+def generate_image(improved_decomposed_input: InitialDecompositionOutput) -> dict:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
 
     logger.info(
@@ -91,11 +82,12 @@ def generate_image(
             logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
     logger.info("\nImage generation process complete.")
-    return ImageGenerationSummary(
-        action="image_generation",
-        message=f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
-        generated_images_data=generated_images_data,
-    )
+    return {
+        "action": "image_generation",
+        "message": f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
+        "generated_images_data": generated_images_data,
+    }
+    # return generated_images_data
 
 
 # TODO: modify
