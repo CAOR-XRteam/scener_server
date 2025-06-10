@@ -5,11 +5,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field
-from sdk.scene import InitialDecompositionOutput
+from sdk.scene import InitialDecompositionOutput, ImprovedDecompositionOutput
 
 
 class ImproveToolInput(BaseModel):
-    initial_decomposition_output: InitialDecompositionOutput = Field(
+    initial_decomposition: InitialDecompositionOutput = Field(
         description="A decomposed scene description ready to be improved for clarity and detail."
     )
 
@@ -74,35 +74,40 @@ class Improver:
             raise
 
     def improve(
-        self, initial_decomposition_output: InitialDecompositionOutput
-    ) -> InitialDecompositionOutput:
+        self, initial_decomposition: InitialDecompositionOutput
+    ) -> ImprovedDecompositionOutput:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        logger.info(f"Improving decomposed scene: {initial_decomposition_output}")
+        try:
+            logger.info(f"Improving decomposed scene: {initial_decomposition}")
 
-        objects_to_improve = initial_decomposition_output.scene.objects
+            objects_to_improve = initial_decomposition.scene.objects
 
-        if not objects_to_improve:
-            logger.info(
-                "Agent: The decomposition resulted in no specific objects to improve."
-            )
-            return "[No objects to improve.]"
-
-        for i, obj in enumerate(objects_to_improve):
-            if isinstance(obj, dict) and obj.get("prompt"):
+            if not objects_to_improve:
                 logger.info(
-                    f"Agent: Improving the prompt for the object {i+1}: {obj['prompt']}"
+                    "The decomposition resulted in no specific objects to improve."
                 )
-                output = self.improve_single_prompt(obj["prompt"])
-                obj["prompt"] = output
-            else:
-                logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
-                logger.info(f"\n[Skipping object {i+1} - missing prompt]")
+                return "[No objects to improve.]"
 
-        logger.info(
-            f"Decomposed scene with enhanced prompts: {initial_decomposition_output}"
-        )
+            for i, obj in enumerate(objects_to_improve):
+                if obj.prompt:
+                    logger.info(
+                        f"Improving the prompt for the object {i+1}: {obj.prompt}"
+                    )
+                    output = self.improve_single_prompt(obj.prompt)
+                    obj.prompt = output
+                else:
+                    logger.warning(
+                        f"Skipping object due to missing/empty prompt: {obj}"
+                    )
+                    logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-        return initial_decomposition_output
+            logger.info(
+                f"Decomposed scene with enhanced prompts: {initial_decomposition}"
+            )
+
+            return initial_decomposition
+        except Exception as e:
+            logger.error(f"{e}")
 
 
 if __name__ == "__main__":

@@ -11,8 +11,10 @@ from agent.tools.scene.decomposer import (
 
 from agent.tools.input.vision import image_analysis
 from agent.tools.input.speech_to_text import speech_to_texte
-from agent.tools.input.gesture import hand_gesture
+
+# from agent.tools.input.gesture import hand_gesture
 
 from agent.tools.asset.generate_image import generate_image
-from agent.tools.asset.generate_3d_object import generate_3d_object
+
+# from agent.tools.asset.generate_3d_object import generate_3d_object
 from agent.tools.asset.library import list_assets

@@ -36,6 +36,7 @@ JSON STRUCTURE (STRICT AND REQUIRED):
   "scene": {{
     "objects": [
       {{
+        "id": "unique_object_id" // must be str
         "name": "concise_descriptive_object_name",  // short, clear identifier (e.g., 'black_cat', 'wooden_table')
         "type": "object_category",  // one of: 'mesh', 'furniture', 'prop', 'room'
         "material": "primary_material_name",  // e.g., 'polished_wood', 'glossy_fur', 'ceramic'
@@ -70,21 +71,21 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
   "scene": {{
     "objects": [
       {{
-        "id": 1,
+        "id": "1",
         "name": "black_cat",
         "type": "prop",
         "material": "fur",
         "prompt": "a sleek black domestic cat"
       }},
       {{
-        "id": 2,
+        "id": "2",
         "name": "beige_couch",
         "type": "furniture",
         "material": "fabric",
         "prompt": "a beige couch"
       }},
        {{
-        "id": 3,
+        "id": "3",
         "name": "living_room",
         "type": "room",
         "material": "walls",
@@ -108,18 +109,19 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         self.parser = JsonOutputParser(pydantic_object=InitialDecompositionOutput)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> dict:
+    def decompose(self, user_input: str) -> InitialDecompositionOutput:
         try:
             logger.info(f"Decomposing input: {user_input}")
-            result: InitialDecompositionOutput = self.chain.invoke(
-                {"user_input": user_input}
-            )
+            result: dict = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
 
+            result["original_user_prompt"] = user_input
+            result = InitialDecompositionOutput(**result)
+
             # Not relying on the llm to provide unique id for every object
-            for obj_dict in result["scene"]["objects"]:
-                obj_dict["id"] = (
-                    f"{obj_dict.get('name', 'obj').replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
+            for obj_dict in result.scene.objects:
+                obj_dict.id = (
+                    f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
 
             return result
@@ -129,11 +131,8 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
 
 class FinalDecomposeToolInput(BaseModel):
-    improved_decomposition_result: InitialDecompositionOutput = Field(
-        description="Initial decomposition of user's request with enhaced prompts."
-    )
-    original_user_prompt: str = Field(
-        description="The raw, original text prompt submitted by the user at the beginning of the workflow."
+    improved_decomposition: ImprovedDecompositionOutput = Field(
+        description="The full scene data, including object list with enhanced prompts and the original user prompt."
     )
 
 
@@ -152,7 +151,7 @@ Given an initial user's structured scene decomposition JSON (which may have alre
 - One skybox configuration (gradient, sun, or cubed).
 
 INPUTS:
-You will receive a JSON object (`improved_decomposition_result`) containing a list of pre-identified scene objects. Each object in `improved_decomposition_result` ALREADY HAS A UNIQUE `id` FIELD, a `name`, and a `prompt`. You will also receive the `original_user_prompt`.
+You will receive a JSON object (`improved_decomposition`) containing a list of pre-identified scene objects. Each object in `improved_decomposition` ALREADY HAS A UNIQUE `id` FIELD, a `name`, and a `prompt`. You will also receive the `original_user_prompt`.
 
 YOUR CRITICAL TASK for objects from `improved_decomposition`:
 - For each object provided in the `improved_decomposition.scene.objects` list:
@@ -275,7 +274,7 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
         {original_user_prompt}
 
         Decomposed Objects with IDs and Improved Prompts (Preserve these IDs for these objects):
-        {improved_decomposition_json_str}
+        {improved_decomposition}
 
         Based on ALL the above information, generate the full scene JSON.
         """
@@ -292,17 +291,17 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        final_decompose_tool_input: FinalDecomposeToolInput,
+        improved_decomposition: ImprovedDecompositionOutput,
     ) -> dict:
         try:
             logger.info(
-                f"Final Decomposing with input: original_prompt='{final_decompose_tool_input.original_user_prompt}', improved_decomposition: {final_decompose_tool_input.original_user_prompt}."
+                f"Final Decomposing with input: original_prompt='{improved_decomposition.original_user_prompt}', improved_decomposition: {improved_decomposition.scene}."
             )
 
             result: Scene = self.chain.invoke(
                 {
-                    "original_user_prompt": final_decompose_tool_input.original_user_prompt,
-                    "improved_decomposition_json_str": final_decompose_tool_input.improved_decomposition_result,
+                    "original_user_prompt": improved_decomposition.original_user_prompt,
+                    "improved_decomposition": improved_decomposition.scene,
                 }
             )
             logger.info(f"Decomposition result: {result}")

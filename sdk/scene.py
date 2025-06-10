@@ -18,6 +18,12 @@ class InitialDecompositionData(BaseModel):
 
 class InitialDecompositionOutput(BaseModel):
     scene: InitialDecompositionData
+    original_user_prompt: str
+
+
+class ImprovedDecompositionOutput(BaseModel):
+    scene: InitialDecompositionData
+    original_user_prompt: str
 
 
 class ColorRGBA(BaseModel):
