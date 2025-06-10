@@ -105,7 +105,7 @@ class Improver:
                 f"Decomposed scene with enhanced prompts: {initial_decomposition}"
             )
 
-            return (initial_decomposition,)
+            return ImprovedDecompositionOutput(scene=initial_decomposition.scene)
 
         except Exception as e:
             logger.error(f"{e}")

@@ -123,7 +123,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
                 obj_dict.id = (
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
-            logger.info(f"Initial decomposition: {result}")
+
             return result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
@@ -294,17 +294,21 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        final_decompose_tool_input: FinalDecomposeToolInput,
+        final_decomposition_tool_input: dict,
     ) -> dict:
         try:
             logger.info(
-                f"Final Decomposing with input: original_prompt='{final_decompose_tool_input.original_user_prompt}', improved_decomposition: {final_decompose_tool_input.original_user_prompt}."
+                f"Final Decomposing with input: original_prompt='{final_decomposition_tool_input.get("original_user_prompt")}', improved_decomposition: {final_decomposition_tool_input.get("improved_decomposition")}."
             )
 
             result: Scene = self.chain.invoke(
                 {
-                    "original_user_prompt": final_decompose_tool_input.original_user_prompt,
-                    "improved_decomposition": final_decompose_tool_input.improved_decomposition,
+                    "original_user_prompt": final_decomposition_tool_input.get(
+                        "original_user_prompt"
+                    ),
+                    "improved_decomposition": final_decomposition_tool_input(
+                        "improved_decomposition"
+                    ),
                 }
             )
             logger.info(f"Decomposition result: {result}")

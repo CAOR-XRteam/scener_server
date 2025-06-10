@@ -30,20 +30,20 @@ You MUST follow these steps in order. Do not skip steps. Do not repeat steps.
 
 **Step 4: Improve Prompts**
 - **Thought:** I have the `initial_decomposition`. I must now call the `improver` tool with it.
-- **Action:** Call `improver` using the `initial_decomposition` from Step 1.
+- **Action:** Call `improver` using the `initial_decomposition` from Step 3.
 - Store the JSON output in a variable called `improved_decomposition`. This is a critical result.
 
-**Step 5: Final Decomposition**
-- **Thought:** I have the `improved_decomposition` from Step 2. I need to call `final_decomposer`. This tool needs the `improved_decomposition` and the original user prompt.
-- **Action:** Call `final_decomposer` with two arguments:
-    - `improved_decomposition_result`: The JSON from `improved_decomposition`.
-    - `original_user_prompt`: The very first user message.
-- Store the resulting JSON in a variable called `final_scene_json`.
-
-**Step 6: Generate 2D Images**
-- **Thought:** I have the `improved_decomposition` from Step 2. I must now call `generate_image` to create the textures.
-- **Action:** Call `generate_image` using the `improved_decomposition` from Step 2 as the `improved_decomposition` argument.
+**Step 5: Generate 2D Images**
+- **Thought:** I have the `improved_decomposition` from Step 4. I must now call `generate_image` to create the textures.
+- **Action:** Call `generate_image` using the `improved_decomposition` from Step 4 as the `improved_decomposition` argument.
 - Store the resulting JSON in a variable called `image_generation_json`.
+
+**Step 6: Final Decomposition**
+- **Thought:** I have the `improved_decomposition` from Step 4. I need to call `final_decomposer`. This tool needs a JSON containing improved_decomposition and the original user prompt.
+- **Action:** Call `final_decomposer` with the following argument:
+    {"improved_decomposition": <the JSON from `improved_decomposition`>,
+     "original_user_prompt": <the very first user message>}.
+- Store the resulting JSON in a variable called `final_scene_json`.
 
 **Step 7: Final Answer**
 - **Thought:** I have successfully run all steps. I have `final_scene_json` and `image_generation_json`. I will now combine them into the final answer. I must not say anything else.
@@ -56,7 +56,7 @@ Your final output MUST be EXACTLY in this format, with no other text before or a
 ---
 AVAILABLE TOOLS:
 - `initial_decomposer(prompt: str)`: Decomposes user prompt into objects.
-- `improver(initial_decomposition InitialDecompositionOutput)`: Enhances prompts for each object.
+- `improver(initial_decomposition: InitialDecompositionOutput)`: Enhances prompts for each object.
 - `final_decomposer(improved_decomposition: ImprovedDecompositionOutput, original_user_prompt: str)`: Creates the final 3D scene JSON for Unity.
 - `generate_image(improved_decomposed_input: ImprovedDecompositionOutput)`: Creates 2D images for each object.
 ---
@@ -93,8 +93,8 @@ If the user is not describing a scene, use this format for your response:
         final_decomposer_tool = Tool.from_function(
             func=final_decomposer_instance.decompose,
             name="final_decomposer",
-            description="Takes an initial scene decomposition with improved object prompts and enriches it into a full 3D scene JSON with transforms, lighting, and skybox for Unity.",
-            args_schema=FinalDecomposeToolInput,
+            description="Takes an improved scene decomposition enriches it into a full 3D scene JSON with transforms, lighting, and skybox for Unity.",
+            # args_schema=FinalDecomposeToolInput,
         )
 
         self.tools = [
