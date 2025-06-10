@@ -123,7 +123,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
                 obj_dict.id = (
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
-
+            logger.info(f"Initial decomposition: {result}")
             return result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
@@ -132,7 +132,10 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
 class FinalDecomposeToolInput(BaseModel):
     improved_decomposition: ImprovedDecompositionOutput = Field(
-        description="The full scene data, including object list with enhanced prompts and the original user prompt."
+        description="Initial decomposition of user's request with enhaced prompts."
+    )
+    original_user_prompt: str = Field(
+        description="The raw, original text prompt submitted by the user at the beginning of the workflow."
     )
 
 
@@ -291,17 +294,17 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        improved_decomposition: ImprovedDecompositionOutput,
+        final_decompose_tool_input: FinalDecomposeToolInput,
     ) -> dict:
         try:
             logger.info(
-                f"Final Decomposing with input: original_prompt='{improved_decomposition.original_user_prompt}', improved_decomposition: {improved_decomposition.scene}."
+                f"Final Decomposing with input: original_prompt='{final_decompose_tool_input.original_user_prompt}', improved_decomposition: {final_decompose_tool_input.original_user_prompt}."
             )
 
             result: Scene = self.chain.invoke(
                 {
-                    "original_user_prompt": improved_decomposition.original_user_prompt,
-                    "improved_decomposition": improved_decomposition.scene,
+                    "original_user_prompt": final_decompose_tool_input.original_user_prompt,
+                    "improved_decomposition": final_decompose_tool_input.improved_decomposition,
                 }
             )
             logger.info(f"Decomposition result: {result}")
