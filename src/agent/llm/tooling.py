@@ -10,7 +10,7 @@ from typing import Literal
 
 
 class ToolOutput(BaseModel):
-    stauts: Literal["success", "error"]
+    status: Literal["success", "error"]
     tool_name: Literal[
         "generate_image", "initial_decomposer", "final_decomposer", "improver"
     ]
@@ -23,7 +23,7 @@ class Tool_callback(BaseCallbackHandler):
         self.used_tools = []
         self.final_answer_tools = (
             "final_decomposer",
-            "image_generation",
+            "generate_image",
             "generate_3d_object",
         )
         self.queue = queue
@@ -60,7 +60,7 @@ class Tool_callback(BaseCallbackHandler):
         except Exception as e:
             logger.error(f"Error in on_tool_end callback: {e}")
             tool_output = ToolOutput(
-                stauts="error",
+                status="error",
                 tool_name={tool_name},
                 message=str(e),
                 payload=None,

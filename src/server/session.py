@@ -2,8 +2,11 @@ import asyncio
 import uuid
 import json
 
-from agent.tools.asset.generate_image import ImageMetaData
-from agent.tools.asset.generate_3d_object import TDObjectMetaData
+from agent.tools.asset.generate_image import ImageMetaData, GenerateImageOutput
+from agent.tools.asset.generate_3d_object import (
+    TDObjectMetaData,
+    Generate3DObjectOutput,
+)
 from beartype import beartype
 from model.black_forest import convert_image_to_bytes
 from lib import logger
@@ -13,6 +16,7 @@ from server.valider import (
     OutputMessage,
     OutputMessageWrapper,
 )
+from sdk.scene import *
 from agent.llm.tooling import ToolOutput
 
 
@@ -128,35 +132,53 @@ class Session:
                 additional_data=None,
             )
 
-    def _3d_object_generation(
+    def _3d_object_generation_response(
         self,
-        object_data: TDObjectMetaData,
-    ) -> OutputMessageWrapper:
-        object_path = object_data.path
-        if object_path:
-            with open(object_path, "rb") as f:
-                glb_bytes = f.read()
+        generation_output: Generate3DObjectOutput,
+    ) -> list[OutputMessageWrapper]:
+        responses = []
+        object_data = generation_output.generated_images_data
 
-        return [
+        responses.append(
             OutputMessageWrapper(
                 output_message=OutputMessage(
                     status="stream",
                     code=200,
                     action="3d_object_generation",
-                    message="Generated 3D object id",
+                    message=generation_output.message,
                 ),
-                additional_data=object_data.id,
-            ),
-            OutputMessageWrapper(
-                output_message=OutputMessage(
-                    status="stream",
-                    code=200,
-                    action="3d_object_generation",
-                    message="Gerenated 3D object bytes",
-                ),
-                additional_data=glb_bytes,
-            ),
-        ]
+                additional_data=None,
+            )
+        )
+
+        for object in object_data:
+            object_path = object_data.path
+            if object_path:
+                with open(object_path, "rb") as f:
+                    glb_bytes = f.read()
+            responses.extend(
+                [
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
+                            status="stream",
+                            code=200,
+                            action="3d_object_generation",
+                            message="Generated 3D object id",
+                        ),
+                        additional_data=object.id,
+                    ),
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
+                            status="stream",
+                            code=200,
+                            action="3d_object_generation",
+                            message="Gerenated 3D object bytes",
+                        ),
+                        additional_data=glb_bytes,
+                    ),
+                ]
+            )
+        return
 
     def _unknown_action_response(self, action: str) -> OutputMessageWrapper:
         """Create a response for unknown actions"""
@@ -170,126 +192,11 @@ class Session:
             additional_data=None,
         )
 
-    def _parse_agent_token(self, token: str) -> list[OutputMessageWrapper]:
-        """Parse an agent token and return a (list of) OutputMessageWrapper ready to be sent to the client"""
-
-        def _parse_agent_response(m: str):
-            try:
-                return m.split("\nFinal Answer:")
-            except Exception as e:
-                raise ValueError(f"Error parsing agent response: {e}")
-
-        def _parse_actionable_json(
-            json_response: dict,
-            responses_to_send: list[OutputMessageWrapper],
-            several_actions: bool,
-        ):
-            match json_response.get("action"):
-                case "agent_response":
-                    responses_to_send.append(
-                        self._agent_response(json_response.get("message"))
-                    )
-                case "image_generation":
-                    responses_to_send.append(
-                        self._image_generation_response(json_response)
-                    )
-                case "scene_generation":
-                    responses_to_send.append(
-                        self._scene_description_response(json_response)
-                    )
-                case "3d_object_generation":
-                    responses_to_send.append(
-                        OutputMessageWrapper(
-                            output_message=OutputMessage(
-                                status="stream",
-                                code=200,
-                                action="3d_object_generation",
-                                message=json_response.get("message"),
-                            ),
-                            additional_data=None,
-                        )
-                    )
-                    generated_objects_data = (
-                        json_response.get("3d_objects_generation_status").get(
-                            "generated_objects_data"
-                        )
-                        if several_actions
-                        else json_response.get("generated_objects_data")
-                    )
-                    for object in generated_objects_data:
-                        responses_to_send.extend(self._3d_object_generation(object))
-                case _:
-                    responses_to_send.append(
-                        self._unknown_action_response(json_response.get("action"))
-                    )
-
-        responses_to_send = []
+    def _parse_agent_response(self, m: str):
         try:
-            thinking, final_answer = _parse_agent_response(
-                token
-            )  # When using stream with qwen, it returns the thinking part and the final answer as one token
-
-            responses_to_send.append(self._thinking_response(thinking))
-
-            try:
-                json_response = json.loads(final_answer)
-            except json.JSONDecodeError as e:
-                logger.error(
-                    f"Final Answer is not a valid JSON: {final_answer}. Error: {e}"
-                )
-                responses_to_send.append(
-                    OutputMessageWrapper(
-                        output_message=OutputMessage(
-                            status="error",
-                            code=400,
-                            action="agent_response",
-                            message=f"Agent's final response is not a valid JSON.",
-                        ),
-                        additional_data=None,
-                    )
-                )
-                return responses_to_send
-
-            if "action" in json_response:
-                _parse_actionable_json(json_response, responses_to_send, False)
-            else:
-                for value in json_response.values():
-                    _parse_actionable_json(value, responses_to_send, True)
-
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.error(f"Error parsing agent response: {e}")
-            responses_to_send.append(
-                OutputMessageWrapper(
-                    output_message=OutputMessage(
-                        status="error",
-                        code=400,
-                        action="agent_response",
-                        message=f"Error parsing agent response: {e}",
-                    ),
-                    additional_data=None,
-                )
-            )
+            return m.split("\nFinal Answer:")
         except Exception as e:
-            logger.error(f"Internal error: {e}")
-            responses_to_send.append(
-                OutputMessageWrapper(
-                    output_message=OutputMessage(
-                        status="error",
-                        code=400,
-                        action="agent_response",
-                        message=f"Internal error: {e}",
-                    ),
-                    additional_data=None,
-                )
-            )
-
-        return responses_to_send
-    
-    def _parce_tool_output(self, tool_output: ToolOutput):
-        responses_to_send = []
-        
-        if tool_output.status == "success":
-
+            raise ValueError(f"Error parsing agent response: {e}")
 
     async def handle_message(self, input_message: InputMessage):
         """handle one client input message - send it to async chat"""
@@ -298,22 +205,68 @@ class Session:
 
         tool_outputs_queue: asyncio.Queue[ToolOutput] = asyncio.Queue()
 
-        async def _queue_bridge():
+        async def handle_tool_output():
             while True:
-                tool_result = await tool_outputs_queue.get()
-                if tool_result is None:
+                tool_output = await tool_outputs_queue.get()
+                if tool_output is None:
                     break
+                if tool_output.status == "success":
+                    match tool_output.tool_name:
+                        case "final_decomposer":
+                            validated_tool_output = (
+                                FinalDecompositionOutput.model_validate_json(
+                                    tool_output.payload
+                                )
+                            )
+                            await self.client.send_message(
+                                self._scene_description_response(validated_tool_output)
+                            )
+                        case "generate_image":
+                            validated_tool_output = (
+                                GenerateImageOutput.model_validate_json(
+                                    tool_output.payload
+                                )
+                            )
+                            await self.client.send_message(
+                                self._image_generation_response(validated_tool_output)
+                            )
 
-                
+                        case "generate_3d_object":
+                            validated_tool_output = (
+                                Generate3DObjectOutput.model_validate_json(
+                                    tool_output.payload
+                                )
+                            )
+                            responses_to_send = self._3d_object_generation_response(
+                                validated_tool_output
+                            )
+                            for response in responses_to_send:
+                                await self.client.send_message(response)
+                else:
+                    logger.error(f"Error during chat stream: {tool_output.message}")
+                    await self.client.send_message(
+                        OutputMessageWrapper(
+                            OutputMessage(
+                                status="error",
+                                code=500,
+                                action="agent_response",
+                                message=f"Error during chat stream in thread {self.thread_id}: {tool_output.message}",
+                            ),
+                            additional_data=None,
+                        )
+                    )
 
+        handle_tool_output_task = asyncio.create_task(handle_tool_output())
 
         try:
-            output_generator = self.client.agent.achat(message, str(self.thread_id))
+            output_generator = self.client.agent.achat(
+                message, tool_outputs_queue, str(self.thread_id)
+            )
             async for token in output_generator:
                 logger.info(f"Received token in thread {self.thread_id}: {token}")
-                responses_to_send = self._parse_agent_token(token)
-                for response in responses_to_send:
-                    await self.client.send_message(response)
+                thinking, final_answer = self._parse_agent_response(token)
+                await self.client.send_message(self._thinking_response(thinking))
+                await self.client.send_message(self._agent_response(final_answer))
 
             logger.info(f"Stream completed for thread {self.thread_id}")
         except asyncio.CancelledError:
@@ -334,3 +287,6 @@ class Session:
                     additional_data=None,
                 )
             )
+        finally:
+            await tool_outputs_queue.put(None)
+            await handle_tool_output_task

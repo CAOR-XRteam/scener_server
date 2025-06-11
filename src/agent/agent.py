@@ -19,7 +19,7 @@ You MUST follow these steps in order. Do not skip steps. Do not repeat steps.
     - If a NEW SCENE DESCRIPTION → Step 3.
     - If a MODIFICATION REQUEST → Use the `analyze` tool. (Details TBD.)
     - If GENERAL CHAT/UNRELATED → Respond using "Final Answer:". Your response for general chat MUST be a JSON object.
-        **Final Answer: {"action": "agent_response", "message": "YOUR_CONCISE_RESPONSE_STRING_HERE"}**
+        **Final Answer: "YOUR_CONCISE_RESPONSE_STRING_HERE"**
         Replace YOUR_CONCISE_RESPONSE_STRING_HERE with your direct answer. STOP.
 
 **Step 3: Initial Decompose**
@@ -36,22 +36,16 @@ You MUST follow these steps in order. Do not skip steps. Do not repeat steps.
 **Step 5: Generate 2D Images**
 - **Thought:** I have the `improved_decomposition` from Step 4. I must now call `generate_image` to create the textures.
 - **Action:** Call `generate_image` using the `improved_decomposition` from Step 4 as the `improved_decomposition` argument.
-- Store the resulting JSON in a variable called `image_generation_json`.
 
 **Step 6: Final Decomposition**
 - **Thought:** I have the `improved_decomposition` from Step 4. I need to call `final_decomposer`. This tool needs a JSON containing improved_decomposition and the original user prompt.
 - **Action:** Call `final_decomposer` with the following argument:
     {"improved_decomposition": <the JSON from `improved_decomposition`>,
      "original_user_prompt": <the very first user message>}.
-- Store the resulting JSON in a variable called `final_scene_json`.
 
 **Step 7: Final Answer**
-- **Thought:** I have successfully run all steps. I have `final_scene_json` and `image_generation_json`. I will now combine them into the final answer. I must not say anything else.
-- **Action:** Output the final answer. The response MUST start with "Final Answer:" followed by a single JSON object.
-
-**Final Answer Format:**
-Your final output MUST be EXACTLY in this format, with no other text before or after it:
-`Final Answer: {"image_generation_status": <content of image_generation_json>, "final_scene_data": <content of final_scene_json>}`
+- **Thought:** I have successfully run all steps I must infor the user that scene decomposition and image generation are finished.
+- **Action:** Output the final answer. The response MUST start with "Final Answer:" followed by your message. STOP.
 
 ---
 AVAILABLE TOOLS:
@@ -62,7 +56,7 @@ AVAILABLE TOOLS:
 ---
 
 If the user is not describing a scene, use this format for your response:
-`Final Answer: {"action": "agent_response", "message": "YOUR_CONCISE_RESPONSE_HERE"}`
+`Final Answer: "YOUR_CONCISE_RESPONSE_HERE"`
 """
         config = load_config()
 

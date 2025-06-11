@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 
-class TDObjectMetaData:
+class TDObjectMetaData(BaseModel):
     id: str
     filename: str
     path: str
