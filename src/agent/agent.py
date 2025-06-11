@@ -70,7 +70,7 @@ If the user is not describing a scene, use this format for your response:
         initial_decomposer_instance = InitialDecomposer(
             model_name=initial_decomposer_model_name
         )
-        initial_decomposer_tool = Tool.from_function(
+        initial_decomposer = Tool.from_function(
             func=initial_decomposer_instance.decompose,
             name="initial_decomposer",
             description="Converts the raw user's scene description string into a basic structured JSON, identifying key objects.",
@@ -79,7 +79,7 @@ If the user is not describing a scene, use this format for your response:
 
         improver_model_name = config.get("improver_model")
         improver_instance = Improver(model_name=improver_model_name)
-        improver_tool = Tool.from_function(
+        improver = Tool.from_function(
             func=improver_instance.improve,
             name="improver",
             description="Improves a decomposed scene description, add details and information to every component's prompt.",
@@ -90,7 +90,7 @@ If the user is not describing a scene, use this format for your response:
         final_decomposer_instance = FinalDecomposer(
             model_name=final_decomposer_model_name
         )
-        final_decomposer_tool = Tool.from_function(
+        final_decomposer = Tool.from_function(
             func=final_decomposer_instance.decompose,
             name="final_decomposer",
             description="Takes an improved scene decomposition enriches it into a full 3D scene JSON with transforms, lighting, and skybox for Unity.",
@@ -98,14 +98,13 @@ If the user is not describing a scene, use this format for your response:
         )
 
         self.tools = [
-            initial_decomposer_tool,  # OK
-            improver_tool,  # OK
-            final_decomposer_tool,
+            initial_decomposer,  # OK
+            improver,  # OK
+            final_decomposer,
             date,  # OK
             generate_image,  # OK
             # generate_3d_object
             image_analysis,  # OK
-            speech_to_texte,
             list_assets,
         ]
 

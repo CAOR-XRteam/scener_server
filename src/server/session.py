@@ -13,6 +13,7 @@ from server.valider import (
     OutputMessage,
     OutputMessageWrapper,
 )
+from agent.llm.tooling import ToolOutput
 
 
 @beartype
@@ -283,11 +284,28 @@ class Session:
             )
 
         return responses_to_send
+    
+    def _parce_tool_output(self, tool_output: ToolOutput):
+        responses_to_send = []
+        
+        if tool_output.status == "success":
+
 
     async def handle_message(self, input_message: InputMessage):
         """handle one client input message - send it to async chat"""
         message = input_message.message
         logger.info(f"Received message in thread {self.thread_id}: {message}")
+
+        tool_outputs_queue: asyncio.Queue[ToolOutput] = asyncio.Queue()
+
+        async def _queue_bridge():
+            while True:
+                tool_result = await tool_outputs_queue.get()
+                if tool_result is None:
+                    break
+
+                
+
 
         try:
             output_generator = self.client.agent.achat(message, str(self.thread_id))
