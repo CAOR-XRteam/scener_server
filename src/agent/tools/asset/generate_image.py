@@ -6,6 +6,7 @@ from sdk.scene import ImprovedDecompositionOutput
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class ImageMetaData(BaseModel):
@@ -14,6 +15,12 @@ class ImageMetaData(BaseModel):
     filename: str
     path: str
     error: str | None
+
+
+class GenerateImageOutput(BaseModel):
+    action: Literal["image_generation"]
+    message: str
+    generated_images_data: list[ImageMetaData]
 
 
 class GenerateImageToolInput(BaseModel):
@@ -82,12 +89,12 @@ def generate_image(improved_decomposition: ImprovedDecompositionOutput) -> dict:
             logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
     logger.info("\nImage generation process complete.")
-    return {
-        "action": "image_generation",
-        "message": f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
-        "generated_images_data": generated_images_data,
-    }
-    # return generated_images_data
+
+    return GenerateImageOutput(
+        action="image_generation",
+        message=f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
+        generated_images_data=generated_images_data,
+    )
 
 
 # TODO: modify

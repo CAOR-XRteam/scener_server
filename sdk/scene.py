@@ -161,3 +161,9 @@ class Scene(BaseModel):
     skybox: Skybox
     lights: list[Light]
     objects: list[SceneObject]
+
+
+class FinalDecompositionOutput(BaseModel):
+    action: Literal["scene_generation"]
+    message: Literal["Scene description has been successfully generated."]
+    final_scene_json: Scene

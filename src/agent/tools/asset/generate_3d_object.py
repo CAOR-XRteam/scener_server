@@ -3,10 +3,11 @@ from langchain_core.tools import tool
 from lib import logger
 from model import trellis
 from sdk.scene import InitialDecompositionOutput
-from agent.tools.asset.generate_image import ImageMetaData
+from agent.tools.asset.generate_image import ImageMetaData, GenerateImageOutput
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class TDObjectMetaData:
@@ -16,6 +17,12 @@ class TDObjectMetaData:
     error: str
 
 
+class Generate3DObjectOutput(BaseModel):
+    action: Literal["3d_object_generation"]
+    message: str
+    generated_images_data: list[TDObjectMetaData]
+
+
 class Generate3dObjectToolInput(BaseModel):
     image_generation_result: dict = Field(
         description="The JSON containing the result of 'generate_image' tool call"
@@ -23,9 +30,11 @@ class Generate3dObjectToolInput(BaseModel):
 
 
 @tool(args_schema=Generate3dObjectToolInput)
-def generate_3d_object(image_generation_result: dict) -> dict:
+def generate_3d_object(
+    image_generation_result: GenerateImageOutput,
+) -> Generate3DObjectOutput:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-    image_data = image_generation_result.get("generated_images_data")
+    image_data = image_generation_result.generated_images_data
     generated_objects_data = []
     successful_objects = 0
 
@@ -61,11 +70,12 @@ def generate_3d_object(image_generation_result: dict) -> dict:
             pass
 
     logger.info("3D object generation process complete.")
-    return {
-        "action": "3d_object_generation",
-        "message": f"3D object generation process complete. Generated {successful_objects} 3d objects from {len(image_data)} images.",
-        "generated_objects_data": generated_objects_data,
-    }
+
+    return Generate3DObjectOutput(
+        action="3d_object_generation",
+        message=f"3D object generation process complete. Generated {successful_objects} 3d objects from {len(image_data)} images.",
+        generated_images_data=generated_objects_data,
+    )
 
 
 # TODO: modify

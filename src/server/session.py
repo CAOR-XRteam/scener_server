@@ -72,7 +72,7 @@ class Session:
 
     def _image_generation_response(self, json_response: dict) -> OutputMessageWrapper:
         try:
-            generated_images_status = json_response.get("image_generation_status_json")
+            generated_images_status = json_response.get("image_generation_json")
             data = []
             for image_data in generated_images_status.get("generated_images_data"):
                 image_path = image_data.get("path")
@@ -111,7 +111,7 @@ class Session:
                     action="scene_generation",
                     message="Scene JSON has been generated.",
                 ),
-                additional_data=json_response.get("final_scene_data"),
+                additional_data=json_response.get("final_scene_json"),
             )
         except json.JSONDecodeError as e:
             logger.error(
@@ -131,7 +131,7 @@ class Session:
         self,
         object_data: TDObjectMetaData,
     ) -> OutputMessageWrapper:
-        object_path = object_data.get("path")
+        object_path = object_data.path
         if object_path:
             with open(object_path, "rb") as f:
                 glb_bytes = f.read()
@@ -172,7 +172,7 @@ class Session:
     def _parse_agent_token(self, token: str) -> list[OutputMessageWrapper]:
         """Parse an agent token and return a (list of) OutputMessageWrapper ready to be sent to the client"""
 
-        def parse_agent_response(m: str):
+        def _parse_agent_response(m: str):
             try:
                 return m.split("\nFinal Answer:")
             except Exception as e:
@@ -224,7 +224,7 @@ class Session:
 
         responses_to_send = []
         try:
-            thinking, final_answer = parse_agent_response(
+            thinking, final_answer = _parse_agent_response(
                 token
             )  # When using stream with qwen, it returns the thinking part and the final answer as one token
 

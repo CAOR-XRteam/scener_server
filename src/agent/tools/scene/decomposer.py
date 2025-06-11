@@ -312,11 +312,13 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
                 }
             )
             logger.info(f"Decomposition result: {result}")
-            return {
-                "action": "scene_generation",
-                "message": "Scene description has been successfully generated.",
-                "final_scene_json": result.model_dump_json(),
-            }
+
+            return FinalDecompositionOutput(
+                action="scene_generation",
+                message="Scene description has been successfully generated.",
+                final_scene_json=result,
+            )
+
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise
