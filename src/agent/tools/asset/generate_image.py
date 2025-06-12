@@ -1,5 +1,5 @@
 from colorama import Fore
-from langchain_core.tools import tool
+from langchain_core.tools import tool, BaseTool
 from lib import logger
 from model import black_forest
 from sdk.scene import ImprovedDecompositionOutput
@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Literal
+from typing import Type
 
 
 class ImageMetaData(BaseModel):
@@ -30,7 +31,9 @@ class GenerateImageToolInput(BaseModel):
 
 
 @tool(args_schema=GenerateImageToolInput)
-def generate_image(improved_decomposition: ImprovedDecompositionOutput) -> dict:
+def generate_image(
+    improved_decomposition: ImprovedDecompositionOutput,
+) -> GenerateImageOutput:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
 
     logger.info(
@@ -95,6 +98,28 @@ def generate_image(improved_decomposition: ImprovedDecompositionOutput) -> dict:
         message=f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
         generated_images_data=generated_images_data,
     )
+
+
+class GenerateImageTool(BaseTool):
+    """Tool for generating an image based on a decomposed user's prompt."""
+
+    name: str = "generate_image"
+    description: str = (
+        "Generates an image based on the decomposed user's prompt using the Black Forest model."
+    )
+    args_schema: Type[BaseModel] = GenerateImageToolInput
+
+    def _run(
+        self, improved_decomposition: ImprovedDecompositionOutput
+    ) -> GenerateImageOutput:
+        """Use the tool."""
+        return generate_image(improved_decomposition)
+
+    async def _arun(
+        self, improved_decomposition: ImprovedDecompositionOutput
+    ) -> GenerateImageOutput:
+        """Use the tool asynchronously."""
+        return self._run(improved_decomposition)
 
 
 # TODO: modify

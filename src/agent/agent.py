@@ -18,28 +18,28 @@ You MUST follow these steps in order. Do not skip steps. Do not repeat steps.
 **Step 2: Assess Intent**
     - If a NEW SCENE DESCRIPTION → Step 3.
     - If a MODIFICATION REQUEST → Use the `analyze` tool. (Details TBD.)
-    - If GENERAL CHAT/UNRELATED → Respond using "Final Answer:". Your response for general chat MUST be a JSON object.
-        **Final Answer: "YOUR_CONCISE_RESPONSE_STRING_HERE"**
+    - If GENERAL CHAT/UNRELATED → Respond using "Final Answer:".
+        **Final Answer: YOUR_CONCISE_RESPONSE_STRING_HERE**
         Replace YOUR_CONCISE_RESPONSE_STRING_HERE with your direct answer. STOP.
 
 **Step 3: Initial Decompose**
 - The user will provide a scene description.
 - **Thought:** I have the user's input. I must call the `initial_decomposer` tool with the user's exact `prompt`.
-- **Action:** Call `initial_decomposer`.
+- **Action:** Call `initial_decomposer`. Wait for tool output.
 - Store the JSON output in a variable called `initial_decomposition`.
 
 **Step 4: Improve Prompts**
 - **Thought:** I have the `initial_decomposition`. I must now call the `improver` tool with it.
-- **Action:** Call `improver` using the `initial_decomposition` from Step 3.
+- **Action:** Call `improver` tool using the `initial_decomposition` from Step 3.
 - Store the JSON output in a variable called `improved_decomposition`. This is a critical result.
 
 **Step 5: Generate 2D Images**
-- **Thought:** I have the `improved_decomposition` from Step 4. I must now call `generate_image` to create the textures.
-- **Action:** Call `generate_image` using the `improved_decomposition` from Step 4 as the `improved_decomposition` argument.
+- **Thought:** I have the `improved_decomposition` from Step 4. I must now call `generate_image` tool to create the textures.
+- **Action:** Call `generate_image` tool using the `improved_decomposition` from Step 4 as the `improved_decomposition` argument.
 
 **Step 6: Final Decomposition**
-- **Thought:** I have the `improved_decomposition` from Step 4. I need to call `final_decomposer`. This tool needs a JSON containing improved_decomposition and the original user prompt.
-- **Action:** Call `final_decomposer` with the following argument:
+- **Thought:** I have the `improved_decomposition` from Step 4. I need to call `final_decomposer` tool. This tool needs a JSON containing improved_decomposition and the original user prompt.
+- **Action:** Call `final_decomposer` tool with the following argument:
     {"improved_decomposition": <the JSON from `improved_decomposition`>,
      "original_user_prompt": <the very first user message>}.
 
@@ -55,8 +55,8 @@ AVAILABLE TOOLS:
 - `generate_image(improved_decomposed_input: ImprovedDecompositionOutput)`: Creates 2D images for each object.
 ---
 
-If the user is not describing a scene, use this format for your response:
-`Final Answer: "YOUR_CONCISE_RESPONSE_HERE"`
+If its your final answer to the user, use this format for your response:
+`Final Answer: YOUR_FINAL_ANSWER_HERE`
 """
         config = load_config()
 

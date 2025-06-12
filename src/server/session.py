@@ -43,10 +43,14 @@ class Session:
                 # Optional: log or handle processing errors
                 logger.error(f"Session error: {e}")
                 await self.client.send_message(
-                    OutputMessage(
-                        status="error",
-                        code=500,
-                        message=f"Internal server error in thread {self.thread_id}",
+                    OutputMessageWrapper(
+                        output_message=OutputMessage(
+                            status="error",
+                            code=500,
+                            action="agent_response",
+                            message=f"Internal server error in thread {self.thread_id}: {e}",
+                        ),
+                        additional_data=None,
                     )
                 )
                 break

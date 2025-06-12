@@ -1,10 +1,13 @@
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.messages import ToolMessage
 from loguru import logger
 from colorama import Fore
 from asyncio import Queue
 import json
 from pydantic import BaseModel
 from typing import Literal
+from agent.tools import *
+from sdk.scene import *
 
 """ Custom tool tracker for functionnal tests """
 
@@ -15,7 +18,7 @@ class ToolOutput(BaseModel):
         "generate_image", "initial_decomposer", "final_decomposer", "improver"
     ]
     message: str
-    payload: dict | None
+    payload: FinalDecompositionOutput | GenerateImageOutput | None
 
 
 class Tool_callback(BaseCallbackHandler):
@@ -38,32 +41,47 @@ class Tool_callback(BaseCallbackHandler):
         if tool_name and tool_name not in self.used_tools:
             self.used_tools.append(tool_name)
 
-    def on_tool_end(self, output: str, **kwargs) -> None:
+    def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
         """Starts when a tool finishes, puts the result in the queue for further processing."""
 
         tool_name = kwargs.get("name")
-        logger.info(
-            f"Tool '{tool_name}' finished. Output is internal, not forwarding to client."
-        )
+
+        logger.info(f"Tool output: {output}")
 
         if tool_name not in self.final_answer_tools:
+            logger.info(
+                f"Tool '{tool_name}' finished. Output is internal, not forwarding to client."
+            )
             return
 
+        tool_output = None
+
         try:
-            output_dict = json.loads(output)
+            payload = None
+            match tool_name:
+                case "final_decomposer":
+                    payload = FinalDecompositionOutput.model_validate(
+                        eval(f"dict({output.content})")
+                    )
+                case "generate_image":
+                    payload = GenerateImageOutput.model_validate(
+                        eval(f"dict({output.content})")
+                    )
+
             tool_output = ToolOutput(
                 status="success",
-                tool_name={tool_name},
+                tool_name=tool_name,
                 message=f"Tool '{tool_name}' completed successfully.",
-                payload=output_dict,
+                payload=payload,
             )
         except Exception as e:
             logger.error(f"Error in on_tool_end callback: {e}")
             tool_output = ToolOutput(
                 status="error",
-                tool_name={tool_name},
+                tool_name=tool_name,
                 message=str(e),
                 payload=None,
             )
         finally:
-            self.queue.put_nowait(tool_output)
+            if tool_output:
+                self.queue.put_nowait(tool_output)
