@@ -1,6 +1,6 @@
 import json
 
-from agent.llm.model import initialize_model
+from agent.llm.creation import initialize_model
 from beartype import beartype
 from colorama import Fore
 from langchain_core.prompts import ChatPromptTemplate
@@ -81,7 +81,7 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
         "prompt": "a beige couch"
       }},
        {{
-        "name": "living_room", 
+        "name": "living_room",
         "type": "room",
         "material": "walls",
         "prompt": "a cozy living room"
@@ -106,7 +106,6 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         self.chain = self.prompt | self.model | self.parser
 
     def decompose(self, user_input: str) -> dict:
-        logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
         try:
             logger.info(f"Decomposing input: {user_input}")
             result: dict = self.chain.invoke({"user_input": user_input})

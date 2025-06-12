@@ -24,7 +24,7 @@ class Server:
         self.port = port
         self.list_client: list[Client] = []
         self.shutdown_event = asyncio.Event()
-        self.server: websockets.ServerConnection = None
+        self.server = None
 
         try:
             self.agent = AgentAPI()
@@ -42,7 +42,7 @@ class Server:
         except Exception as e:
             logger.error(f"Error in server's main execution: {e}")
         finally:
-            if not self.server.is_serving():
+            if self.server is not None and self.server.is_serving():
                 loop.run_until_complete(self.server.wait_closed())
             logger.info("Server finished working.")
 

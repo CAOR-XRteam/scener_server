@@ -104,7 +104,6 @@ STRICT ADHERENCE TO THESE RULES IS ESSENTIAL FOR SUCCESSFUL RENDERING. DOUBLE-CH
 @tool(args_schema=DecomposeToolInput)
 def decomposer(prompt: str) -> dict:
     """Decomposes a user's scene description prompt into manageable elements for 3D scene creation."""
-    logger.info(f"Using tool {Fore.GREEN}{'decomposer'}{Fore.RESET}")
     tool = Decomposer()
     output = tool.decompose(prompt)
     return output

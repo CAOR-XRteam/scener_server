@@ -12,3 +12,6 @@ run_server:
 
 run_client:
 	wscat -c ws:localhost:8765
+
+run_gesture:
+	python -m gesture

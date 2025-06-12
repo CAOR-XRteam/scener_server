@@ -9,15 +9,10 @@ from pathlib import Path
 def image_analysis(path: str) -> str:
     """Analyze image content for an image path input."""
 
-    logger.info(f"Using tool {Fore.GREEN}{'image_analysis'}{Fore.RESET}")
-
     image_path = Path(path).resolve()
-
     if not image_path.exists():
         return "Image not found."
-
     prompt = "Provide a concise paragraph describing the visual content of the image directly and objectively, without using bullet points."
-
     message = {
         "role": "user",
         "content": [

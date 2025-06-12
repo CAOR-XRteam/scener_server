@@ -17,7 +17,6 @@ class GenerateImageToolInput(BaseModel):
 def generate_image(improved_decomposed_input: dict) -> dict:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
 
-    logger.info(f"Using tool {Fore.GREEN}{'image_generation'}{Fore.RESET}")
     logger.info(
         f"\nDecomposed JSON received: {improved_decomposed_input}. Generating image..."
     )

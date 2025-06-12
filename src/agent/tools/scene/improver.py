@@ -1,4 +1,4 @@
-from agent.llm.model import initialize_model
+from agent.llm.creation import initialize_model
 from colorama import Fore
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
@@ -41,7 +41,7 @@ class Improver:
             - **Camera view** based on object type:
                 - For non-room objects (e.g., 'prop', 'furniture', 'character'): Use "front camera view".
                 - For room objects (e.g., 'room', 'environment'): Use "squared room view from the outside with a distant 3/4 top-down perspective".
-            
+
             EXAMPLE OF AN IMPROVED *OBJECT* PROMPT (for a non-room object):
             Original: "a red chair"
             Improved: "A vibrant red armchair, crafted from polished mahogany wood, featuring a high back with button-tufted detailing, plush velvet cushioning on the seat and backrest, and elegantly curved cabriole legs. Front camera view. Placed on a white and empty background. Completely detached from surroundings."
@@ -74,7 +74,6 @@ class Improver:
 
     def improve(self, decomposed_input: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        logger.info(f"Using tool {Fore.GREEN}{'improver'}{Fore.RESET}")
         logger.info(f"Improving decomposed scene: {decomposed_input}")
 
         try:

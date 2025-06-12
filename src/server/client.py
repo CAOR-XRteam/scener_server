@@ -13,6 +13,7 @@ from server.valider import (
     OutputMessage,
     OutputMessageWrapper,
 )
+from server.io import IO
 from pydantic import ValidationError
 
 
@@ -42,6 +43,7 @@ class Client:
         self.task_session = None
 
         self.agent = agent
+        self.IO = IO
 
     def start(self):
         from server.session import Session
@@ -66,6 +68,21 @@ class Client:
         except Exception as e:
             logger.error(
                 f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
+            )
+
+    async def send_blob(self, path: str):
+        try:
+            with open(path, "rb") as f:
+                binary_data = f.read()
+            await self.queue_output.put(binary_data)
+        except asyncio.CancelledError:
+            logger.error(
+                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {path}"
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {path}"
             )
 
     # Subfunction
@@ -238,6 +255,7 @@ class Client:
     async def loop_output(self):
         """Process the outgoing messages in the client's queue."""
         while self.is_active:
+            # Output management
             try:
                 message: OutputMessageWrapper = (
                     await self.queue_output.get()
