@@ -6,15 +6,11 @@ from beartype import beartype
 from colorama import Fore
 from lib import logger
 from server.valider import InputMessage, OutputMessage
-from server.io import IO
 from pydantic import ValidationError
 
 
-# Le client manage les output et la session managera les input
-
-
 @beartype
-class Client:
+class IO:
     """Manage client session and input / ouput messages"""
 
     # Main function
@@ -32,16 +28,6 @@ class Client:
         self.task_session = None
 
         self.agent = agent
-        self.IO = IO
-
-    def start(self):
-        from server.session import Session
-
-        """Start input/output handlers."""
-        self.session = Session(self)
-        self.task_input = asyncio.create_task(self.loop_input())
-        self.task_output = asyncio.create_task(self.loop_output())
-        self.task_session = asyncio.create_task(self.session.run())
 
     async def send_message(self, output_message: OutputMessage):
         """Queue a message to be sent to the client."""
@@ -136,34 +122,6 @@ class Client:
                 self.is_active = (
                     False  # If there’s an error, mark the client as inactive
                 )
-
-    async def close(self):
-        """Close the WebSocket connection gracefully."""
-        if not self.is_active:
-            return
-
-        logger.info(f"Closing connection for {self.websocket.remote_address}")
-
-        self.is_active = False
-
-        tasks_to_cancel = [
-            t
-            for t in [self.task_input, self.task_output, self.task_session]
-            if t and not t.done()
-        ]
-        for task in tasks_to_cancel:
-            task.cancel()
-
-        try:
-            await self.websocket.close()
-        except Exception as e:
-            logger.error(
-                f"Error closing websocket connection for {self.websocket.remote_address}: {e}"
-            )
-        finally:
-            self.disconnection.set()
-
-        self._clear_queues()
 
     def _clear_queues(self):
         """Clear queues without blocking."""
