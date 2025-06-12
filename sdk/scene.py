@@ -16,12 +16,22 @@ class InitialDecompositionData(BaseModel):
     objects: list[DecomposedObject]
 
 
-class InitialDecompositionOutput(BaseModel):
+class InitialDecomposition(BaseModel):
     scene: InitialDecompositionData
+
+
+class InitialDecompositionOutput(BaseModel):
+    decomposition: InitialDecomposition
+    original_user_prompt: str
 
 
 class ImprovedDecompositionOutput(BaseModel):
-    scene: InitialDecompositionData
+    decomposition: InitialDecomposition
+    original_user_prompt: str
+
+
+class ToolOutputWrapper(BaseModel):
+    output: InitialDecompositionOutput | ImprovedDecompositionOutput
 
 
 class ColorRGBA(BaseModel):

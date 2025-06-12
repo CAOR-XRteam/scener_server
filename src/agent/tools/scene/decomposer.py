@@ -6,7 +6,7 @@ from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from lib import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sdk.scene import *
 
 
@@ -106,36 +106,34 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         )
 
         self.model = initialize_model(model_name, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=InitialDecompositionOutput)
+        self.parser = JsonOutputParser(pydantic_object=InitialDecomposition)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> InitialDecompositionOutput:
+    def decompose(self, user_input: str) -> dict:
         try:
             logger.info(f"Decomposing input: {user_input}")
-            result: dict = self.chain.invoke({"user_input": user_input})
+            result: InitialDecomposition = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
 
-            result["original_user_prompt"] = user_input
-            result = InitialDecompositionOutput(**result)
+            output = InitialDecompositionOutput(
+                decomposition=result, original_user_prompt=user_input
+            )
 
             # Not relying on the llm to provide unique id for every object
-            for obj_dict in result.scene.objects:
+            for obj_dict in output.decomposition.scene.objects:
                 obj_dict.id = (
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
-
-            return result
+            logger.info(f"Initial decomposition: {output}")
+            return output.model_dump()
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise
 
 
 class FinalDecomposeToolInput(BaseModel):
-    improved_decomposition: ImprovedDecompositionOutput = Field(
-        description="Initial decomposition of user's request with enhaced prompts."
-    )
-    original_user_prompt: str = Field(
-        description="The raw, original text prompt submitted by the user at the beginning of the workflow."
+    improved_decomposition: dict = Field(
+        description="Initial decomposition of user's request with enhaced prompts and original user prompt."
     )
 
 
@@ -177,8 +175,8 @@ CRITICAL RULES:
     -   `id`: Generate a unique string ID for each object (e.g., `objectName_randomSuffix`).
     -   `name`: Use the name from the input object.
     -   `position`: Infer sensible 3D coordinates. Place the 'room' object (if any from input type) generally around the origin (e.g., scale it up and center it). Place other objects relative to each other or the room, avoiding obvious overlaps. Default to near origin if no other context.
-    -   `rotation`: Default to `{"x": 0, "y": 0, "z": 0}` unless orientation is clearly implied by the object's nature or its prompt.
-    -   `scale`: Default to `{"x": 1, "y": 1, "z": 1}`. Adjust for objects that are typically very large (like a 'room' primitive) or if scale is implied.
+    -   `rotation`: Default to `{{"x": 0, "y": 0, "z": 0}}` unless orientation is clearly implied by the object's nature or its prompt.
+    -   `scale`: Default to `{{"x": 1, "y": 1, "z": 1}}`. Adjust for objects that are typically very large (like a 'room' primitive) or if scale is implied.
 3.  **OBJECT TYPE & SHAPE:**
     -   For each object from the input:
         -   If the input object's `type` (e.g., 'prop', 'furniture', 'mesh') suggests a complex, organic, or detailed model, set its `type` in the output to `"dynamic"`. `shape` should be `null`, `path` should be `null`.
@@ -294,21 +292,24 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        final_decomposition_tool_input: dict,
-    ) -> dict:
+        improved_decomposition: dict,
+    ) -> FinalDecompositionOutput:
+        try:
+            validated_data = ImprovedDecompositionOutput(**improved_decomposition)
+        except ValidationError as e:
+            logger.error(f"Pydantic validation failed for improver payload: {e}")
+            raise ValueError(
+                f"Invalid payload structure for improver tool. Details: {e}"
+            )
         try:
             logger.info(
-                f"Final Decomposing with input: original_prompt='{final_decomposition_tool_input.get("original_user_prompt")}', improved_decomposition: {final_decomposition_tool_input.get("improved_decomposition")}."
+                f"Final decomposition with input: original_prompt='{validated_data.original_user_prompt}', improved_decomposition: {validated_data.decomposition.scene}."
             )
 
             result: Scene = self.chain.invoke(
                 {
-                    "original_user_prompt": final_decomposition_tool_input.get(
-                        "original_user_prompt"
-                    ),
-                    "improved_decomposition": final_decomposition_tool_input(
-                        "improved_decomposition"
-                    ),
+                    "original_user_prompt": validated_data.original_user_prompt,
+                    "improved_decomposition": validated_data.decomposition.scene,
                 }
             )
             logger.info(f"Decomposition result: {result}")

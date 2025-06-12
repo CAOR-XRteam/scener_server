@@ -33,9 +33,12 @@ class Tool_callback(BaseCallbackHandler):
 
     def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
         """Start when a tool is being to be used"""
+
         # Log starting tool
         tool_name = serialized.get("name")
-        logger.info(f"Using tool {Fore.GREEN}{tool_name}{Fore.RESET}")
+        logger.info(
+            f"Using tool {Fore.GREEN}{tool_name}{Fore.RESET} with input {input_str}"
+        )
 
         # Store used tool names
         if tool_name and tool_name not in self.used_tools:

@@ -4,13 +4,13 @@ from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
-from pydantic import BaseModel, Field
-from sdk.scene import InitialDecompositionOutput, ImprovedDecompositionOutput
+from pydantic import BaseModel, Field, ValidationError
+from sdk.scene import *
 
 
 class ImproveToolInput(BaseModel):
-    initial_decomposition: InitialDecompositionOutput = Field(
-        description="A decomposed scene description ready to be improved for clarity and detail."
+    initial_decomposition: dict = Field(
+        description="A decomposed scene description ready to be improved for clarity and detail and original user prompt."
     )
 
 
@@ -73,14 +73,20 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(
-        self, initial_decomposition: InitialDecompositionOutput
-    ) -> ImprovedDecompositionOutput:
+    def improve(self, initial_decomposition: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
+        try:
+            validated_data = InitialDecompositionOutput(**initial_decomposition)
+        except ValidationError as e:
+            logger.error(f"Pydantic validation failed for improver payload: {e}")
+            raise ValueError(
+                f"Invalid payload structure for improver tool. Details: {e}"
+            )
+
         try:
             logger.info(f"Improving decomposed scene: {initial_decomposition}")
 
-            objects_to_improve = initial_decomposition.scene.objects
+            objects_to_improve = validated_data.decomposition.scene.objects
 
             if not objects_to_improve:
                 logger.info(
@@ -101,11 +107,9 @@ class Improver:
                     )
                     logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-            logger.info(
-                f"Decomposed scene with enhanced prompts: {initial_decomposition}"
-            )
+            logger.info(f"Decomposed scene with enhanced prompts: {validated_data}")
 
-            return ImprovedDecompositionOutput(scene=initial_decomposition.scene)
+            return validated_data.model_dump()
 
         except Exception as e:
             logger.error(f"{e}")

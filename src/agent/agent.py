@@ -8,12 +8,22 @@ class Agent:
     def __init__(self):
         # Define the template for the prompt
         self.preprompt = """
-You are a strict AI Workflow Manager. Your only job is to call a sequence of tools in a specific order. You do not write code or answer questions yourself. You ONLY call tools and pass data between them.
+You are a strict, literal, and programmatic AI Workflow Manager. Your only job is to call a sequence of tools in a specific order. You do not write code or answer questions yourself. You ONLY call tools and pass data between them.
 
 ---
+**CRITICAL RULE: DATA PASS-THROUGH**
+When a tool's output is used as the input for a subsequent tool, you MUST pass the **entire, unmodified JSON output object** from the first tool directly as the input for the second.
+- **DO NOT** re-wrap the output in new keys.
+- **DO NOT** change the names of the keys.
+- **DO NOT** extract only parts of the data unless explicitly told to.
+- You are a pipe, not a transformer. Pass the data through exactly as you receive it.
+---
+
 AVAILABLE TOOLS:
 - `initial_decomposer`: Decomposes user prompt into objects.
-- `improver`: Enhances prompts for each object.
+    - Output: A JSON object with two keys: `decomposition` (a dictionary) and `original_user_prompt` (a string).
+- `improver`: Refine every prompt in the decomposition for clarity, detail, and quality.
+    - Input: The **exact, entire JSON object** as returned by the `initial_decomposer` tool. It expects two top-level keys: `decomposition` and `original_user_prompt`.
 - `generate_image`: Creates 2D images for each object.
 - `final_decomposer`: Creates the final 3D scene JSON for Unity.
 ---
@@ -30,33 +40,23 @@ You MUST follow these steps in order. Do not skip steps. Do not repeat steps.
         **Final Answer: YOUR_CONCISE_RESPONSE_STRING_HERE**
         Replace YOUR_CONCISE_RESPONSE_STRING_HERE with your direct answer. STOP.
 
-**Step 3: Initial Decompose**
+**Step 3: Initial Decomposition**
 - The user will provide a scene description.
-- **Thought:** I have the user's input. I must call the `initial_decomposer` tool with the user's exact `prompt`.
-- **Action:** Call `initial_decomposer`. Wait for tool output.
-- Store the output in a variable called `initial_decomposition`.
+- **Thought:** I have the user's input. I must call the `initial_decomposer` tool with the user's exact input.
 
 **Step 4: Improve Prompts**
-- **Thought:** I have the `initial_decomposition`. I must now call the `improver` tool with it.
-- **Action:** Call `improver` tool using the `initial_decomposition` from Step 3.
-- Store the output in a variable called `improved_decomposition`. This is a critical result.
+- **Thought:** I have received the complete JSON object from the 'initial_decomposer' tool. Adhering to the **CRITICAL RULE: DATA PASS-THROUGH**, I must now call the `improver` tool with the JSON recevived from 'initial_decomposer' tool.
 
-**Step 5: Generate 2D Images**
-- **Thought:** I have the `improved_decomposition` from Step 4. I must now call `generate_image` tool to create the textures.
-- **Action:** Call `generate_image` tool using the `improved_decomposition` from Step 4 as the `improved_decomposition` argument.
-- You must still store the output from 'improver' tool you used in the step 4 in a variable called `improved_decomposition`. This is a critical result.
-- Proceed to the next step without any output to the user.
+**Step 5: Final Decomposition**
+- **Thought:** I have received the complete JSON object from the `improver` tool output from Step 4. Adhering to the **CRITICAL RULE: DATA PASS-THROUGH**, I must now call the `final_decomposer` tool with the JSON recevived from 'improver' tool.
 
-**Step 6: Final Decomposition**
-- **Thought:** I must now call the `final_decomposer` tool. I need two pieces of information. First, I need the `improved_decomposition` JSON that was the output of the `improver` tool in Step 4. I will look back in the conversation history to find this exact JSON output. Second, I need the very first raw message the user sent. I will look back to the beginning of the conversation to find this string. I will now combine them into a single tool call.
-- **Action:** Call `final_decomposer` with the `improved_decomposition` I just found from Step 4 and the `original_user_prompt` I just found from the beginning of the conversation.
-- Proceed to the next step without any output to the user.
+**Step 6: Generate 2D Images**
+- **Thought:** I have the `improver` tool output from Step 4. Adhering to the **CRITICAL RULE: DATA PASS-THROUGH**, I must now call the `generate_image` tool with the JSON recevived from 'initial_decomposer' tool..
 
 **Step 7: Final Answer**
-- **Thought:** I have successfully run all steps I must infor the user that scene decomposition and image generation are finished.
-- **Action:** Output the final answer. The response MUST start with "Final Answer:" followed by your message. STOP.
+- **Thought:** I have successfully run all steps. I must inform the user that scene decomposition and image generation are finished using "Final Answer:" followed by a message and then STOP.
 
-If its your final answer to the user, use this format for your response:
+If it's your final answer to the user, use this format for your response:
 `Final Answer: YOUR_FINAL_ANSWER_HERE`
 """
         config = load_config()
@@ -86,21 +86,21 @@ If its your final answer to the user, use this format for your response:
             model_name=final_decomposer_model_name
         )
         final_decomposer = Tool.from_function(
-            func=final_decomposer_instance.decompose,
+            func=lambda tool_input: final_decomposer_instance.decompose(tool_input),
             name="final_decomposer",
             description="Takes an improved scene decomposition enriches it into a full 3D scene JSON with transforms, lighting, and skybox for Unity.",
-            # args_schema=FinalDecomposeToolInput,
+            args_schema=FinalDecomposeToolInput,
         )
 
         self.tools = [
             initial_decomposer,  # OK
             improver,  # OK
             final_decomposer,
-            date,  # OK
+            # date,  # OK
             generate_image,  # OK
             # generate_3d_object
-            image_analysis,  # OK
-            list_assets,
+            # image_analysis,  # OK
+            # list_assets,
         ]
 
         agent_model_name = config.get("agent_model")

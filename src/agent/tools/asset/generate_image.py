@@ -5,7 +5,7 @@ from model import black_forest
 from sdk.scene import ImprovedDecompositionOutput
 import os
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from typing import Literal
 from typing import Type
 
@@ -36,16 +36,19 @@ class GenerateImageToolInput(BaseModel):
 
 @tool(args_schema=GenerateImageToolInput)
 def generate_image(
-    improved_decomposition: ImprovedDecompositionOutput,
+    improved_decomposition: dict,
 ) -> GenerateImageOutput:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
+    try:
+        validated_data = ImprovedDecompositionOutput(**improved_decomposition)
+    except ValidationError as e:
+        logger.error(f"Pydantic validation failed for improver payload: {e}")
+        raise ValueError(f"Invalid payload structure for improver tool. Details: {e}")
 
-    logger.info(
-        f"\nDecomposed scene received: {improved_decomposition}. Generating image..."
-    )
+    logger.info(f"\nDecomposed scene received: {validated_data}. Generating image...")
 
     # Retrieve list of to-generated objects
-    objects_to_generate = improved_decomposition.scene.objects
+    objects_to_generate = validated_data.scene.objects
     logger.info(f"Decomposed objects to generate: {objects_to_generate}")
 
     if not objects_to_generate:
@@ -104,28 +107,6 @@ def generate_image(
             generated_images_data=generated_images_data,
         )
     )
-
-
-class GenerateImageTool(BaseTool):
-    """Tool for generating an image based on a decomposed user's prompt."""
-
-    name: str = "generate_image"
-    description: str = (
-        "Generates an image based on the decomposed user's prompt using the Black Forest model."
-    )
-    args_schema: Type[BaseModel] = GenerateImageToolInput
-
-    def _run(
-        self, improved_decomposition: ImprovedDecompositionOutput
-    ) -> GenerateImageOutput:
-        """Use the tool."""
-        return generate_image(improved_decomposition)
-
-    async def _arun(
-        self, improved_decomposition: ImprovedDecompositionOutput
-    ) -> GenerateImageOutput:
-        """Use the tool asynchronously."""
-        return self._run(improved_decomposition)
 
 
 # TODO: modify
