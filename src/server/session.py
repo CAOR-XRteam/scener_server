@@ -79,39 +79,40 @@ class Session:
             additional_data=None,
         )
 
-    def _image_generation_response(self, json_response: dict) -> OutputMessageWrapper:
-        try:
-            generated_images_status = json_response.get("image_generation_json")
-            data = []
-            for image_data in generated_images_status.get("generated_images_data"):
-                image_path = image_data.get("path")
+    def _image_generation_response(
+        self, image_generation_status: GenerateImageOutput
+    ) -> OutputMessageWrapper:
+        data = []
+        logger.info(f"Preparing to send images: {image_generation_status}")
+        for image_data in image_generation_status.generated_images_data:
+            try:
+                image_path = image_data.path
                 if image_path:
                     data.append(convert_image_to_bytes(image_path))
+            except Exception as e:
+                logger.error(f"Error converting image to bytes: {e}")
+                return OutputMessageWrapper(
+                    output_message=OutputMessage(
+                        status="error",
+                        code=500,
+                        action="image_generation",
+                        message=f"Error converting image {image_data.filename} to bytes: {e}",
+                    ),
+                    additional_data=None,
+                )
+        return OutputMessageWrapper(
+            output_message=OutputMessage(
+                status="stream",
+                code=200,
+                action="image_generation",
+                message=image_generation_status.message,
+            ),
+            additional_data=data,
+        )
 
-            return OutputMessageWrapper(
-                output_message=OutputMessage(
-                    status="stream",
-                    code=200,
-                    action="image_generation",
-                    message=generated_images_status.get(
-                        "image_generation_status_json"
-                    ).get("message"),
-                ),
-                additional_data=data,
-            )
-        except Exception as e:
-            logger.error(f"Error converting image to bytes: {e}")
-            return OutputMessageWrapper(
-                output_message=OutputMessage(
-                    status="error",
-                    code=500,
-                    action="image_generation",
-                    message=f"Error converting image {image_data.get("name")} to bytes: {e}",
-                ),
-                additional_data=None,
-            )
-
-    def _scene_description_response(self, json_response: dict) -> OutputMessageWrapper:
+    def _scene_description_response(
+        self, final_decomposition_status: FinalDecompositionOutput
+    ) -> OutputMessageWrapper:
         try:
             return OutputMessageWrapper(
                 output_message=OutputMessage(
@@ -120,7 +121,7 @@ class Session:
                     action="scene_generation",
                     message="Scene JSON has been generated.",
                 ),
-                additional_data=json_response.get("final_scene_json"),
+                additional_data=final_decomposition_status.final_scene_json,
             )
         except json.JSONDecodeError as e:
             logger.error(
@@ -217,32 +218,16 @@ class Session:
                 if tool_output.status == "success":
                     match tool_output.tool_name:
                         case "final_decomposer":
-                            validated_tool_output = (
-                                FinalDecompositionOutput.model_validate_json(
-                                    tool_output.payload
-                                )
-                            )
                             await self.client.send_message(
-                                self._scene_description_response(validated_tool_output)
+                                self._scene_description_response(tool_output.payload)
                             )
                         case "generate_image":
-                            validated_tool_output = (
-                                GenerateImageOutput.model_validate_json(
-                                    tool_output.payload
-                                )
-                            )
                             await self.client.send_message(
-                                self._image_generation_response(validated_tool_output)
+                                self._image_generation_response(tool_output.payload)
                             )
-
                         case "generate_3d_object":
-                            validated_tool_output = (
-                                Generate3DObjectOutput.model_validate_json(
-                                    tool_output.payload
-                                )
-                            )
                             responses_to_send = self._3d_object_generation_response(
-                                validated_tool_output
+                                tool_output.payload
                             )
                             for response in responses_to_send:
                                 await self.client.send_message(response)

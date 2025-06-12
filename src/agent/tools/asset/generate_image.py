@@ -24,6 +24,10 @@ class GenerateImageOutput(BaseModel):
     generated_images_data: list[ImageMetaData]
 
 
+class GenerateImageOutputWrapper(BaseModel):
+    general_image_output: GenerateImageOutput
+
+
 class GenerateImageToolInput(BaseModel):
     improved_decomposition: ImprovedDecompositionOutput = Field(
         description="The JSON representing the decomposed scene."
@@ -93,10 +97,12 @@ def generate_image(
 
     logger.info("\nImage generation process complete.")
 
-    return GenerateImageOutput(
-        action="image_generation",
-        message=f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
-        generated_images_data=generated_images_data,
+    return GenerateImageOutputWrapper(
+        general_image_output=GenerateImageOutput(
+            action="image_generation",
+            message=f"Image generation process complete. Generated {successful_images} from {len(objects_to_generate)} images.",
+            generated_images_data=generated_images_data,
+        )
     )
 
 

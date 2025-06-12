@@ -64,9 +64,9 @@ class Tool_callback(BaseCallbackHandler):
                         eval(f"dict({output.content})")
                     )
                 case "generate_image":
-                    payload = GenerateImageOutput.model_validate(
+                    payload = GenerateImageOutputWrapper.model_validate(
                         eval(f"dict({output.content})")
-                    )
+                    ).general_image_output
 
             tool_output = ToolOutput(
                 status="success",
