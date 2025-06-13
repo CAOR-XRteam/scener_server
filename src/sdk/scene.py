@@ -70,7 +70,6 @@ class SceneObject(BaseModel):
     scale: Vector3
     path: str | None
     shape: Literal["cube", "sphere", "capsule", "cylinder", "plane", "quad"] | None
-    prompt: str
 
     @model_validator(mode="after")
     def check_conditional_fields(self):

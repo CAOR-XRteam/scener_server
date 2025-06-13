@@ -141,134 +141,66 @@ class FinalDecomposerToolInput(BaseModel):
 class FinalDecomposer:
     def __init__(self, model_name: str, temperature: float = 0.0):
         self.system_prompt = """
-You are a Spatial Layout and Scene Enrichment AI for a 3D rendering engine.
+You are a highly specialized AI that converts a list of scene objects into a complete 3D scene layout in a strict JSON format. Your ONLY job is to fill out the JSON structure according to the schemas and guidance provided below.
 
-YOUR ROLE:
-Given an initial user's structured scene decomposition JSON (which may have already had its object prompts enhanced), your task is to enrich it into a full 3D scene layout based on the inital user's prompt. This includes:
-- Object positions, rotations, and scales.
-- Classification of each object from the input as either 'primitive' or 'dynamic'.
-- Generating unique IDs for all objects and lights.
-- A suitable lighting setup (1-2 lights like sun, point, spot, or area).
-- One skybox configuration (gradient, sun, or cubed).
+YOUR TASK IS TO FOLLOW THESE STEPS EXACTLY:
 
-INPUTS:
-You will receive a JSON object (`improved_decomposition`) containing a list of pre-identified scene objects. Each object in `improved_decomposition` ALREADY HAS A UNIQUE `id` FIELD, a `name`, and a `prompt`. You will also receive the `original_user_prompt`.
+STEP 1: POPULATE THE "objects" ARRAY
+- For each object from the `improved_decomposition` input, create a corresponding JSON object in the output `objects` array.
+- You MUST copy these fields EXACTLY as they appear in the input: `id`, `name`, `prompt`. DO NOT CHANGE THEM.
+- You will INFER and ADD the following new fields for each object:
+  - `type`: Set to "dynamic" for complex items (cat, couch). Set to "primitive" for simple shapes (room, ground plane).
+  - `shape`: If `type` is "primitive", set this to one of: "cube", "sphere", "capsule", "cylinder", "plane", "quad". Otherwise, set it to `null`.
+  - `position`, `rotation`, `scale`: Infer reasonable 3D transform values to create a logical scene.
+  - `path`: Always set to `null`.
 
-YOUR CRITICAL TASK for objects from `improved_decomposition`:
-- For each object provided in the `improved_decomposition.scene.objects` list:
+STEP 2: POPULATE THE "lights" ARRAY
+- Create a `lights` array. Add 1-2 lights to it.
+- For each new light, you MUST generate a NEW, UNIQUE `id` (e.g., "directional_light_1").
+- Choose a light `type` based on the guidance below and provide ALL of its required fields. DO NOT mix fields from different types.
 
-  3. Determine its `type` ("dynamic" or "primitive") and `shape` (if primitive) based on its nature and prompt.
-  4. Infer `position`, `rotation`, and `scale`.
-  5. Set `path` to null for now.
+--- LIGHTING GUIDANCE & CHOICES ---
+- **Contextual Hints**:
+  - For **outdoor scenes**, use one `"directional"` light to act as the sun.
+  - For **indoor scenes**, use `"point"` lights for general illumination (like lightbulbs) or `"spot"` lights to highlight specific objects (like a desk lamp).
+  - Use `"area"` lights for soft, realistic lighting from a surface like a window or a studio softbox.
 
-YOUR TASK for NEW elements YOU create (lights, skybox components if they need IDs, additional primitives like ground planes):
-- For any new elements you add to the scene (like lights, or perhaps a default ground plane if no 'room' was specified):
-  1. **Generate a NEW, unique string `id` for each of these new elements.** (e.g., "directional_light_abc", "ground_plane_xyz").
-  2. Populate all other required fields for these elements (position, color, intensity, type, etc.).
+- **Schema Definitions**:
+  1. If `type` is `"directional"`:
+     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `mode` ("baked", "mixed", or "realtime"), `shadow_type` ("no_shadows", "hard_shadows", or "soft_shadows").
+  2. If `type` is `"point"`:
+     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `mode`, `shadow_type`.
+  3. If `type` is `"spot"`:
+     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `spot_angle`, `mode`, `shadow_type`.
+--- END LIGHTING ---
 
-CRITICAL RULES:
----------------
-1.  **PRESERVE PROMPTS:** You MUST use the `prompt` field for each object exactly as provided in the input JSON. Do NOT alter these prompt strings.
-1.  **PRESERVE IDS:** You MUST use the `id` field for each object exactly as provided in the input JSON. Do NOT change or regenerate this ID.
-2.  **PRESERVE NAMS:** You MUST use the `name` field for each object exactly as provided in the input JSON. Do NOT alter these name strings.
-2.  **OBJECT TRANSFORMS:**
-    -   `id`: Generate a unique string ID for each object (e.g., `objectName_randomSuffix`).
-    -   `name`: Use the name from the input object.
-    -   `position`: Infer sensible 3D coordinates. Place the 'room' object (if any from input type) generally around the origin (e.g., scale it up and center it). Place other objects relative to each other or the room, avoiding obvious overlaps. Default to near origin if no other context.
-    -   `rotation`: Default to `{{"x": 0, "y": 0, "z": 0}}` unless orientation is clearly implied by the object's nature or its prompt.
-    -   `scale`: Default to `{{"x": 1, "y": 1, "z": 1}}`. Adjust for objects that are typically very large (like a 'room' primitive) or if scale is implied.
-3.  **OBJECT TYPE & SHAPE:**
-    -   For each object from the input:
-        -   If the input object's `type` (e.g., 'prop', 'furniture', 'mesh') suggests a complex, organic, or detailed model, set its `type` in the output to `"dynamic"`. `shape` should be `null`, `path` should be `null`.
-        -   If the input object's `type` is 'room', or it describes a very simple geometric form (e.g., 'a large cube', 'a sphere'), set its `type` in the output to `"primitive"`. Assign an appropriate `shape` (e.g., "cube" for a room, "sphere", "plane"). `path` should be `null`.
-4.  **LIGHTING:**
-    -   Include 1-2 lights. Choose types (`directional`, `point`, `spot`, `area`) that logically match the overall scene description implied by the object prompts.
-    -   `id`: Generate a unique string ID for each light.
-    -   Provide all necessary fields for the chosen light type as per the schema (position, rotation, scale, color, intensity, indirect_multiplier, range, mode, shadow_type, etc.). Use reasonable defaults if not inferable. For example, a "sunny day" might imply a `directional` light.
-5.  **SKYBOX:**
-    -   Choose one skybox type: `gradient`, `sun`, or `cubed`.
-    -   Provide all fields for the chosen skybox type with valid default values to set a basic mood. (e.g., `SunSkybox` for outdoor scenes, `GradientSkybox` or `CubedSkybox` for indoors).
-6.  **ADHERE TO SCHEMA:** The entire output MUST be a single JSON object strictly conforming to the target Pydantic `Scene` model and its sub-models (`SceneObject`, `Light` variants, `Skybox` variants).
+STEP 3: POPULATE THE "skybox" OBJECT
+- Create a single `skybox` object.
+- Choose ONE `type` based on the guidance below and provide ALL of its required fields.
 
-OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below):
-{{
-  "skybox": {{
-    "type": "sun",
-    "top_color": {{ "r": 0.2, "g": 0.4, "b": 0.8, "a": 1.0 }},
-    "top_exponent": 1.0,
-    "horizon_color": {{ "r": 0.6, "g": 0.7, "b": 0.8, "a": 1.0 }},
-    "bottom_color": {{ "r": 0.8, "g": 0.8, "b": 0.7, "a": 1.0 }},
-    "bottom_exponent": 1.0,
-    "sky_intensity": 1.0,
-    "sun_color": {{ "r": 1.0, "g": 0.95, "b": 0.85, "a": 1.0 }},
-    "sun_intensity": 1.5,
-    "sun_alpha": 0.8,
-    "sun_beta": 0.6,
-    "sun_vector": {{ "x": 0.3, "y": -0.7, "z": 0.2, "w": 0.0 }}
-  }},
-  "lights": [
-    {{
-      "id": "directional_light_01",
-      "type": "directional",
-      "position": {{ "x": 0, "y": 10, "z": 0 }},
-      "rotation": {{ "x": 50, "y": -30, "z": 0 }},
-      "scale": {{ "x": 1, "y": 1, "z": 1 }},
-      "color": {{ "r": 1.0, "g": 0.95, "b": 0.9, "a": 1.0 }},
-      "intensity": 1.0,
-      "indirect_multiplier": 1.0,
-      "mode": "realtime",
-      "shadow_type": "soft_shadows"
-    }},
-    {{
-      "id": "point_light_01",
-      "type": "point",
-      "position": {{ "x": -2, "y": 1.5, "z": 1 }},
-      "rotation": {{ "x": 0, "y": 0, "z": 0 }},
-      "scale": {{ "x": 1, "y": 1, "z": 1 }},
-      "color": {{ "r": 1.0, "g": 0.8, "b": 0.6, "a": 1.0 }},
-      "intensity": 0.8,
-      "indirect_multiplier": 1.0,
-      "range": 10.0,
-      "mode": "mixed",
-      "shadow_type": "hard_shadows"
-    }}
-  ],
-  "objects": [
-    {{
-      "id": "black_cat_xyz123",
-      "name": "black_cat",
-      "type": "dynamic",
-      "position": {{ "x": 0.5, "y": 0.6, "z": 0.1 }},
-      "rotation": {{ "x": 0, "y": 15, "z": 0 }},
-      "scale": {{ "x": 0.3, "y": 0.3, "z": 0.3 }},
-      "path": null,
-      "shape": null,
-      "prompt": "a sleek black domestic cat"
-    }},
-    {{
-      "id": "beige_couch_abc789",
-      "name": "beige_couch",
-      "type": "dynamic",
-      "position": {{ "x": 0, "y": 0, "z": 0 }},
-      "rotation": {{ "x": 0, "y": 0, "z": 0 }},
-      "scale": {{ "x": 1.5, "y": 1.0, "z": 1.0 }},
-      "path": null,
-      "shape": null,
-      "prompt": "a beige couch"
-    }},
-    {{
-      "id": "living_room_wall_def456",
-      "name": "living_room",
-      "type": "primitive",
-      "shape": "cube",
-      "position": {{ "x": 0, "y": 1.5, "z": 0 }},
-      "rotation": {{ "x": 0, "y": 0, "z": 0 }},
-      "scale": {{ "x": 10, "y": 3, "z": 10 }},
-      "path": null,
-      "prompt": "a cozy living room"
-    }}
-  ]
-}}
+--- SKYBOX GUIDANCE & CHOICES ---
+- **Contextual Hints**:
+  - For **outdoor scenes** (e.g., "a field", "a sunny beach"), use the `"sun"` type.
+  - For **indoor scenes** (e.g., "a cozy room", "a dark library"), `"gradient"` is a great choice for setting a general mood.
+  - Use `"cubed"` for realistic reflections, especially in indoor or studio scenes.
+
+- **Schema Definitions**:
+  1. If `type` is `"sun"`:
+     - Required fields: `type`, `top_color`, `top_exponent`, `horizon_color`, `bottom_color`, `bottom_exponent`, `sky_intensity`, `sun_color`, `sun_intensity`, `sun_alpha`, `sun_beta`, `sun_vector` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields).
+  2. If `type` is `"gradient"`:
+     - Required fields: `type`, `color1`, `color2`, `up_vector` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), `intensity`, `exponent`.
+  3. If `type` is `"cubed"`:
+     - Required fields: `type`, `tint_color`, `exposure`, `rotation`, `cube_map` (provide a placeholder string like "default_cubemap").
+--- END SKYBOX ---
+
+**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).
+
+CRITICAL RULES - DO NOT VIOLATE:
+1.  **JSON ONLY**: Your entire output MUST be a single, valid JSON object.
+2.  **NO EXTRA TEXT**: Do NOT include markdown ```json ```, explanations, or any text outside of the final JSON object. No thinking.
+3.  **PRESERVE INPUT DATA**: `id`, `name`, and `prompt` for objects from the input list are sacred. Copy them verbatim.
+4.  **GENERATE NEW IDs**: Any new elements you add (lights) MUST have a new, unique ID that you generate.
+5.  **ADHERE TO THE SCHEMA**: Your output MUST strictly conform to the schemas described in Steps 1, 2, and 3. Do not add or omit fields for a chosen type.
 """
         self.user_prompt = """
         Original User Prompt:
@@ -311,7 +243,7 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
             result: Scene = self.chain.invoke(
                 {
                     "original_user_prompt": validated_data.original_user_prompt,
-                    "improved_decomposition": validated_data.decomposition.scene,
+                    "improved_decomposition": validated_data.decomposition.scene.model_dump(),
                 }
             )
             logger.info(f"Decomposition result: {result}")
@@ -365,4 +297,4 @@ if __name__ == "__main__":
         "original_user_prompt": "A sleek black domestic cat lounges sitting on a beige couch in a cozy living room",
     }
     output = decomposer.decompose(superprompt)
-    print(json.dumps(output, indent=2))
+    print(output)
