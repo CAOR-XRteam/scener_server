@@ -1,14 +1,8 @@
 from server.client import Client
-from server.io.valider import (
-    InputMessage,
-    OutputMessage,
-    OutputMessageWrapper,
-)
 from server.protobuf import message_pb2
 from lib import logger
 from beartype import beartype
 import asyncio
-import json
 
 
 @beartype
@@ -36,9 +30,8 @@ class Input:
                 logger.info(f"Client {self.client.get_uid()} cancelled for websocket {self.client.websocket.remote_address}")
                 break
             except Exception as e:
-                # Optional: log or handle processing errors
                 logger.error(f"Input error: {e}")
-                await self.client.send_error(500, f"Internal server error in thread {self.client.uid}")
+                await self.client.send_error(500, f"Internal server error in thread {self.client.get_uid()}")
                 break
 
     async def handle_proto(self, proto):

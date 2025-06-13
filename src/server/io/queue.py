@@ -1,9 +1,5 @@
-from agent.api import AgentAPI
-from server.io.valider import InputMessage, OutputMessage
-from lib import logger
+from server.protobuf import message_pb2
 from beartype import beartype
-from colorama import Fore
-from pydantic import ValidationError
 import asyncio
 
 
@@ -12,8 +8,8 @@ class Queue:
     """Manage client queues"""
 
     def __init__(self):
-        self.input: asyncio.Queue[InputMessage] = (asyncio.Queue())
-        self.output: asyncio.Queue[OutputMessageWrapper] = (asyncio.Queue())
+        self.input: asyncio.Queue[message_pb2.Content] = (asyncio.Queue())
+        self.output: asyncio.Queue[message_pb2.Content] = (asyncio.Queue())
 
     def clear(self):
         """Clear queues without blocking."""

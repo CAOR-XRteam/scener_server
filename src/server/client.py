@@ -43,48 +43,40 @@ class Client:
         self.input.start();
         self.output.start();
 
-    async def send_message(self, type, json = None, data = None):
+    async def send_message(self, type, json = None, data = None, status = 200):
         """Queue a message to be sent to the client."""
         # Queue message
         try:
             msg = message_pb2.Content()
-            msg.type = "json"
+            msg.type = type
             msg.json = json
             msg.data = data
-            msg.status = 200
-            msg.error = ""
+            msg.status = status
             await self.queue.output.put(msg)
 
         # Manage exceptions
         except asyncio.CancelledError:
-            logger.error(
-                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}"
-            )
+            logger.error(f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}")
             raise
         except Exception as e:
-            logger.error(
-                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
-            )
+            logger.error(f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}")
 
     async def send_error(self, status = 500, error = ""):
         """Queue a message to be sent to the client."""
         # Queue message
         try:
             msg = message_pb2.Content()
+            msg.type = "error"
             msg.status = status
             msg.error = error
             await self.queue.output.put(msg)
 
         # Manage exceptions
         except asyncio.CancelledError:
-            logger.error(
-                f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}"
-            )
+            logger.error(f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}")
             raise
         except Exception as e:
-            logger.error(
-                f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}"
-            )
+            logger.error(f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}")
 
     async def loop_input(self):
         """Queue incoming client messages."""
@@ -97,19 +89,13 @@ class Client:
 
             # Manage exceptions
             except asyncio.CancelledError:
-                logger.error(
-                    f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}"
-                )
+                logger.error(f"Task cancelled for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}")
                 break
             except websockets.exceptions.ConnectionClosed as e:
-                logger.error(
-                    f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}"
-                )
+                logger.error(f"Client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET} disconnected. Reason: {e}")
                 break
             except Exception as e:
-                logger.error(
-                    f"Error with client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}"
-                )
+                logger.error(f"Error with client {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}")
                 break
             finally:
                 await self.close()
