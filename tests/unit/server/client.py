@@ -8,7 +8,7 @@ from colorama import Fore, Style
 from server.client import Client
 from server.session import Session
 from server.server import Server
-from server.valider import InputMessage, OutputMessage
+from server.io.valider import InputMessage, OutputMessage
 from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 from websockets.asyncio.server import ServerConnection
 from agent.api import AgentAPI

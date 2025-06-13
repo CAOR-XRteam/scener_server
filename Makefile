@@ -11,7 +11,10 @@ run_server:
 	python -m server
 
 run_client:
-	wscat -c ws:localhost:8765
+	python src/server/protobuf/test_client.py
+
+run_proto:
+	python src/server/protobuf/test_once.py
 
 run_gesture:
 	python -m gesture

@@ -9,7 +9,7 @@ from colorama import Fore, Style
 from server.client import Client
 from server.session import Session
 from server.server import Server
-from server.valider import InputMessage, OutputMessage, OutputMessageWrapper
+from server.io.valider import InputMessage, OutputMessage, OutputMessageWrapper
 from unittest.mock import AsyncMock, MagicMock, patch, call, Mock
 
 # TODO: fix session, client.loop_input and client.loop_output tests once the pipeline is implemented

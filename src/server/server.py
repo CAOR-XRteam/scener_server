@@ -25,7 +25,14 @@ class Server:
         self.list_client: list[Client] = []
         self.shutdown_event = asyncio.Event()
         self.server = None
+        self.agent = None
 
+    def start(self):
+        # Add stopping event
+        loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGINT, self.handler_shutdown)
+
+        # Initiate agent
         try:
             self.agent = AgentAPI()
             logger.info("AgentAPI initialized successfully at server startup.")
@@ -34,9 +41,7 @@ class Server:
             logger.critical(f"Failed to initialize AgentAPI at server startup: {e}")
             self.agent = None
 
-    def start(self):
-        loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGINT, self.handler_shutdown)
+        # Run into async thread
         try:
             loop.run_until_complete(self.run())
         except Exception as e:
@@ -48,20 +53,21 @@ class Server:
 
     # Subfunction
     def handler_shutdown(self):
-        """Manage Ctrl+C input to gracefully stop the server."""
+        """Triggered by SIGINT to start shutdown"""
         asyncio.create_task(self.shutdown())
 
     async def run(self):
         """Run the WebSocket server."""
         try:
+            # Start serveur and wait to close
             self.server = await websockets.serve(
                 self.handler_client, "0.0.0.0", self.port, max_size=10 * 1024 * 1024
             )
-            logger.info(
-                f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}"
-            )
+            logger.info(f"Server running on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}")
             print("---------------------------------------------")
             await self.server.wait_closed()
+
+            # Manage exceptions
         except OSError as e:
             logger.error(
                 f"Could not start server on {Fore.GREEN}ws://{self.host}:{self.port}{Fore.GREEN}: {e}."
@@ -73,16 +79,20 @@ class Server:
             self.shutdown_event.set()
 
     async def handler_client(self, websocket: websockets.ServerConnection):
-        import server.client
-
         """Handle an incoming WebSocket client connection."""
+
+        from server.client import Client
+
+        client = None
         try:
-            client = server.client.Client(websocket, self.agent)
+            # Create client and run it
+            client = Client(websocket, self.agent)
             client.start()
 
             self.list_client.append(client)
             logger.info(f"New client connected:: {websocket.remote_address}")
 
+            # Manage exceptions
             try:
                 await client.disconnection.wait()
             except asyncio.CancelledError:
