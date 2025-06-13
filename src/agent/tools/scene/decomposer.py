@@ -132,7 +132,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
 
 class FinalDecomposerToolInput(BaseModel):
-    improved_decomposition: ImprovedDecompositionOutput = Field(
+    improved_decomposition: dict = Field(
         description="Initial decomposition of user's request with enhaced prompts and original user prompt."
     )
 
@@ -292,7 +292,7 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        improved_decomposition: ImprovedDecompositionOutput,
+        improved_decomposition: dict,
     ) -> FinalDecompositionOutput:
         try:
             validated_data = ImprovedDecompositionOutput(**improved_decomposition)
@@ -328,7 +328,41 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
 
 if __name__ == "__main__":
-    decomposer = InitialDecomposer()
-    superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
+    # decomposer = InitialDecomposer()
+    # superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
+    # output = decomposer.decompose(superprompt)
+    # print(json.dumps(output, indent=2))
+
+    decomposer = FinalDecomposer("llama3.1")
+    superprompt = {
+        "decomposition": {
+            "scene": {
+                "objects": [
+                    {
+                        "id": "1",
+                        "name": "black_cat",
+                        "type": "prop",
+                        "material": "fur",
+                        "prompt": "a sleek black domestic cat",
+                    },
+                    {
+                        "id": "2",
+                        "name": "beige_couch",
+                        "type": "furniture",
+                        "material": "fabric",
+                        "prompt": "a beige couch",
+                    },
+                    {
+                        "id": "3",
+                        "name": "living_room",
+                        "type": "room",
+                        "material": "walls",
+                        "prompt": "a cozy living room",
+                    },
+                ]
+            }
+        },
+        "original_user_prompt": "A sleek black domestic cat lounges sitting on a beige couch in a cozy living room",
+    }
     output = decomposer.decompose(superprompt)
     print(json.dumps(output, indent=2))

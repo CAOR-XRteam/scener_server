@@ -9,7 +9,7 @@ from sdk.scene import *
 
 
 class ImproveToolInput(BaseModel):
-    initial_decomposition: InitialDecompositionOutput = Field(
+    initial_decomposition: dict = Field(
         description="A decomposed scene description ready to be improved for clarity and detail and original user prompt."
     )
 
@@ -73,9 +73,7 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(
-        self, initial_decomposition: InitialDecompositionOutput
-    ) -> ImprovedDecompositionOutput:
+    def improve(self, initial_decomposition: dict) -> ImprovedDecompositionOutput:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
         try:
             validated_data = InitialDecompositionOutput(**initial_decomposition)
