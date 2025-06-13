@@ -1,20 +1,12 @@
 from agent.api import AgentAPI
 from server.protobuf import message_pb2
-from server.io.valider import (
-    InputMessage,
-    InputMessageMeta,
-    OutputMessage,
-    OutputMessageWrapper,
-)
 from server.io.queue import Queue
-from lib import logger, speech_to_text
+from lib import logger
 from beartype import beartype
 from colorama import Fore
-from pydantic import ValidationError
 import websockets
 import asyncio
 import uuid
-import os
 
 
 @beartype
@@ -43,23 +35,23 @@ class Client:
         self.input.start();
         self.output.start();
 
-    async def send_message(self, type, json = None, data = None, status = 200):
+    async def send_message(self, type: str, text: str = "", data = b"", status: int = 200):
         """Queue a message to be sent to the client."""
         # Queue message
         try:
             msg = message_pb2.Content()
             msg.type = type
-            msg.json = json
+            msg.text = text
             msg.data = data
             msg.status = status
             await self.queue.output.put(msg)
 
         # Manage exceptions
         except asyncio.CancelledError:
-            logger.error(f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}")
+            logger.error(f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, message type: {type}")
             raise
         except Exception as e:
-            logger.error(f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}")
+            logger.error(f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, message type: {type}")
 
     async def send_error(self, status = 500, error = ""):
         """Queue a message to be sent to the client."""
@@ -73,10 +65,10 @@ class Client:
 
         # Manage exceptions
         except asyncio.CancelledError:
-            logger.error(f"Task was cancelled while sending message to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {output_message}")
+            logger.error(f"Task was cancelled while sending error to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {error}")
             raise
         except Exception as e:
-            logger.error(f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {output_message}")
+            logger.error(f"Error queuing error for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {error}")
 
     async def loop_input(self):
         """Queue incoming client messages."""
@@ -84,8 +76,10 @@ class Client:
         while self.is_active:
             # Manage messages
             try:
-                async for message in self.websocket:
-                    await self.queue.input.put(message,)
+                async for proto in self.websocket:
+                    message = message_pb2.Content()
+                    message.ParseFromString(proto)
+                    await self.queue.input.put(message)
 
             # Manage exceptions
             except asyncio.CancelledError:

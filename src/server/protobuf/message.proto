@@ -2,7 +2,7 @@ syntax = "proto3";
 
 message Content {
   string type = 1;          // Declare the type of message
-  string json = 2;          // (optionnal) Contain json stuff
+  string text = 2;          // (optionnal) Contain json or text stuff
   bytes data = 3;           // (optionnal) Contain binary data stuff
 
   int32 status = 4;         // ex: 200, 404, 500

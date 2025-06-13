@@ -6,10 +6,11 @@ async def main():
     uri = "ws://localhost:8765"
     async with websockets.connect(uri) as ws:
         # Send initial protobuf message
-        initial_msg = message_pb2.Content()
-        initial_msg.type = "json"
-        initial_msg.json = '{"hello":"world"}'
-        await ws.send(initial_msg.SerializeToString())
+        msg = message_pb2.Content()
+        msg.type = "json"
+        msg.text = '{"hello":"world"}'
+        msg.status = 200
+        await ws.send(msg.SerializeToString())
 
         print("Protobuf message sent.")
 

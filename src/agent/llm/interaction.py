@@ -16,9 +16,7 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
     final_response_content = ""
 
     try:
-        for token in agent.executor.stream(
-            agent_input, config=config, stream_mode="values"
-        ):
+        for token in agent.executor.stream(agent_input, config=config, stream_mode="values"):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -46,9 +44,7 @@ async def achat(agent: Agent, query: str, thread_id: str = 0):
 
     try:
 
-        async for token in agent.executor.astream(
-            agent_input, config=config, stream_mode="values"
-        ):
+        async for token in agent.executor.astream(agent_input, config=config, stream_mode="values"):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:

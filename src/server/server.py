@@ -1,13 +1,11 @@
-import asyncio
-import signal
-import websockets
-
 from agent.api import AgentAPI
+from server.client import Client
+from lib import logger
 from beartype import beartype
 from colorama import Fore, Style
-from lib import logger
-from server.client import Client
-
+import websockets
+import asyncio
+import signal
 
 # TODO: cancel agent task if client disconnects,
 # TODO: send an error message to the client if the server shutdowns while the connections is still active
