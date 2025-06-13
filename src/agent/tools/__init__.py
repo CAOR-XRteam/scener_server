@@ -4,9 +4,9 @@ from agent.tools.scene.improver import Improver, ImproveToolInput
 from agent.tools.scene.scene import SceneAnalyzer
 from agent.tools.scene.decomposer import (
     InitialDecomposer,
-    InitialDecomposeToolInput,
+    InitialDecomposerToolInput,
     FinalDecomposer,
-    FinalDecomposeToolInput,
+    FinalDecomposerToolInput,
 )
 
 from agent.tools.input.vision import image_analysis

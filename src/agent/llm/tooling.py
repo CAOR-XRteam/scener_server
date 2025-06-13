@@ -88,3 +88,7 @@ class Tool_callback(BaseCallbackHandler):
         finally:
             if tool_output:
                 self.queue.put_nowait(tool_output)
+
+    def on_tool_error(self, error: BaseException, **kwargs) -> None:
+        tool_name = kwargs.get("name")
+        logger.error(f"Tool '{tool_name}' encountered an error: {error}")

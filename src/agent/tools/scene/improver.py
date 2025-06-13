@@ -9,7 +9,7 @@ from sdk.scene import *
 
 
 class ImproveToolInput(BaseModel):
-    initial_decomposition: dict = Field(
+    initial_decomposition: InitialDecompositionOutput = Field(
         description="A decomposed scene description ready to be improved for clarity and detail and original user prompt."
     )
 
@@ -73,15 +73,15 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(self, initial_decomposition: dict) -> dict:
+    def improve(
+        self, initial_decomposition: InitialDecompositionOutput
+    ) -> ImprovedDecompositionOutput:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
         try:
             validated_data = InitialDecompositionOutput(**initial_decomposition)
         except ValidationError as e:
             logger.error(f"Pydantic validation failed for improver payload: {e}")
-            raise ValueError(
-                f"Invalid payload structure for improver tool. Details: {e}"
-            )
+            raise ValueError(f"Invalid payload structure for improver tool: {e}")
 
         try:
             logger.info(f"Improving decomposed scene: {initial_decomposition}")
@@ -109,7 +109,7 @@ class Improver:
 
             logger.info(f"Decomposed scene with enhanced prompts: {validated_data}")
 
-            return validated_data.model_dump()
+            return validated_data
 
         except Exception as e:
             logger.error(f"{e}")

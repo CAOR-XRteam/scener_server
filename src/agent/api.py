@@ -3,6 +3,10 @@ from agent.llm.interaction import chat, achat
 from asyncio import Queue
 from beartype import beartype
 
+# from langchain.globals import set_debug
+
+# set_debug(True)
+
 
 @beartype
 class AgentAPI:

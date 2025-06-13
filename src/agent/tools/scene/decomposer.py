@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ValidationError
 from sdk.scene import *
 
 
-class InitialDecomposeToolInput(BaseModel):
-    prompt: str = Field(
+class InitialDecomposerToolInput(BaseModel):
+    user_input: str = Field(
         description="The raw user's scene description prompt to be decomposed."
     )
 
@@ -109,7 +109,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         self.parser = JsonOutputParser(pydantic_object=InitialDecomposition)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> dict:
+    def decompose(self, user_input: str) -> InitialDecompositionOutput:
         try:
             logger.info(f"Decomposing input: {user_input}")
             result: InitialDecomposition = self.chain.invoke({"user_input": user_input})
@@ -125,14 +125,14 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
             logger.info(f"Initial decomposition: {output}")
-            return output.model_dump()
+            return output
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise
 
 
-class FinalDecomposeToolInput(BaseModel):
-    improved_decomposition: dict = Field(
+class FinalDecomposerToolInput(BaseModel):
+    improved_decomposition: ImprovedDecompositionOutput = Field(
         description="Initial decomposition of user's request with enhaced prompts and original user prompt."
     )
 
@@ -292,14 +292,16 @@ OUTPUT FORMAT (Return ONLY the JSON, ensure it matches the Pydantic models below
 
     def decompose(
         self,
-        improved_decomposition: dict,
+        improved_decomposition: ImprovedDecompositionOutput,
     ) -> FinalDecompositionOutput:
         try:
             validated_data = ImprovedDecompositionOutput(**improved_decomposition)
         except ValidationError as e:
-            logger.error(f"Pydantic validation failed for improver payload: {e}")
+            logger.error(
+                f"Pydantic validation failed for final_decomposer payload: {e}"
+            )
             raise ValueError(
-                f"Invalid payload structure for improver tool. Details: {e}"
+                f"Invalid payload structure for final_decomposer tool: {e}"
             )
         try:
             logger.info(
