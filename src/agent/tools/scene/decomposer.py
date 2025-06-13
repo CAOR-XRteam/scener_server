@@ -109,23 +109,23 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         self.parser = JsonOutputParser(pydantic_object=InitialDecomposition)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> InitialDecompositionOutput:
+    def decompose(self, user_input: str) -> dict:
         try:
             logger.info(f"Decomposing input: {user_input}")
             result: InitialDecomposition = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
 
             output = InitialDecompositionOutput(
-                decomposition=result, original_user_prompt=user_input
+                scene_data=result, original_user_prompt=user_input
             )
 
             # Not relying on the llm to provide unique id for every object
-            for obj_dict in output.decomposition.scene.objects:
+            for obj_dict in output.scene_data.scene.objects:
                 obj_dict.id = (
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
             logger.info(f"Initial decomposition: {output}")
-            return output
+            return output.model_dump()
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise
@@ -237,13 +237,13 @@ CRITICAL RULES - DO NOT VIOLATE:
             )
         try:
             logger.info(
-                f"Final decomposition with input: original_prompt='{validated_data.original_user_prompt}', improved_decomposition: {validated_data.decomposition.scene}."
+                f"Final decomposition with input: original_prompt='{validated_data.original_user_prompt}', improved_decomposition: {validated_data.scene_data.scene}."
             )
 
             result: Scene = self.chain.invoke(
                 {
                     "original_user_prompt": validated_data.original_user_prompt,
-                    "improved_decomposition": validated_data.decomposition.scene.model_dump(),
+                    "improved_decomposition": validated_data.scene_data.model_dump(),
                 }
             )
             logger.info(f"Decomposition result: {result}")
@@ -252,7 +252,7 @@ CRITICAL RULES - DO NOT VIOLATE:
                 action="scene_generation",
                 message="Scene description has been successfully generated.",
                 final_scene_json=result,
-            )
+            ).model_dump()
 
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")

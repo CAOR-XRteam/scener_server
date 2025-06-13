@@ -48,7 +48,7 @@ def generate_image(
     logger.info(f"\nDecomposed scene received: {validated_data}. Generating image...")
 
     # Retrieve list of to-generated objects
-    objects_to_generate = validated_data.scene.objects
+    objects_to_generate = validated_data.scene_data.scene.objects
     logger.info(f"Decomposed objects to generate: {objects_to_generate}")
 
     if not objects_to_generate:

@@ -21,12 +21,12 @@ class InitialDecomposition(BaseModel):
 
 
 class InitialDecompositionOutput(BaseModel):
-    decomposition: InitialDecomposition
+    scene_data: InitialDecomposition
     original_user_prompt: str
 
 
 class ImprovedDecompositionOutput(BaseModel):
-    decomposition: InitialDecomposition
+    scene_data: InitialDecomposition
     original_user_prompt: str
 
 

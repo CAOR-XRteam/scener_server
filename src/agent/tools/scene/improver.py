@@ -73,7 +73,7 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(self, initial_decomposition: dict) -> ImprovedDecompositionOutput:
+    def improve(self, initial_decomposition: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
         try:
             validated_data = InitialDecompositionOutput(**initial_decomposition)
@@ -84,7 +84,7 @@ class Improver:
         try:
             logger.info(f"Improving decomposed scene: {initial_decomposition}")
 
-            objects_to_improve = validated_data.decomposition.scene.objects
+            objects_to_improve = validated_data.scene_data.scene.objects
 
             if not objects_to_improve:
                 logger.info(
@@ -107,7 +107,7 @@ class Improver:
 
             logger.info(f"Decomposed scene with enhanced prompts: {validated_data}")
 
-            return validated_data
+            return validated_data.model_dump()
 
         except Exception as e:
             logger.error(f"{e}")
