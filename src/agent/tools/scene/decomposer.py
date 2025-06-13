@@ -38,8 +38,6 @@ JSON STRUCTURE (STRICT AND REQUIRED):
       {{
         "id": "unique_object_id" // must be str
         "name": "concise_descriptive_object_name",  // short, clear identifier (e.g., 'black_cat', 'wooden_table')
-        "type": "object_category",  // one of: 'mesh', 'furniture', 'prop', 'room'
-        "material": "primary_material_name",  // e.g., 'polished_wood', 'glossy_fur', 'ceramic'
         "prompt": "The exact, verbatim phrase describing this specific object, extracted directly from the user's input scene description. This must be the exact noun phrase or descriptive phrase from the input that **identifies or describes the object itself**. **Do NOT include prepositions (like 'on', 'in', 'under'), verbs describing actions, or phrases indicating relationships to other objects.** Do NOT modify capitalization. For example, if the user input mentions 'a fluffy white dog', this prompt should be exactly 'a fluffy white dog'. If the input is 'cat on a table', the prompt for the cat is 'cat' and the prompt for the table is 'a table' (or just 'table' depending on the exact wording around it)."
       }},
       // Add one entry per main object. STRICTLY follow this format.
@@ -61,7 +59,7 @@ RULES FOR OBJECT SELECTION:
    - Minor clutter (utensils, cushions, books) unless explicitly emphasized as a main object.
 
 4. DEFAULT FIELD VALUES:
-   - For 'name' and 'material', use inferred or standard values if not explicitly detailed for the object in the user's prompt. The 'prompt' field, however, must remain verbatim.
+   - For 'name', use inferred or standard value if not explicitly detailed for the object in the user's prompt. The 'prompt' field, however, must remain verbatim.
 
 EXAMPLE SCENE AND REQUIRED OUTPUT:
 Input: "A sleek black domestic cat lounges sitting on a beige couch"
@@ -73,22 +71,16 @@ Required Output (Demonstrating full structure, object inclusion, and verbatim pr
       {{
         "id": "1",
         "name": "black_cat",
-        "type": "prop",
-        "material": "fur",
         "prompt": "a sleek black domestic cat"
       }},
       {{
         "id": "2",
         "name": "beige_couch",
-        "type": "furniture",
-        "material": "fabric",
         "prompt": "a beige couch"
       }},
        {{
         "id": "3",
         "name": "living_room",
-        "type": "room",
-        "material": "walls",
         "prompt": "a cozy living room"
       }}
     ]
@@ -141,66 +133,42 @@ class FinalDecomposerToolInput(BaseModel):
 class FinalDecomposer:
     def __init__(self, model_name: str, temperature: float = 0.0):
         self.system_prompt = """
-You are a highly specialized AI that converts a list of scene objects into a complete 3D scene layout in a strict JSON format. Your ONLY job is to fill out the JSON structure according to the schemas and guidance provided below.
+You are a highly specialized AI that generates a complete 3D scene in a strict JSON format based on a list of objects. Your ONLY job is to create this JSON structure.
 
-YOUR TASK IS TO FOLLOW THESE STEPS EXACTLY:
+---
+**SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY**
+---
 
-STEP 1: POPULATE THE "objects" ARRAY
-- For each object from the `improved_decomposition` input, create a corresponding JSON object in the output `objects` array.
-- You MUST copy these fields EXACTLY as they appear in the input: `id`, `name`, `prompt`. DO NOT CHANGE THEM.
-- You will INFER and ADD the following new fields for each object:
-  - `type`: Set to "dynamic" for complex items (cat, couch). Set to "primitive" for simple shapes (room, ground plane).
-  - `shape`: If `type` is "primitive", set this to one of: "cube", "sphere", "capsule", "cylinder", "plane", "quad". Otherwise, set it to `null`.
-  - `position`, `rotation`, `scale`: Infer reasonable 3D transform values to create a logical scene.
-  - `path`: Always set to `null`.
+**1. OBJECTS (`objects`):**
+   - Each object MUST have these fields: `id`, `name`, `prompt` (copied from input), `position`, `rotation`, `scale`.
+   - `type`: MUST be **"dynamic"** OR **"primitive"**.
+   - `shape`: MUST be one of **"cube", "sphere", "plane"** IF `type` is "primitive". Otherwise, it MUST be `null`.
 
-STEP 2: POPULATE THE "lights" ARRAY
-- Create a `lights` array. Add 1-2 lights to it.
-- For each new light, you MUST generate a NEW, UNIQUE `id` (e.g., "directional_light_1").
-- Choose a light `type` based on the guidance below and provide ALL of its required fields. DO NOT mix fields from different types.
+**2. LIGHTS (`lights`):**
+   - Provide 1-2 lights. Generate a new unique `id` for each.
+   - For a **Directional Light** (`"type": "directional"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `mode` ("baked"|"mixed"|"realtime"), `shadow_type` ("no_shadows"|"hard_shadows"|"soft_shadows").
+   - For a **Point Light** (`"type": "point"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `mode`, `shadow_type`.
+   - For a **Spot Light** (`"type": "spot"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `spot_angle`, `mode`, `shadow_type`.
+   - For an **Area Light** (`"type": "area"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `shape` ("rectangle"|"disk"), and `width`/`height` (for rectangle) or `radius` (for disk).
 
---- LIGHTING GUIDANCE & CHOICES ---
-- **Contextual Hints**:
-  - For **outdoor scenes**, use one `"directional"` light to act as the sun.
-  - For **indoor scenes**, use `"point"` lights for general illumination (like lightbulbs) or `"spot"` lights to highlight specific objects (like a desk lamp).
-  - Use `"area"` lights for soft, realistic lighting from a surface like a window or a studio softbox.
+**3. SKYBOX (`skybox`):**
+   - You MUST provide one skybox object.
+   - If `type` is **"sun"**, you MUST include all its fields: `top_color`, `horizon_color`, `bottom_color`, `sky_intensity`, `sun_intensity` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), etc.
+   - If `type` is **"gradient"**, you MUST include all its fields: `color1`, `color2`, `up_vector` (Unity vector4 format), `intensity`, `exponent`.
+   - If `type` is **"cubed"**, you MUST include all its fields: `tint_color`, `exposure`, `rotation`, `cube_map`.
 
-- **Schema Definitions**:
-  1. If `type` is `"directional"`:
-     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `mode` ("baked", "mixed", or "realtime"), `shadow_type` ("no_shadows", "hard_shadows", or "soft_shadows").
-  2. If `type` is `"point"`:
-     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `mode`, `shadow_type`.
-  3. If `type` is `"spot"`:
-     - Required fields: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `spot_angle`, `mode`, `shadow_type`.
---- END LIGHTING ---
+**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).   
 
-STEP 3: POPULATE THE "skybox" OBJECT
-- Create a single `skybox` object.
-- Choose ONE `type` based on the guidance below and provide ALL of its required fields.
+---
+**EXAMPLE OF FINAL JSON OUTPUT (Use as a structural guide)**
+---
+{{"objects":[{{ "id":"desk_ghi", "name":"desk", "type":"dynamic", "shape":null, "position":{{"x":0,"y":0,"z":-2}}, "rotation":{{"x":0,"y":0,"z":0}}, "scale":{{"x":2,"y":1,"z":1}}, "prompt":"a wooden desk"}}, {{"id":"room_def", "name":"room", "type":"primitive", "shape":"cube", "position":{{"x":0,"y":1.5,"z":0}}, "rotation":{{"x":0,"y":0,"z":0}}, "scale":{{"x":10,"y":3,"z":10}}, "prompt":"A dark study room"}}], "lights":[{{ "id":"lamp_spot_1", "type":"spot", "position":{{"x":0,"y":3,"z":-2}}, "rotation":{{"x":90,"y":0,"z":0}}, "scale":{{"x":1,"y":1,"z":1}}, "color":{{"r":1,"g":0.8,"b":0.6,"a":1}}, "intensity":1.0, "indirect_multiplier":1.0, "range":8.0, "spot_angle":45.0, "mode":"realtime", "shadow_type":"soft_shadows"}}], "skybox":{{"type":"gradient", "color1":{{"r":0.1,"g":0.1,"b":0.2,"a":1}}, "color2":{{"r":0.05,"g":0.05,"b":0.1,"a":1}}, "up_vector":{{"x":0,"y":1,"z":0,"w":0}}, "intensity":0.5, "exponent":1.0}}}}
 
---- SKYBOX GUIDANCE & CHOICES ---
-- **Contextual Hints**:
-  - For **outdoor scenes** (e.g., "a field", "a sunny beach"), use the `"sun"` type.
-  - For **indoor scenes** (e.g., "a cozy room", "a dark library"), `"gradient"` is a great choice for setting a general mood.
-  - Use `"cubed"` for realistic reflections, especially in indoor or studio scenes.
-
-- **Schema Definitions**:
-  1. If `type` is `"sun"`:
-     - Required fields: `type`, `top_color`, `top_exponent`, `horizon_color`, `bottom_color`, `bottom_exponent`, `sky_intensity`, `sun_color`, `sun_intensity`, `sun_alpha`, `sun_beta`, `sun_vector` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields).
-  2. If `type` is `"gradient"`:
-     - Required fields: `type`, `color1`, `color2`, `up_vector` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), `intensity`, `exponent`.
-  3. If `type` is `"cubed"`:
-     - Required fields: `type`, `tint_color`, `exposure`, `rotation`, `cube_map` (provide a placeholder string like "default_cubemap").
---- END SKYBOX ---
-
-**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).
-
-CRITICAL RULES - DO NOT VIOLATE:
-1.  **JSON ONLY**: Your entire output MUST be a single, valid JSON object.
-2.  **NO EXTRA TEXT**: Do NOT include markdown ```json ```, explanations, or any text outside of the final JSON object. No thinking.
-3.  **PRESERVE INPUT DATA**: `id`, `name`, and `prompt` for objects from the input list are sacred. Copy them verbatim.
-4.  **GENERATE NEW IDs**: Any new elements you add (lights) MUST have a new, unique ID that you generate.
-5.  **ADHERE TO THE SCHEMA**: Your output MUST strictly conform to the schemas described in Steps 1, 2, and 3. Do not add or omit fields for a chosen type.
+---
+**CRITICAL RULES:**
+1.  **JSON ONLY**: Your entire output must be a single, valid JSON object. No extra text, no markdown.
+2.  **PRESERVE INPUT**: `id`, `name`, and `prompt` for objects from the input must be copied exactly.
+3.  **STRICT SCHEMA**: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above.
 """
         self.user_prompt = """
         Original User Prompt:
@@ -225,7 +193,7 @@ CRITICAL RULES - DO NOT VIOLATE:
     def decompose(
         self,
         improved_decomposition: dict,
-    ) -> FinalDecompositionOutput:
+    ) -> dict:
         try:
             validated_data = ImprovedDecompositionOutput(**improved_decomposition)
         except ValidationError as e:
@@ -267,28 +235,22 @@ if __name__ == "__main__":
 
     decomposer = FinalDecomposer("llama3.1")
     superprompt = {
-        "decomposition": {
+        "scene_data": {
             "scene": {
                 "objects": [
                     {
                         "id": "1",
                         "name": "black_cat",
-                        "type": "prop",
-                        "material": "fur",
                         "prompt": "a sleek black domestic cat",
                     },
                     {
                         "id": "2",
                         "name": "beige_couch",
-                        "type": "furniture",
-                        "material": "fabric",
                         "prompt": "a beige couch",
                     },
                     {
                         "id": "3",
                         "name": "living_room",
-                        "type": "room",
-                        "material": "walls",
                         "prompt": "a cozy living room",
                     },
                 ]

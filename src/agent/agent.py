@@ -59,13 +59,13 @@ You MUST follow these steps in order. Do not skip or re-order steps.
 - **Thought:** I have the `initial_output` from the previous step. Following the DATA PASS-THROUGH rule, I must call the `improver` tool. The tool's argument `initial_decomposition` will be the `initial_output` variable.
 - **Action:** Call `improver(initial_decomposition=initial_output)`. Save the entire JSON output to a variable named `improved_output`.
 
-**Step 5: Generate 2D Images (Parallel Task 1)**
-- **Thought:** I have the `improved_output` from Step 4. The `generate_image` tool requires the output from the `improver` tool. I will call `generate_image` now.
-- **Action:** Call `generate_image(improved_decomposition=improved_output)`.
-
-**Step 6: Final Decomposition for 3D Scene (Parallel Task 2)**
-- **Thought:** I have the `improved_output` from Step 4. The `final_decomposer` tool also requires the output from the `improver` tool. I will call `final_decomposer` now.
+**Step 5: Final Decomposition for 3D Scene**
+- **Thought:** I have the `improved_output` from Step 4. The `final_decomposer` tool  requires the output from the `improver` tool. I will call `final_decomposer` now.
 - **Action:** Call `final_decomposer(improved_decomposition=improved_output)`.
+
+**Step 6: Generate 2D Images**
+- **Thought:** I have the `improved_output` from Step 4. The `generate_image` tool also requires the output from the `improver` tool. I will call `generate_image` now.
+- **Action:** Call `generate_image(improved_decomposition=improved_output)`.
 
 **Step 7: Final Answer**
 - **Thought:** I have successfully run all tool calls for scene decomposition and image generation. I must now inform the user that the process is complete.
@@ -120,6 +120,7 @@ If it's your final answer to the user, use this format for your response:
 
         agent_model_name = config.get("agent_model")
         self.executor = initialize_agent(agent_model_name, self.tools, self.preprompt)
+        self.executor.max_iterations = 30
 
     def run(self):
         from agent.llm import interaction

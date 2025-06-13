@@ -7,8 +7,6 @@ from typing import Literal, Union
 class DecomposedObject(BaseModel):
     id: str
     name: str
-    type: str
-    material: str
     prompt: str
 
 
@@ -68,7 +66,6 @@ class SceneObject(BaseModel):
     position: Vector3
     rotation: Vector3
     scale: Vector3
-    path: str | None
     shape: Literal["cube", "sphere", "capsule", "cylinder", "plane", "quad"] | None
 
     @model_validator(mode="after")

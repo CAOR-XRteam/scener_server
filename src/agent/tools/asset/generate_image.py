@@ -29,7 +29,7 @@ class GenerateImageOutputWrapper(BaseModel):
 
 
 class GenerateImageToolInput(BaseModel):
-    improved_decomposition: ImprovedDecompositionOutput = Field(
+    improved_decomposition: dict = Field(
         description="The JSON representing the decomposed scene."
     )
 
