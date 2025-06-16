@@ -31,15 +31,26 @@ class Data:
                 print("Unknown message type")
 
 
-        print(message.type)
-        print(message.json)
-
     async def message_chat(self, message):
         """Manage chat message"""
-        output_generator = self.client.agent.achat(message.text, str(self.client.uid))
-        async for token in output_generator:
-            logger.info(f"Received token for client {self.client.get_uid()}: {token}")
-            await self.client.send_message("chat", token)
+        try:
+            output_generator = self.client.agent.achat(message.text, str(self.client.uid))
+            async for token in output_generator:
+                logger.info(f"Received token for client {self.client.get_uid()}: {token}")
+                await self.client.send_message("chat", token)
+
+            logger.info(f"Stream completed for client {self.client.get_uid()}")
+
+        # Manage exceptions
+        except asyncio.CancelledError:
+            logger.info(f"Stream cancelled for client {self.client.get_uid()} for websocket {self.client.websocket.remote_address}")
+            raise
+        except Exception as e:
+            logger.error(f"Error during chat stream: {e}")
+            await self.client.send_error(500, f"Error during chat stream in thread {self.client.uid}: {e}")
+
+    async def message_image(self, message):
+        pass
 
     async def message_json(self, message):
         pass

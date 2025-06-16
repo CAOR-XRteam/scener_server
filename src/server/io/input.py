@@ -38,5 +38,5 @@ class Input:
 
     async def handle_message(self, message):
         """handle one client input message - send it to async chat"""
+        logger.info(f"Received message from client {self.client.get_uid()}: {message.type}")
         await self.data.manage_message(message)
-        logger.info(f"Received message for client {self.client.get_uid()}: {message.type}")

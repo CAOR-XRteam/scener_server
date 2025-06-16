@@ -1,6 +1,6 @@
 import asyncio
 import websockets
-import message_pb2 
+import message_pb2
 from colorama import Fore
 
 
@@ -22,7 +22,7 @@ async def main():
                 msg.status = 200
 
                 await ws.send(msg.SerializeToString())
-                print(f"{Fore.GREEN}{"Message sent"}{Fore.RESET}")
+                print(f"{Fore.GREEN}{"Message sent"}{Fore.RESET} \n")
 
         async def recv_loop():
             while True:
@@ -30,7 +30,7 @@ async def main():
                     data = await ws.recv()
                     msg = message_pb2.Content()
                     msg.ParseFromString(data)
-                    print(f"{Fore.GREEN}{"Response"}{Fore.RESET}: {msg.text}")
+                    print(f"{Fore.GREEN}{"Response"}{Fore.RESET}: {msg.text} \n")
                 except websockets.exceptions.ConnectionClosed:
                     break
 

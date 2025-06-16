@@ -40,7 +40,7 @@ class Output:
         """Process the outgoing messages in the client's queue."""
         # Output management
         try:
-            logger.info(f"Client {self.client.get_uid()} send message of type {message.type}")
+            logger.info(f"Server send message to client {self.client.get_uid()} of type {message.type}")
             await self.client.websocket.send(message.SerializeToString())
 
         # Manage exceptions

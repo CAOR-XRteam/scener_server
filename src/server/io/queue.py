@@ -5,7 +5,7 @@ import asyncio
 
 @beartype
 class Queue:
-    """Manage client queues"""
+    """Manage client queues creation / deletion"""
 
     def __init__(self):
         self.input: asyncio.Queue[message_pb2.Content] = (asyncio.Queue())
