@@ -6,9 +6,10 @@ import asyncio
 import uuid
 import json
 
+#Peut etre faudra til mettre chacune des data processing dans des classes distincts
 
 @beartype
-class Data:
+class Message:
     """Manage client queued input messages"""
 
     def __init__(self, client: Client):
@@ -22,14 +23,13 @@ class Data:
             case "json":
                 await self.message_json(message)
             case "image":
-                await self.message_json(message)
+                await self.message_image(message)
             case "speech":
-                await self.message_json(message)
+                await self.message_speech(message)
             case "error":
-                await self.message_json(message)
+                await self.message_error(message)
             case _:
                 print("Unknown message type")
-
 
     async def message_chat(self, message):
         """Manage chat message"""
@@ -49,8 +49,20 @@ class Data:
             logger.error(f"Error during chat stream: {e}")
             await self.client.send_error(500, f"Error during chat stream in thread {self.client.uid}: {e}")
 
-    async def message_image(self, message):
+    async def message_json(self, message):
+        """Manage json message"""
         pass
 
-    async def message_json(self, message):
+    async def message_image(self, message):
+        """Manage image message"""
+        if message.data:
+                with open("src/server/test/image_received.png", "wb") as f:
+                    f.write(message.data)
+
+    async def message_speech(self, message):
+        """Manage json message"""
+        pass
+
+    async def message_error(self, message):
+        """Manage json message"""
         pass

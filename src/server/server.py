@@ -88,45 +88,34 @@ class Server:
             client.start()
 
             self.list_client.append(client)
-            logger.info(f"New client connected:: {websocket.remote_address}")
 
             # Manage exceptions
             try:
                 await client.disconnection.wait()
             except asyncio.CancelledError:
-                logger.error(
-                    f"Task cancelled for client {websocket.remote_address} disconnection event."
-                )
+                logger.error(f"Task cancelled for client {websocket.remote_address} disconnection event.")
                 if client.is_active:
-                    await self._close_client(client)
+                    await self.remove_client(client)
             except Exception as e:
-                logger.error(
-                    f"Internal error for client {websocket.remote_address} disconnection event: {e}"
-                )
+                logger.error(f"Internal error for client {websocket.remote_address} disconnection event: {e}")
                 if client.is_active:
-                    await self._close_client(client)
+                    await self.remove_client(client)
         finally:
             if client:
                 if client.is_active:
-                    logger.warning(
-                        f"Client {websocket.remote_address} still marked active in finally. Forcing close."
-                    )
-                    await self._close_client(client)
-
+                    logger.warning(f"Client {websocket.remote_address} still marked active in finally. Forcing close.")
+                    await self.remove_client(client)
                 elif client in self.list_client:
                     self.list_client.remove(client)
-                    logger.info(
-                        f"Removed client {websocket.remote_address} from list. (Remaining: {len(self.list_client)})"
-                    )
-
-            logger.info(f"Finished closing the client {websocket.remote_address}.")
 
     async def shutdown(self):
         """Gracefully shut down the server."""
         if self.server:
             self.server.close()
             try:
+                print("hello")
                 await self.server.wait_closed()
+                print("hello")
                 print("---------------------------------------------")
                 logger.success(f"Server shutdown")
             except asyncio.CancelledError:
@@ -136,7 +125,7 @@ class Server:
 
         for client in list(self.list_client):
             if client.is_active:
-                await self._close_client(client)
+                await self.remove_client(client)
 
         self.list_client.clear()
 
@@ -144,20 +133,16 @@ class Server:
         print("---------------------------------------------")
         logger.success(f"Server shutdown sequence completed.{Style.RESET_ALL}")
 
-    async def _close_client(self, client: Client):
+    async def remove_client(self, client: Client):
         try:
             if client.is_active:
                 await client.close()
         except Exception as e:
-            logger.error(
-                f"Error closing client {client.websocket.remote_address}: {e}",
-            )
+            logger.error(f"Error closing client {client.websocket.remote_address}: {e}",)
             try:
                 await client.websocket.close()
             except Exception as e:
-                logger.info(
-                    f"Failed to close websocket connection for {client.websocket.remote_address}: {e}"
-                )
+                logger.info(f"Failed to close websocket connection for {client.websocket.remote_address}: {e}")
             client.is_active = False
             client.disconnection.set()
         finally:

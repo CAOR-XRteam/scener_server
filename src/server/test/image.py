@@ -1,12 +1,13 @@
-import asyncio
+from server.protobuf import message_pb2
 import websockets
-import message_pb2  # your generated protobuf module
+import asyncio
+
 
 async def main():
     uri = "ws://localhost:8765"
     async with websockets.connect(uri) as ws:
         # Load image as bytes
-        with open("image.png", "rb") as f:
+        with open("src/server/test/image.png", "rb") as f:
             image_bytes = f.read()
 
         # Create protobuf message

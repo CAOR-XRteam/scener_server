@@ -29,7 +29,6 @@ class Output:
 
             # Manage exceptions
             except asyncio.CancelledError:
-                logger.info(f"Client {self.client.get_uid()} cancelled for websocket {self.client.websocket.remote_address}")
                 break
             except Exception as e:
                 logger.error(f"Output error: {e}")

@@ -21,8 +21,8 @@ class Client:
         self.websocket = websocket  # The WebSocket connection object
         self.agent = agent
         self.queue = Queue()
-        self.input = Input(self)
-        self.output = Output(self)
+        self.queue_input = Input(self)
+        self.queue_output = Output(self)
 
         self.is_active = True  # State to track if the client is active
         self.disconnection = asyncio.Event()
@@ -31,9 +31,10 @@ class Client:
 
     def start(self):
         """Start input/output handlers."""
+        logger.info(f"Client {self.get_uid()} - connection from {self.websocket.remote_address}")
         self.task_input = asyncio.create_task(self.loop_input())
-        self.input.start();
-        self.output.start();
+        self.queue_input.start();
+        self.queue_output.start();
 
     async def send_message(self, type: str, text: str = "", data = b"", status: int = 200):
         """Queue a message to be sent to the client."""
@@ -100,12 +101,10 @@ class Client:
         if not self.is_active:
             return
         self.is_active = False
-        logger.info(f"Closing connection for {self.websocket.remote_address}")
 
         # Close client tasks
         tasks_to_cancel = [
-            t
-            for t in [self.task_input, self.task_output, self.task_session]
+            t for t in [self.task_input, self.queue_input.task_loop, self.queue_output.task_loop]
             if t and not t.done()
         ]
         for task in tasks_to_cancel:
@@ -115,11 +114,10 @@ class Client:
         try:
             await self.websocket.close()
         except Exception as e:
-            logger.error(
-                f"Error closing websocket connection for {self.websocket.remote_address}: {e}"
-            )
+            logger.error(f"Error closing websocket connection for {self.websocket.remote_address}: {e}")
         finally:
             self.disconnection.set()
+        logger.info(f"Client {self.get_uid()} - disconnection from {self.websocket.remote_address}")
 
         # Close client queues
         self.queue.clear()

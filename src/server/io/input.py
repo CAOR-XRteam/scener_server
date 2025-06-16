@@ -1,5 +1,5 @@
 from server.client import Client
-from server.data.data import Data
+from server.data.message import Message
 from server.protobuf import message_pb2
 from lib import logger
 from beartype import beartype
@@ -12,7 +12,7 @@ class Input:
 
     def __init__(self, client: Client):
         self.client = client
-        self.data = Data(client)
+        self.message = Message(client)
         self.task_loop = None
 
     def start(self):
@@ -29,14 +29,13 @@ class Input:
 
             # Manage exceptions
             except asyncio.CancelledError:
-                logger.info(f"Client {self.client.get_uid()} cancelled for websocket {self.client.websocket.remote_address}")
                 break
             except Exception as e:
                 logger.error(f"Client input error: {e}")
                 await self.client.send_error(500, f"Internal server error in thread {self.client.get_uid()}")
                 break
 
-    async def handle_message(self, message):
+    async def handle_message(self, msg):
         """handle one client input message - send it to async chat"""
-        logger.info(f"Received message from client {self.client.get_uid()}: {message.type}")
-        await self.data.manage_message(message)
+        logger.info(f"Client {self.client.get_uid()} - Received message '{msg.type}'")
+        await self.message.manage_message(msg)

@@ -3,6 +3,7 @@ import json
 from pydantic import BaseModel, field_validator
 from typing import Literal
 
+# Encore valide ?
 
 def validate_message(msg):
     """Check message non-emptyness"""

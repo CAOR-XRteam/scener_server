@@ -1,7 +1,7 @@
-import asyncio
-import websockets
-import message_pb2
+from server.protobuf import message_pb2
 from colorama import Fore
+import websockets
+import asyncio
 
 
 async def main():

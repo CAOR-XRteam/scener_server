@@ -1,6 +1,8 @@
-import asyncio
+from server.protobuf import message_pb2
+from colorama import Fore
 import websockets
-import message_pb2  # your generated protobuf module
+import asyncio
+
 
 async def main():
     uri = "ws://localhost:8765"
