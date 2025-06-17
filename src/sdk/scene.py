@@ -140,7 +140,7 @@ class PointLight(BaseLight):
     type: Literal["point"]
     range: float
     mode: Literal["baked", "mixed", "realtime"]
-    shadow_type: Literal["no_shaows", "hard_shadows", "soft_shadows"]
+    shadow_type: Literal["no_shadows", "hard_shadows", "soft_shadows"]
 
 
 class AreaLight(BaseLight):
