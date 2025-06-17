@@ -67,6 +67,7 @@ class SceneObject(BaseModel):
     rotation: Vector3
     scale: Vector3
     shape: Literal["cube", "sphere", "capsule", "cylinder", "plane", "quad"] | None
+    color: ColorRGBA | None
 
     @model_validator(mode="after")
     def check_conditional_fields(self):
