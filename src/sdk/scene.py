@@ -133,7 +133,7 @@ class SpotLight(BaseLight):
 class DirectionalLight(BaseLight):
     type: Literal["directional"]
     mode: Literal["baked", "mixed", "realtime"]
-    shadow_type: Literal["no_shaows", "hard_shadows", "soft_shadows"]
+    shadow_type: Literal["no_shadows", "hard_shadows", "soft_shadows"]
 
 
 class PointLight(BaseLight):
