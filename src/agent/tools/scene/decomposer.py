@@ -6,7 +6,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
-from sdk.scene import *
+from sdk.scene import Scene, FinalDecompositionOutput
 
 
 class DecomposedObject(BaseModel):

@@ -1,11 +1,10 @@
 from agent.llm.creation import initialize_model
-from colorama import Fore
+from agent.tools.scene.decomposer import DecompositionOutput
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
-from agent.tools.scene.decomposer import DecompositionOutput
 
 
 class ImproveToolInput(BaseModel):
