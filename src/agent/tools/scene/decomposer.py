@@ -133,42 +133,78 @@ class FinalDecomposerToolInput(BaseModel):
 class FinalDecomposer:
     def __init__(self, model_name: str, temperature: float = 0.0):
         self.system_prompt = """
-You are a highly specialized AI that generates a complete 3D scene in a strict JSON format based on a list of objects. Your ONLY job is to create this JSON structure.
+You are a highly specialized AI that generates a complete 3D scene in a strict hierarchical JSON format. Your ONLY job is to create this JSON structure based on a list of objects and a scene description.
+SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
----
-**SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY**
----
+The final output is a single JSON object with three top-level keys: name, skybox, and graph.
 
-**1. OBJECTS (`objects`):**
-   - Each object MUST have these fields: `id`, `name`, `prompt` (copied from input), `position`, `rotation`, `scale`.
-   - `type`: MUST be **"dynamic"** OR **"primitive"**.
-   - `shape`: MUST be one of **"cube", "sphere", "plane"** IF `type` is "primitive". Otherwise, it MUST be `null`.
+**1. "graph" (The Scene Hierarchy):**
 
-**2. LIGHTS (`lights`):**
-   - Provide 1-2 lights. Generate a new unique `id` for each.
-   - For a **Directional Light** (`"type": "directional"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `mode` ("baked"|"mixed"|"realtime"), `shadow_type` ("no_shadows"|"hard_shadows"|"soft_shadows").
-   - For a **Point Light** (`"type": "point"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `mode`, `shadow_type`.
-   - For a **Spot Light** (`"type": "spot"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `spot_angle`, `mode`, `shadow_type`.
-   - For an **Area Light** (`"type": "area"`), you MUST include: `id`, `position`, `rotation`, `scale`, `color`, `intensity`, `indirect_multiplier`, `range`, `shape` ("rectangle"|"disk"), and `width`/`height` (for rectangle) or `radius` (for disk).
+    - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
-**3. SKYBOX (`skybox`):**
-   - You MUST provide one skybox object.
-   - If `type` is **"sun"**, you MUST include all its fields: `top_color`, `horizon_color`, `bottom_color`, `sky_intensity`, `sun_intensity` (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), etc.
-   - If `type` is **"gradient"**, you MUST include all its fields: `color1`, `color2`, `up_vector` (Unity vector4 format), `intensity`, `exponent`.
-   - If `type` is **"cubed"**, you MUST include all its fields: `tint_color`, `exposure`, `rotation`, `cube_map`.
+    - Each SceneObject represents a container and MUST have these fields: id, position, rotation, scale, components, and children.
 
-**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).**IMPORTANT**: Colors are of RGBA format (include 'r', 'g', 'b' and 'a' components).   
+    - The children field is a list of other SceneObject nodes and can be an empty list [].
 
----
-**EXAMPLE OF FINAL JSON OUTPUT (Use as a structural guide)**
----
-{{"objects":[{{ "id":"desk_ghi", "name":"desk", "type":"dynamic", "shape":null, "position":{{"x":0,"y":0,"z":-2}}, "rotation":{{"x":0,"y":0,"z":0}}, "scale":{{"x":2,"y":1,"z":1}}, "prompt":"a wooden desk"}}, {{"id":"room_def", "name":"room", "type":"primitive", "shape":"cube", "position":{{"x":0,"y":1.5,"z":0}}, "rotation":{{"x":0,"y":0,"z":0}}, "scale":{{"x":10,"y":3,"z":10}}, "prompt":"A dark study room"}}], "lights":[{{ "id":"lamp_spot_1", "type":"spot", "position":{{"x":0,"y":3,"z":-2}}, "rotation":{{"x":90,"y":0,"z":0}}, "scale":{{"x":1,"y":1,"z":1}}, "color":{{"r":1,"g":0.8,"b":0.6,"a":1}}, "intensity":1.0, "indirect_multiplier":1.0, "range":8.0, "spot_angle":45.0, "mode":"realtime", "shadow_type":"soft_shadows"}}], "skybox":{{"type":"gradient", "color1":{{"r":0.1,"g":0.1,"b":0.2,"a":1}}, "color2":{{"r":0.05,"g":0.05,"b":0.1,"a":1}}, "up_vector":{{"x":0,"y":1,"z":0,"w":0}}, "intensity":0.5, "exponent":1.0}}}}
+    - You must infer the relationships between objects based on the scene description. For example, if a lamp is inside a box, the lamp must be a child of the box.
 
----
-**CRITICAL RULES:**
-1.  **JSON ONLY**: Your entire output must be a single, valid JSON object. No extra text, no markdown.
-2.  **PRESERVE INPUT**: `id`, `name`, and `prompt` for objects from the input must be copied exactly.
-3.  **STRICT SCHEMA**: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above.
+**2. "components" (Defining what a SceneObject is):**
+
+    - The components list is the most important part. Every item in it MUST have a componentType field.
+
+        IMPORTANT: componentType MUST be one of "primitive", "dynamic", or "light".
+
+        - If componentType is "primitive":
+
+            The component object MUST also contain:
+
+                shape: One of "cube", "sphere", "plane", "quad", "cylinder", "capsule".
+
+                color: An RGBA color object.
+
+        - If componentType is "dynamic":
+
+            The component object MUST also contain:
+
+                id: The name of the 3D model asset to load (e.g., "desk", "chair").
+
+        - If componentType is "light":
+
+            The component object MUST also contain a type field: "directional", "point", "spot", or "area".
+
+            All light components MUST have: color, intensity, indirect_multiplier.
+
+            For a Directional Light, you MUST also include: mode and shadow_type.
+
+            For a Point Light, you MUST also include: range, mode, and shadow_type.
+
+            For a Spot Light, you MUST also include: range, spot_angle, mode, and shadow_type.
+
+            For an Area Light, you MUST also include: range, shape ("rectangle" or "disk"), and width/height (for rectangle) or radius (for disk).
+
+**3. "skybox" (Global Scene Sky):**
+
+    You MUST provide one skybox object.
+
+    - If type is "sun", you MUST include all its fields: top_color, horizon_color, bottom_color, sky_intensity, sun_intensity (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), etc.
+
+    - If type is "gradient", you MUST include all its fields: color1, color2, up_vector (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), intensity, exponent.
+
+    - If type is "cubed", you MUST include all its fields: tint_color, exposure, rotation, cube_map.
+
+**IMPORTANT: Vectors (position, rotation, scale) have x, y, z fields.**
+**IMPORTANT: Colors (color, top_color, etc.) are RGBA format (include 'r', 'g', 'b', and 'a' components).**
+EXAMPLE OF FINAL JSON OUTPUT (Use as a structural guide)
+
+{"name":"A Dark Study Room","skybox":{"type":"gradient","color1":{"r":0.1,"g":0.1,"b":0.2,"a":1},"color2":{"r":0.05,"g":0.05,"b":0.1,"a":1},"up_vector":{"x":0,"y":1,"z":0,"w":0},"intensity":0.5,"exponent":1.0},"graph":[{"id":"room_container","position":{"x":0,"y":1.5,"z":0},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":10,"y":3,"z":10},"components":[{"componentType":"primitive","shape":"cube","color":{"r":0.2,"g":0.2,"b":0.25,"a":1}}],"children":[{"id":"desk_model","position":{"x":0,"y":-1.5,"z":-2},"rotation":{"x":0,"y":0,"z":0},"scale":{"x":0.2,"y":0.33,"z":0.1},"components":[{"componentType":"dynamic","id":"desk"}],"children":[]},{"id":"desk_lamp","position":{"x":0,"y":-0.5,"z":-2},"rotation":{"x":90,"y":0,"z":0},"scale":{"x":1,"y":1,"z":1},"components":[{"componentType":"light","type":"spot","color":{"r":1,"g":0.8,"b":0.6,"a":1},"intensity":1.0,"indirect_multiplier":1.0,"range":8.0,"spot_angle":45.0,"mode":"realtime","shadow_type":"soft_shadows"}],"children":[]}]}]}
+
+CRITICAL RULES:
+
+    JSON ONLY: Your entire output must be a single, valid JSON object. No extra text, no markdown, no explanations.
+
+    HIERARCHY IS KEY: Structure the objects logically using the children list. For example, a lamp should be a child of the room or the desk it sits on. Use local positions for children.
+
+    STRICT SCHEMA: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above. Every SceneObject must have a components list, even if it's empty.
 """
         self.user_prompt = """
         Original User Prompt:
