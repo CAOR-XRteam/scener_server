@@ -1,5 +1,6 @@
-from pydantic import BaseModel, model_validator
-from typing import Literal, Union
+from enum import Enum
+from pydantic import BaseModel, Field, model_validator
+from typing import Literal, Union, Annotated
 
 # TODO: change literals to enums, more constraints on fields with Field
 
@@ -58,28 +59,117 @@ class Vector4(BaseModel):
         return [self.x, self.y, self.z, self.w]
 
 
-class SceneObject(BaseModel):
-    id: str
-    name: str
-    # TODO: do we need predefined objects (prefabs) or treillis-generated objects are enough? colliders? materials?
-    type: Literal["dynamic", "primitive"]
-    position: Vector3
-    rotation: Vector3
-    scale: Vector3
-    shape: Literal["cube", "sphere", "capsule", "cylinder", "plane", "quad"] | None
+class ComponentType(str, Enum):
+    LIGHT = "light"
+    PRIMITIVE = "primitive"
+    DYNAMIC = "dynamic"
+
+
+class SkyboxType(str, Enum):
+    GRADIENT = "gradient"
+    SUN = "sun"
+    CUBED = "cubed"
+
+
+class LightType(str, Enum):
+    SPOT = "spot"
+    DIRECTIONAL = "directional"
+    POINT = "point"
+    AREA = "area"
+
+
+class LightShadowType(str, Enum):
+    NO_SHADOWS = "no_shadows"
+    HARD_SHADOWS = "hard_shadows"
+    SOFT_SHADOWS = "soft_shadows"
+
+
+class LightMode(str, Enum):
+    BAKED = "baked"
+    MIXED = "mixed"
+    REALTIME = "realtime"
+
+
+class AreaLightShape(str, Enum):
+    RECTANGLE = "rectangle"
+    DISK = "disk"
+
+
+class PrimitiveShape(str, Enum):
+    CUBE = "cube"
+    SPHERE = "sphere"
+    CAPSULE = "capsule"
+    CYLINDER = "cylinder"
+    PLANE = "plane"
+    QUAD = "quad"
+
+
+class SceneComponent(BaseModel):
+    component_type: ComponentType
+
+
+class PrimitiveObject(SceneComponent):
+    component_type: Literal[ComponentType.PRIMITIVE] = ComponentType.PRIMITIVE
+    shape: PrimitiveShape
     color: ColorRGBA | None
+
+
+class DynamicObject(SceneComponent):
+    component_type: Literal[ComponentType.DYNAMIC] = ComponentType.DYNAMIC
+    id: str
+
+
+class BaseLight(BaseModel):
+    componentType: Literal[ComponentType.LIGHT] = ComponentType.LIGHT
+    color: ColorRGBA
+    intensity: float
+    indirect_multiplier: float
+
+
+class SpotLight(BaseLight):
+    type: Literal[LightType.SPOT] = LightType.SPOT
+    range: float
+    spot_angle: float
+    mode: LightMode
+    shadow_type: LightShadowType
+
+
+class DirectionalLight(BaseLight):
+    type: Literal[LightType.DIRECTIONAL] = LightType.DIRECTIONAL
+    mode: LightMode
+    shadow_type: LightShadowType
+
+
+class PointLight(BaseLight):
+    type: Literal[LightType.POINT] = LightType.POINT
+    range: float
+    mode: LightMode
+    shadow_type: LightShadowType
+
+
+class AreaLight(BaseLight):
+    type: Literal[LightType.AREA] = LightType.AREA
+    shape: AreaLightShape
+    range: float
+    width: float | None
+    height: float | None
+    radius: float | None
 
     @model_validator(mode="after")
     def check_conditional_fields(self):
-        if self.type == "primitive" and self.shape is None:
-            raise ValueError("shape must be set for primitive objects")
-        if self.type == "dynamic" and self.id is None:
-            raise ValueError("id must be set for dynamic objects")
+        if (
+            self.shape == AreaLightShape.RECTANGLE
+            and self.width is None
+            or self.height is None
+        ):
+            raise ValueError("width and height must be set for rectangle area light")
+        if self.shape == AreaLightShape.DISK and self.radius is None:
+            raise ValueError("radius must be set for disk area light")
         return self
 
 
 class GradientSkybox(BaseModel):
-    type: Literal["gradient"]
+    type: Literal[SkyboxType.GRADIENT] = SkyboxType.GRADIENT
     color1: ColorRGBA
     color2: ColorRGBA
     up_vector: Vector4
@@ -88,7 +178,7 @@ class GradientSkybox(BaseModel):
 
 
 class SunSkybox(BaseModel):
-    type: Literal["sun"]
+    type: Literal[SkyboxType.SUN] = SkyboxType.SUN
     top_color: ColorRGBA
     top_exponent: float
     horizon_color: ColorRGBA
@@ -103,71 +193,44 @@ class SunSkybox(BaseModel):
 
 
 class CubedSkybox(BaseModel):
-    type: Literal["cubed"]
+    type: Literal[SkyboxType.CUBED] = SkyboxType.CUBED
     tint_color: ColorRGBA
     exposure: float
     rotation: float
     cube_map: str
 
 
-Skybox = Union[GradientSkybox, SunSkybox, CubedSkybox]
+Skybox = Annotated[
+    Union[GradientSkybox, SunSkybox, CubedSkybox], Field(discriminator="type")
+]
 
 
-class BaseLight(BaseModel):
+Component = Annotated[
+    Union[
+        PrimitiveObject,
+        DynamicObject,
+        SpotLight,
+        DirectionalLight,
+        PointLight,
+        AreaLight,
+    ],
+    Field(discriminator="componentType"),
+]
+
+
+class SceneObject(BaseModel):
     id: str
     position: Vector3
     rotation: Vector3
     scale: Vector3
-    color: ColorRGBA
-    intensity: float
-    indirect_multiplier: float
-
-
-class SpotLight(BaseLight):
-    type: Literal["spot"]
-    range: float
-    spot_angle: float
-    mode: Literal["baked", "mixed", "realtime"]
-    shadow_type: Literal["no_shadows", "hard_shadows", "soft_shadows"]
-
-
-class DirectionalLight(BaseLight):
-    type: Literal["directional"]
-    mode: Literal["baked", "mixed", "realtime"]
-    shadow_type: Literal["no_shadows", "hard_shadows", "soft_shadows"]
-
-
-class PointLight(BaseLight):
-    type: Literal["point"]
-    range: float
-    mode: Literal["baked", "mixed", "realtime"]
-    shadow_type: Literal["no_shadows", "hard_shadows", "soft_shadows"]
-
-
-class AreaLight(BaseLight):
-    type: Literal["area"]
-    shape: Literal["rectangle", "disk"]
-    range: float
-    width: float | None
-    height: float | None
-    radius: float | None
-
-    @model_validator(mode="after")
-    def check_conditional_fields(self):
-        if self.shape == "rectangle" and self.width is None or self.height is None:
-            raise ValueError("width and height must be set for rectangle area light")
-        if self.shape == "disk" and self.radius is None:
-            raise ValueError("radius must be set for disk area light")
-        return self
-
-
-Light = Union[SpotLight, DirectionalLight, PointLight, AreaLight]
+    components: list[SceneComponent]
+    children: list["SceneObject"]
 
 
 class Scene(BaseModel):
+    name: str
     skybox: Skybox
-    lights: list[Light]
-    objects: list[SceneObject]
+    graph: list[SceneObject]
 
 
 class FinalDecompositionOutput(BaseModel):
