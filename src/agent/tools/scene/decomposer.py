@@ -7,7 +7,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
-from agent.tools.scene.improver import ImprovedDecompositionOutput
 from sdk.scene import *
 
 
@@ -17,16 +16,16 @@ class DecomposedObject(BaseModel):
     prompt: str
 
 
-class InitialDecompositionData(BaseModel):
+class DecompositionData(BaseModel):
     objects: list[DecomposedObject]
 
 
-class InitialDecomposition(BaseModel):
-    scene: InitialDecompositionData
+class Decomposition(BaseModel):
+    scene: DecompositionData
 
 
-class InitialDecompositionOutput(BaseModel):
-    scene_data: InitialDecomposition
+class DecompositionOutput(BaseModel):
+    scene_data: Decomposition
     original_user_prompt: str
 
 
@@ -118,16 +117,16 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         )
 
         self.model = initialize_model(model_name, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=InitialDecomposition)
+        self.parser = JsonOutputParser(pydantic_object=Decomposition)
         self.chain = self.prompt | self.model | self.parser
 
     def decompose(self, user_input: str) -> dict:
         try:
             logger.info(f"Decomposing input: {user_input}")
-            result: InitialDecomposition = self.chain.invoke({"user_input": user_input})
+            result: Decomposition = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
 
-            output = InitialDecompositionOutput(
+            output = DecompositionOutput(
                 scene_data=result, original_user_prompt=user_input
             )
 
@@ -251,7 +250,7 @@ CRITICAL RULES:
         improved_decomposition: dict,
     ) -> dict:
         try:
-            validated_data = ImprovedDecompositionOutput(**improved_decomposition)
+            validated_data = DecompositionOutput(**improved_decomposition)
         except ValidationError as e:
             logger.error(
                 f"Pydantic validation failed for final_decomposer payload: {e}"

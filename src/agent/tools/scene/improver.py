@@ -5,15 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
-from agent.tools.scene.decomposer import (
-    InitialDecomposition,
-    InitialDecompositionOutput,
-)
-
-
-class ImprovedDecompositionOutput(BaseModel):
-    scene_data: InitialDecomposition
-    original_user_prompt: str
+from agent.tools.scene.decomposer import DecompositionOutput
 
 
 class ImproveToolInput(BaseModel):
@@ -84,7 +76,7 @@ class Improver:
     def improve(self, initial_decomposition: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
         try:
-            validated_data = InitialDecompositionOutput(**initial_decomposition)
+            validated_data = DecompositionOutput(**initial_decomposition)
         except ValidationError as e:
             logger.error(f"Pydantic validation failed for improver payload: {e}")
             raise ValueError(f"Invalid payload structure for improver tool: {e}")
