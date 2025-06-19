@@ -7,7 +7,27 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
+from agent.tools.scene.improver import ImprovedDecompositionOutput
 from sdk.scene import *
+
+
+class DecomposedObject(BaseModel):
+    id: str
+    name: str
+    prompt: str
+
+
+class InitialDecompositionData(BaseModel):
+    objects: list[DecomposedObject]
+
+
+class InitialDecomposition(BaseModel):
+    scene: InitialDecompositionData
+
+
+class InitialDecompositionOutput(BaseModel):
+    scene_data: InitialDecomposition
+    original_user_prompt: str
 
 
 class InitialDecomposerToolInput(BaseModel):

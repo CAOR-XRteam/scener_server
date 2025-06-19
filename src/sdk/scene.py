@@ -2,36 +2,6 @@ from enum import Enum
 from pydantic import BaseModel, Field, model_validator
 from typing import Literal, Union, Annotated
 
-# TODO: change literals to enums, more constraints on fields with Field
-
-
-class DecomposedObject(BaseModel):
-    id: str
-    name: str
-    prompt: str
-
-
-class InitialDecompositionData(BaseModel):
-    objects: list[DecomposedObject]
-
-
-class InitialDecomposition(BaseModel):
-    scene: InitialDecompositionData
-
-
-class InitialDecompositionOutput(BaseModel):
-    scene_data: InitialDecomposition
-    original_user_prompt: str
-
-
-class ImprovedDecompositionOutput(BaseModel):
-    scene_data: InitialDecomposition
-    original_user_prompt: str
-
-
-class ToolOutputWrapper(BaseModel):
-    output: InitialDecompositionOutput | ImprovedDecompositionOutput
-
 
 class ColorRGBA(BaseModel):
     r: float

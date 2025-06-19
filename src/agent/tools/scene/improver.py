@@ -5,7 +5,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
-from sdk.scene import *
+from agent.tools.scene.decomposer import (
+    InitialDecomposition,
+    InitialDecompositionOutput,
+)
+
+
+class ImprovedDecompositionOutput(BaseModel):
+    scene_data: InitialDecomposition
+    original_user_prompt: str
 
 
 class ImproveToolInput(BaseModel):
