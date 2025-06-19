@@ -3,6 +3,7 @@ import os
 import sys
 import torch
 
+from sdk.scene import Scene
 from colorama import Fore
 from loguru import logger
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
@@ -64,3 +65,7 @@ def speech_to_text(path: str) -> str:
     )
 
     return result["text"]
+
+
+def deserialize_scene_json(scene_json: str) -> Scene:
+    pass
