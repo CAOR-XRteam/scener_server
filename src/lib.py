@@ -82,6 +82,17 @@ def deserialize_scene_json(scene_json: str) -> Scene:
         raise ValueError("Failed to deserialize scene data.")
 
 
+def serialize_scene(scene: Scene) -> str:
+    """Serialize a Scene object into a JSON string."""
+    try:
+        scene_json = scene.model_dump_json()
+        logger.info(f"Scene serialized successfully: {scene_json}")
+        return scene_json
+    except Exception as e:
+        logger.error(f"Error serializing scene: {e}")
+        raise ValueError("Failed to serialize scene data.")
+
+
 if __name__ == "__main__":
     scene_dict = {
         "name": "main_scene",
@@ -184,29 +195,22 @@ if __name__ == "__main__":
                 "components": [],
                 "children": [
                     {
-                        "id": "theatre(Clone)",
-                        "name": "theatre(Clone)",
+                        "id": "geometry_0",
+                        "name": "geometry_0",
                         "position": {"x": 0.0, "y": 0.0, "z": 0.0},
                         "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
                         "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
-                        "components": [],
-                        "children": [
-                            {
-                                "id": "geometry_0",
-                                "name": "geometry_0",
-                                "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                                "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
-                                "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
-                                "components": [
-                                    {"id": "geometry_0", "component_type": "dynamic"}
-                                ],
-                                "children": [],
-                            }
+                        "components": [
+                            {"id": "geometry_0", "component_type": "dynamic"}
                         ],
+                        "children": [],
                     }
                 ],
             },
         ],
     }
     scene_json = json.dumps(scene_dict)
-    print(f"Deserialized scene: {deserialize_scene_json(scene_json)}")
+    deser = deserialize_scene_json(scene_json)
+    ser = serialize_scene(deser)
+    print(f"Deserialized scene: {deser}")
+    print(f"Serialized scene: {ser}")
