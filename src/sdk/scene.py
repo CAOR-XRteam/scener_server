@@ -190,7 +190,6 @@ Component = Annotated[
 
 class SceneObject(BaseModel):
     id: str
-    name: str
     position: Vector3
     rotation: Vector3
     scale: Vector3

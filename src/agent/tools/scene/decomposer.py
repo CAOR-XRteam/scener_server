@@ -160,7 +160,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
     - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
-    - Each SceneObject represents a container and MUST have these fields: id, name, position, rotation, scale, components, and children.
+    - Each SceneObject represents a container and MUST have these fields: id, position, rotation, scale, components, and children.
 
     - The children field is a list of other SceneObject nodes; it is always present in the structure, and if a SceneObject logically has no children, it must be an empty list [].
 

@@ -117,8 +117,7 @@ if __name__ == "__main__":
         },
         "graph": [
             {
-                "id": "1",
-                "name": "light",
+                "id": "light1",
                 "position": {"x": 0.0, "y": 0.0, "z": 0.0},
                 "rotation": {"x": 50.00001, "y": 330.0, "z": -1.328236e-06},
                 "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
@@ -136,8 +135,7 @@ if __name__ == "__main__":
                 "children": [],
             },
             {
-                "id": "2",
-                "name": "light",
+                "id": "light2",
                 "position": {"x": 5.0, "y": 2.0, "z": 3.0},
                 "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
                 "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
@@ -156,8 +154,7 @@ if __name__ == "__main__":
                 "children": [],
             },
             {
-                "id": "1",
-                "name": "obj",
+                "id": "obj1",
                 "position": {"x": 0.0, "y": 0.0, "z": 0.0},
                 "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
                 "scale": {"x": 10.0, "y": 1.0, "z": 10.0},
@@ -171,8 +168,7 @@ if __name__ == "__main__":
                 "children": [],
             },
             {
-                "id": "2",
-                "name": "obj",
+                "id": "obj2",
                 "position": {"x": 0.0, "y": 1.0, "z": 5.0},
                 "rotation": {"x": 0.0, "y": 24.9999981, "z": 0.0},
                 "scale": {"x": 2.0, "y": 2.0, "z": 2.0},
@@ -187,29 +183,18 @@ if __name__ == "__main__":
             },
             {
                 "id": "theatre",
-                "name": "theatre",
                 "position": {"x": -5.0, "y": 0.0, "z": 10.0},
                 "rotation": {"x": 0.0, "y": 180.0, "z": 0.0},
                 "scale": {"x": 5.0, "y": 5.0, "z": 5.0},
-                "components": [],
-                "children": [
-                    {
-                        "id": "geometry_0",
-                        "name": "geometry_0",
-                        "position": {"x": 0.0, "y": 0.0, "z": 0.0},
-                        "rotation": {"x": 0.0, "y": 0.0, "z": 0.0},
-                        "scale": {"x": 1.0, "y": 1.0, "z": 1.0},
-                        "components": [
-                            {"id": "geometry_0", "component_type": "dynamic"}
-                        ],
-                        "children": [],
-                    }
-                ],
+                "components": [{"id": "theatre", "component_type": "dynamic"}],
+                "children": [],
             },
         ],
     }
+
     scene_json = json.dumps(scene_dict)
     deser = deserialize_scene_json(scene_json)
     ser = serialize_scene(deser)
+
     print(f"Deserialized scene: {deser}")
     print(f"Serialized scene: {ser}")
