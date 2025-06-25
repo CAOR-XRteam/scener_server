@@ -1,4 +1,4 @@
-media/*
+src/media/*
 model/*
 __pycache__/
 *.py[cod]

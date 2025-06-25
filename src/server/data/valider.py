@@ -5,6 +5,7 @@ from typing import Literal
 
 # Encore valide ?
 
+
 def validate_message(msg):
     """Check message non-emptyness"""
     if not msg or msg.isspace():
@@ -18,11 +19,30 @@ class OutputMessage(BaseModel):
     action: Literal[
         "agent_response",
         "image_generation",
+        "scene_generation",
+        "3d_object_generation",
         "thinking_process",
         "converted_speech",
         "unknown_action",
     ]
     message: str
+    _validate_message = field_validator("message")(validate_message)
+
+
+class OutputMessageWrapper(BaseModel):
+    output_message: OutputMessage
+    additional_data: list[bytes] | dict | None = None
+
+
+class InputMessageMeta(BaseModel):
+    command: Literal["chat"]
+    type: Literal["text", "audio"]
+
+
+class InputMessage(BaseModel):
+    command: Literal["chat"]
+    message: str
+
     _validate_message = field_validator("message")(validate_message)
 
 

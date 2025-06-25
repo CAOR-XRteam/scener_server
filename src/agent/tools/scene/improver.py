@@ -1,15 +1,15 @@
 from agent.llm.creation import initialize_model
-from colorama import Fore
+from agent.tools.scene.decomposer import DecompositionOutput
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from lib import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 
 class ImproveToolInput(BaseModel):
-    decomposed_input: dict = Field(
-        description="A decomposed scene description ready to be improved for clarity and detail."
+    initial_decomposition: dict = Field(
+        description="A decomposed scene description ready to be improved for clarity and detail and original user prompt."
     )
 
 
@@ -72,37 +72,44 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(self, decomposed_input: dict) -> dict:
+    def improve(self, initial_decomposition: dict) -> dict:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        logger.info(f"Improving decomposed scene: {decomposed_input}")
+        try:
+            validated_data = DecompositionOutput(**initial_decomposition)
+        except ValidationError as e:
+            logger.error(f"Pydantic validation failed for improver payload: {e}")
+            raise ValueError(f"Invalid payload structure for improver tool: {e}")
 
         try:
-            objects_to_improve = decomposed_input.get("scene", {}).get("objects", [])
-            logger.info(f"Agent: Decomposed objects to improve: {objects_to_improve}")
-        except Exception as e:
-            logger.error(f"Failed to extract objects from JSON: {e}")
-            return f"[Error during image generation: {e}]"
+            logger.info(f"Improving decomposed scene: {initial_decomposition}")
 
-        if not objects_to_improve:
-            logger.info(
-                "Agent: The decomposition resulted in no specific objects to improve."
-            )
-            return "[No objects to improve.]"
+            objects_to_improve = validated_data.scene_data.scene.objects
 
-        for i, obj in enumerate(objects_to_improve):
-            if isinstance(obj, dict) and obj.get("prompt"):
+            if not objects_to_improve:
                 logger.info(
-                    f"Agent: Improving the prompt for the object {i+1}: {obj['prompt']}"
+                    "The decomposition resulted in no specific objects to improve."
                 )
-                output = self.improve_single_prompt(obj["prompt"])
-                obj["prompt"] = output
-            else:
-                logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
-                logger.info(f"\n[Skipping object {i+1} - missing prompt]")
+                return "[No objects to improve.]"
 
-        logger.info(f"Decomposed scene with enhanced prompts: {decomposed_input}")
+            for i, obj in enumerate(objects_to_improve):
+                if obj.prompt:
+                    logger.info(
+                        f"Improving the prompt for the object {i+1}: {obj.prompt}"
+                    )
+                    output = self.improve_single_prompt(obj.prompt)
+                    obj.prompt = output
+                else:
+                    logger.warning(
+                        f"Skipping object due to missing/empty prompt: {obj}"
+                    )
+                    logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-        return decomposed_input
+            logger.info(f"Decomposed scene with enhanced prompts: {validated_data}")
+
+            return validated_data.model_dump()
+
+        except Exception as e:
+            logger.error(f"{e}")
 
 
 if __name__ == "__main__":

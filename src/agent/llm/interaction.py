@@ -1,5 +1,6 @@
 from agent.agent import Agent
 from agent.llm.tooling import Tool_callback
+from asyncio import Queue
 from beartype import beartype
 from colorama import Fore
 from langchain_core.messages import HumanMessage, AIMessage
@@ -34,10 +35,10 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
 
 
 @beartype
-async def achat(agent: Agent, query: str, thread_id: str = 0):
+async def achat(agent: Agent, query: str, tool_output_queue: Queue, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
 
-    callback = Tool_callback()
+    callback = Tool_callback(tool_output_queue)
     agent_input = {"messages": [HumanMessage(content=query)]}
     config = {"configurable": {"thread_id": thread_id}, "callbacks": [callback]}
     final_response_content = ""
