@@ -2,7 +2,7 @@ from colorama import Fore
 from langchain_core.tools import tool, BaseTool
 from lib import logger
 from model import black_forest
-from sdk.scene import ImprovedDecompositionOutput
+from agent.tools.scene.decomposer import DecompositionOutput
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field, ValidationError
@@ -40,7 +40,7 @@ def generate_image(
 ) -> GenerateImageOutput:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
     try:
-        validated_data = ImprovedDecompositionOutput(**improved_decomposition)
+        validated_data = DecompositionOutput(**improved_decomposition)
     except ValidationError as e:
         logger.error(f"Pydantic validation failed for improver payload: {e}")
         raise ValueError(f"Invalid payload structure for improver tool. Details: {e}")

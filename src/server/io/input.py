@@ -23,7 +23,9 @@ class Input:
         while self.client.is_active:
             # Handle client message
             try:
-                message = await self.client.queue.input.get() # Take the older message of the queue
+                message = (
+                    await self.client.queue.input.get()
+                )  # Take the older message of the queue
                 await self.handle_message(message)
                 self.client.queue.input.task_done()
 
@@ -32,10 +34,12 @@ class Input:
                 break
             except Exception as e:
                 logger.error(f"Client input error: {e}")
-                await self.client.send_error(500, f"Internal server error in thread {self.client.get_uid()}")
+                await self.client.send_error(
+                    500, f"Internal server error in thread {self.client.get_uid()}"
+                )
                 break
 
     async def handle_message(self, msg):
         """handle one client input message - send it to async chat"""
         logger.info(f"Client {self.client.get_uid()} - Received message '{msg.type}'")
-        await self.message.manage_message(msg)
+        await self.message.manage_incoming_message(msg)
