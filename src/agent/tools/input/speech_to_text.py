@@ -1,6 +1,5 @@
 import torch
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
-from datasets import load_dataset
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 from colorama import Fore
