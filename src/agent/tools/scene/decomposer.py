@@ -19,13 +19,8 @@ class DecompositionData(BaseModel):
     objects: list[DecomposedObject]
 
 
-class Decomposition(BaseModel):
-    scene: DecompositionData
-
-
 class DecompositionOutput(BaseModel):
-    scene_data: Decomposition
-    original_user_prompt: str
+    scene: DecompositionData
 
 
 class InitialDecomposerToolInput(BaseModel):
@@ -116,26 +111,23 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
         )
 
         self.model = initialize_model(model_name, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=Decomposition)
+        self.parser = JsonOutputParser(pydantic_object=DecompositionOutput)
         self.chain = self.prompt | self.model | self.parser
 
-    def decompose(self, user_input: str) -> dict:
+    def decompose(self, user_input: str) -> DecompositionOutput:
         try:
             logger.info(f"Decomposing input: {user_input}")
-            result: Decomposition = self.chain.invoke({"user_input": user_input})
+            result = self.chain.invoke({"user_input": user_input})
             logger.info(f"Decomposition result: {result}")
-
-            output = DecompositionOutput(
-                scene_data=result, original_user_prompt=user_input
-            )
+            validated_result = DecompositionOutput(**result)
 
             # Not relying on the llm to provide unique id for every object
-            for obj_dict in output.scene_data.scene.objects:
+            for obj_dict in validated_result.scene.objects:
                 obj_dict.id = (
                     f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
                 )
-            logger.info(f"Initial decomposition: {output}")
-            return output.model_dump()
+
+            return validated_result
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
             raise

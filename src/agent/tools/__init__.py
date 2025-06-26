@@ -9,18 +9,10 @@ from agent.tools.scene.decomposer import (
     FinalDecomposerToolInput,
 )
 
-from agent.tools.input.speech_to_text import speech_to_text
-
 # from agent.tools.input.gesture import hand_gesture
-
-from agent.tools.asset.generate_image import (
-    generate_image,
-    GenerateImageOutput,
-    GenerateImageOutputWrapper,
-    ImageMetaData,
-)
 
 # from agent.tools.asset.generate_3d_object import generate_3d_object
 from agent.tools.asset.library import list_assets
 
 from agent.tools.processing.image_to_depth import image_to_depth
+from agent.tools.pipeline.image_generation import generate_image

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 
 class ImproveToolInput(BaseModel):
-    initial_decomposition: dict = Field(
+    initial_decomposition: DecompositionOutput = Field(
         description="A decomposed scene description ready to be improved for clarity and detail and original user prompt."
     )
 
@@ -72,18 +72,14 @@ class Improver:
             logger.error(f"Improvement failed: {str(e)}")
             raise
 
-    def improve(self, initial_decomposition: dict) -> dict:
+    def improve(
+        self, initial_decomposition: DecompositionOutput
+    ) -> DecompositionOutput:
         """Improve a decomposed scene description, add details and information to every component's prompt"""
-        try:
-            validated_data = DecompositionOutput(**initial_decomposition)
-        except ValidationError as e:
-            logger.error(f"Pydantic validation failed for improver payload: {e}")
-            raise ValueError(f"Invalid payload structure for improver tool: {e}")
-
         try:
             logger.info(f"Improving decomposed scene: {initial_decomposition}")
 
-            objects_to_improve = validated_data.scene_data.scene.objects
+            objects_to_improve = initial_decomposition.scene.objects
 
             if not objects_to_improve:
                 logger.info(
@@ -104,9 +100,11 @@ class Improver:
                     )
                     logger.info(f"\n[Skipping object {i+1} - missing prompt]")
 
-            logger.info(f"Decomposed scene with enhanced prompts: {validated_data}")
+            logger.info(
+                f"Decomposed scene with enhanced prompts: {initial_decomposition}"
+            )
 
-            return validated_data.model_dump()
+            return initial_decomposition
 
         except Exception as e:
             logger.error(f"{e}")

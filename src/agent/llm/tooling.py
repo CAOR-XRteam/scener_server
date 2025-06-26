@@ -8,26 +8,27 @@ from pydantic import BaseModel
 from typing import Literal
 from agent.tools import *
 from sdk.scene import *
+from sdk.messages import *
 
 """ Custom tool tracker for functionnal tests """
 
 
-class ToolOutput(BaseModel):
-    status: Literal["success", "error"]
-    tool_name: Literal[
-        "generate_image", "initial_decomposer", "final_decomposer", "improver"
-    ]
-    message: str
-    payload: FinalDecompositionOutput | GenerateImageOutput | None
+# class ToolOutput(BaseModel):
+#     status: Literal["success", "error"]
+#     tool_name: Literal[
+#         "generate_image", "initial_decomposer", "final_decomposer", "improver"
+#     ]
+#     message: str
+#     payload: FinalDecompositionOutput | GenerateImageOutput | None
 
 
 class Tool_callback(BaseCallbackHandler):
     def __init__(self):
         self.used_tools = []
         self.final_answer_tools = (
-            "final_decomposer",
             "generate_image",
             "generate_3d_object",
+            "generate_3d_scene",
         )
 
     def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
@@ -61,14 +62,10 @@ class Tool_callback(BaseCallbackHandler):
     #     try:
     #         payload = None
     #         match tool_name:
-    #             case "final_decomposer":
-    #                 payload = FinalDecompositionOutput.model_validate(
+    #             case "generate_image":
+    #                 payload = OutgoingGeneratedImagesMessage.model_validate(
     #                     eval(f"dict({output.content})")
     #                 )
-    #             case "generate_image":
-    #                 payload = GenerateImageOutputWrapper.model_validate(
-    #                     eval(f"dict({output.content})")
-    #                 ).general_image_output
 
     #         tool_output = ToolOutput(
     #             status="success",
@@ -86,7 +83,7 @@ class Tool_callback(BaseCallbackHandler):
     #         )
     #     finally:
     #         if tool_output:
-    #             self.queue.put_nowait(tool_output)
+    #             self.tool_output.append(tool_output)
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")

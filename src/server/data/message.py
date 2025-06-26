@@ -1,5 +1,5 @@
 import os
-from agent.tools.input.speech_to_text import speech_to_text
+from lib import speech_to_text
 from model.black_forest import convert_image_to_bytes
 from server.client import Client
 from lib import logger
@@ -36,16 +36,12 @@ class Message:
     async def handle_chat_message(self, message: str):
         """Manage chat message"""
         try:
-            output_generator = self.client.agent.achat(message, str(self.client.uid))
+            output_generator = self.client.agent.aask(message, str(self.client.uid))
             async for token in output_generator:
                 logger.info(
                     f"Received token for client {self.client.get_uid()}: {token}"
                 )
-                await self.client.send_message(
-                    OutgoingUnrelatedMessage(
-                        token=token,
-                    )
-                )
+                await self.client.send_message(token)
 
             logger.info(f"Stream completed for client {self.client.get_uid()}")
 
@@ -82,6 +78,7 @@ class Message:
                 text=text,
             )
         )
+        await self.handle_chat_message(text)
 
     async def handle_image_generation_message(self, message):
         """Manage image message"""

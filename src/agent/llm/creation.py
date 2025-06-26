@@ -17,6 +17,9 @@ def initialize_agent(model_name: str, tools: list[BaseTool], base_prompt: str):
     memory = InMemorySaver()
 
     agent = create_react_agent(
-        tools=tools, model=llm, prompt=base_prompt, checkpointer=memory
+        tools=tools,
+        model=llm,
+        prompt=base_prompt,
+        checkpointer=memory,
     )
     return agent

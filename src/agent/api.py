@@ -1,5 +1,5 @@
 from agent.agent import Agent
-from agent.llm.interaction import chat, achat
+from agent.llm.interaction import chat, achat, ask, aask
 from asyncio import Queue
 from beartype import beartype
 
@@ -16,11 +16,14 @@ class AgentAPI:
     def chat(self, user_input: str, thread_id: str = 0) -> str:
         chat(self.agent, user_input, thread_id)
 
-    def achat(self, user_input: str, thread_id: str = 0):
-        return achat(self.agent, user_input, thread_id)
+    def achat(self, user_input: str, tool_output: Queue, thread_id: str = 0):
+        return achat(self.agent, user_input, tool_output, thread_id)
 
     def run(self):
         self.agent.run()
 
-    def ask(self, query: str) -> dict:
-        return self.agent.ask(query)
+    def ask(self, query: str, thread_id: str) -> dict:
+        return ask(self.agent, query, thread_id)
+
+    def aask(self, query: str, thread_id: str):
+        return aask(self.agent, query, thread_id)

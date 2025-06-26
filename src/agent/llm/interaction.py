@@ -3,8 +3,12 @@ from agent.llm.tooling import Tool_callback
 from asyncio import Queue
 from beartype import beartype
 from colorama import Fore
-from langchain_core.messages import HumanMessage, AIMessage
-from loguru import logger
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from model.black_forest import convert_image_to_bytes
+from lib import logger
+from sdk.messages import *
+from agent.tools.pipeline.image_generation import GenerateImageOutput
+import json
 
 
 @beartype
@@ -37,10 +41,10 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
 
 
 @beartype
-async def achat(agent: Agent, query: str, thread_id: str = 0):
+async def achat(agent: Agent, query: str, tool_output_queue: Queue, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
 
-    callback = Tool_callback()
+    callback = Tool_callback(tool_output_queue)
     agent_input = {"messages": [HumanMessage(content=query)]}
     config = {"configurable": {"thread_id": thread_id}, "callbacks": [callback]}
     final_response_content = ""
@@ -88,6 +92,49 @@ def ask(agent: Agent, query: str, thread_id: str = 0):
         return f"[Error during agent execution: {e}]"
 
     return {"answer": final_content, "tools": callback.used_tools}
+
+
+@beartype
+async def aask(agent: Agent, query: str, thread_id: str = 0):
+    """Send a prompt to the LLM and receive a structured response."""
+    callback = Tool_callback()
+    agent_input = {"messages": [HumanMessage(content=query)]}
+    config = {"configurable": {"thread_id": thread_id}, "callbacks": [callback]}
+
+    try:
+        response = await agent.executor.ainvoke(agent_input, config=config)
+
+        # Extraire le dernier AIMessage
+        messages = response.get("messages", [])
+        ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
+        tool_messages = [msg for msg in messages if isinstance(msg, ToolMessage)]
+        final_content = None
+        if ai_messages:
+            final_content = ai_messages[-1].content
+        else:
+            print("No AIMessage found.")
+        final_response = None
+        if tool_messages:
+            match tool_messages[-1].name:
+                case "generate_image":
+                    data = []
+                    res = GenerateImageOutput.model_validate(
+                        json.loads(tool_messages[-1].content)
+                    )
+
+                    for image_meta_data in res.data:
+                        data.append(convert_image_to_bytes(image_meta_data.path))
+                    final_response = OutgoingGeneratedImagesMessage(
+                        text=res.text, data=data
+                    )
+        else:
+            final_response = OutgoingUnrelatedMessage(token=final_content)
+
+    except Exception as e:
+        logger.error(f"\nAgent error occurred: {e}")
+        raise ValueError(f"[Error during agent execution: {e}]")
+
+    yield final_response
 
 
 @beartype
