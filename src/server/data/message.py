@@ -7,23 +7,9 @@ from beartype import beartype
 import asyncio
 import uuid
 import json
-from enum import Enum
+
 
 # Peut etre faudra til mettre chacune des data processing dans des classes distincts
-
-
-class OutcomingMessageType(str, Enum):
-    UNRELATED_RESPONSE = "unrelated_response"
-    GENERATE_IMAGE = "generate_image"
-    GENERATE_3D_OBJECT = "generate_3d_object"
-    GENERATE_3D_SCENE = "generate_3d_scene"
-    CONVERT_SPEECH = "convert_speech"
-
-
-class IncomingMessageType(str, Enum):
-    TEXT = "text"
-    AUDIO = "audio"
-    GESTURE = "gesture"
 
 
 @beartype
