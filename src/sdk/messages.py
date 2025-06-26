@@ -108,6 +108,7 @@ class OutgoingGeneratedImagesMessage(IOutgoingMessage):
             type=OutgoingMessageType.GENERATE_IMAGE.value,
             text=self.text,
             data=self.data,
+            status=200,
         )
 
 
