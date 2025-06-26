@@ -1,5 +1,5 @@
 import os
-from agent.tools.input import speech_to_text
+from agent.tools.input.speech_to_text import speech_to_text
 from model.black_forest import convert_image_to_bytes
 from server.client import Client
 from lib import logger

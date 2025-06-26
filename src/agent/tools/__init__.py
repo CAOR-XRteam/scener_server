@@ -9,7 +9,7 @@ from agent.tools.scene.decomposer import (
     FinalDecomposerToolInput,
 )
 
-from agent.tools.input.speech_to_text import speech_to_texte
+from agent.tools.input.speech_to_text import speech_to_text
 
 # from agent.tools.input.gesture import hand_gesture
 

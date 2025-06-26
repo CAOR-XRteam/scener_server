@@ -30,4 +30,4 @@ def speech_to_text(path: str) -> str:
 
     result = pipe(path, return_timestamps=True)
     # print(result["text"])
-    return result
+    return result["text"]
