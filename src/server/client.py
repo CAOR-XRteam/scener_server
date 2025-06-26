@@ -1,5 +1,6 @@
 from agent.api import AgentAPI
-from server.protobuf import message_pb2
+from sdk.protobuf import message_pb2
+from sdk.messages import IOutgoingMessage
 from server.io.queue import Queue
 from lib import logger
 from beartype import beartype
@@ -38,19 +39,12 @@ class Client:
         self.queue_input.start()
         self.queue_output.start()
 
-    async def send_message(
-        self, type: str, text: str = "", data=b"", status: int = 200
-    ):
+    async def send_message(self, message: IOutgoingMessage):
         """Queue a message to be sent to the client."""
         # Queue message
         try:
-            msg = message_pb2.Content()
-            msg.type = type
-            msg.text = text
-            msg.data = data
-            msg.status = status
-            await self.queue.output.put(msg)
-
+            proto_message = message.to_proto()
+            await self.queue.output.put(proto_message)
         # Manage exceptions
         except asyncio.CancelledError:
             logger.error(
@@ -60,27 +54,6 @@ class Client:
         except Exception as e:
             logger.error(
                 f"Error queuing message for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, message type: {type}"
-            )
-
-    async def send_error(self, status=500, error=""):
-        """Queue a message to be sent to the client."""
-        # Queue message
-        try:
-            msg = message_pb2.Content()
-            msg.type = "error"
-            msg.status = status
-            msg.error = error
-            await self.queue.output.put(msg)
-
-        # Manage exceptions
-        except asyncio.CancelledError:
-            logger.error(
-                f"Task was cancelled while sending error to {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}, initial message: {error}"
-            )
-            raise
-        except Exception as e:
-            logger.error(
-                f"Error queuing error for {Fore.GREEN}{self.websocket.remote_address}{Fore.RESET}: {e}, initial message: {error}"
             )
 
     async def loop_input(self):

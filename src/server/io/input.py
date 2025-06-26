@@ -1,6 +1,6 @@
 from server.client import Client
 from server.data.message import Message
-from server.protobuf import message_pb2
+from sdk.protobuf import message_pb2
 from lib import logger
 from beartype import beartype
 import asyncio
@@ -19,7 +19,7 @@ class Input:
         self.task_loop = asyncio.create_task(self.loop())
 
     async def loop(self):
-        """While client keep being actif, handle input messages"""
+        """While client keep being active, handle input messages"""
         while self.client.is_active:
             # Handle client message
             try:
@@ -42,4 +42,4 @@ class Input:
     async def handle_message(self, msg):
         """handle one client input message - send it to async chat"""
         logger.info(f"Client {self.client.get_uid()} - Received message '{msg.type}'")
-        await self.message.manage_incoming_message(msg)
+        await self.message.handle_incoming_message(msg)

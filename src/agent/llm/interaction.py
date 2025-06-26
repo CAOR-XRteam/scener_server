@@ -17,7 +17,9 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
     final_response_content = ""
 
     try:
-        for token in agent.executor.stream(agent_input, config=config, stream_mode="values"):
+        for token in agent.executor.stream(
+            agent_input, config=config, stream_mode="values"
+        ):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:
@@ -35,17 +37,19 @@ def chat(agent: Agent, query: str, thread_id: str = 0):
 
 
 @beartype
-async def achat(agent: Agent, query: str, tool_output_queue: Queue, thread_id: str = 0):
+async def achat(agent: Agent, query: str, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
 
-    callback = Tool_callback(tool_output_queue)
+    callback = Tool_callback()
     agent_input = {"messages": [HumanMessage(content=query)]}
     config = {"configurable": {"thread_id": thread_id}, "callbacks": [callback]}
     final_response_content = ""
 
     try:
 
-        async for token in agent.executor.astream(agent_input, config=config, stream_mode="values"):
+        async for token in agent.executor.astream(
+            agent_input, config=config, stream_mode="values"
+        ):
             last_message = token["messages"][-1]
 
             if isinstance(last_message, AIMessage) and not last_message.tool_calls:

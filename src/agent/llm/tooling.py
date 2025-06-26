@@ -22,14 +22,13 @@ class ToolOutput(BaseModel):
 
 
 class Tool_callback(BaseCallbackHandler):
-    def __init__(self, queue: Queue[ToolOutput]):
+    def __init__(self):
         self.used_tools = []
         self.final_answer_tools = (
             "final_decomposer",
             "generate_image",
             "generate_3d_object",
         )
-        self.queue = queue
 
     def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
         """Start when a tool is being to be used"""
@@ -44,50 +43,50 @@ class Tool_callback(BaseCallbackHandler):
         if tool_name and tool_name not in self.used_tools:
             self.used_tools.append(tool_name)
 
-    def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
-        """Starts when a tool finishes, puts the result in the queue for further processing."""
+    # def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
+    #     """Starts when a tool finishes, puts the result in the queue for further processing."""
 
-        tool_name = kwargs.get("name")
+    #     tool_name = kwargs.get("name")
 
-        logger.info(f"Tool output: {output}")
+    #     logger.info(f"Tool output: {output}")
 
-        if tool_name not in self.final_answer_tools:
-            logger.info(
-                f"Tool '{tool_name}' finished. Output is internal, not forwarding to client."
-            )
-            return
+    #     if tool_name not in self.final_answer_tools:
+    #         logger.info(
+    #             f"Tool '{tool_name}' finished. Output is internal, not forwarding to client."
+    #         )
+    #         return
 
-        tool_output = None
+    #     tool_output = None
 
-        try:
-            payload = None
-            match tool_name:
-                case "final_decomposer":
-                    payload = FinalDecompositionOutput.model_validate(
-                        eval(f"dict({output.content})")
-                    )
-                case "generate_image":
-                    payload = GenerateImageOutputWrapper.model_validate(
-                        eval(f"dict({output.content})")
-                    ).general_image_output
+    #     try:
+    #         payload = None
+    #         match tool_name:
+    #             case "final_decomposer":
+    #                 payload = FinalDecompositionOutput.model_validate(
+    #                     eval(f"dict({output.content})")
+    #                 )
+    #             case "generate_image":
+    #                 payload = GenerateImageOutputWrapper.model_validate(
+    #                     eval(f"dict({output.content})")
+    #                 ).general_image_output
 
-            tool_output = ToolOutput(
-                status="success",
-                tool_name=tool_name,
-                message=f"Tool '{tool_name}' completed successfully.",
-                payload=payload,
-            )
-        except Exception as e:
-            logger.error(f"Error in on_tool_end callback: {e}")
-            tool_output = ToolOutput(
-                status="error",
-                tool_name=tool_name,
-                message=str(e),
-                payload=None,
-            )
-        finally:
-            if tool_output:
-                self.queue.put_nowait(tool_output)
+    #         tool_output = ToolOutput(
+    #             status="success",
+    #             tool_name=tool_name,
+    #             message=f"Tool '{tool_name}' completed successfully.",
+    #             payload=payload,
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Error in on_tool_end callback: {e}")
+    #         tool_output = ToolOutput(
+    #             status="error",
+    #             tool_name=tool_name,
+    #             message=str(e),
+    #             payload=None,
+    #         )
+    #     finally:
+    #         if tool_output:
+    #             self.queue.put_nowait(tool_output)
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")

@@ -1,4 +1,4 @@
-from server.protobuf import message_pb2
+from sdk.protobuf import message_pb2
 from beartype import beartype
 import asyncio
 
@@ -8,8 +8,8 @@ class Queue:
     """Manage client queues creation / deletion"""
 
     def __init__(self):
-        self.input: asyncio.Queue[message_pb2.Content] = (asyncio.Queue())
-        self.output: asyncio.Queue[message_pb2.Content] = (asyncio.Queue())
+        self.input: asyncio.Queue[message_pb2.Content] = asyncio.Queue()
+        self.output: asyncio.Queue[message_pb2.Content] = asyncio.Queue()
 
     def clear(self):
         """Clear queues without blocking."""

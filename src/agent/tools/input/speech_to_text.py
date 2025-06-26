@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 
 
 @tool
-def speech_to_texte(path: str) -> str:
+def speech_to_text(path: str) -> str:
     """Convert a vocal speech to text."""
 
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
