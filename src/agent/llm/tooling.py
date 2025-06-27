@@ -87,3 +87,6 @@ class Tool_callback(BaseCallbackHandler):
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")
         logger.error(f"Tool '{tool_name}' encountered an error: {error}")
+        self.structured_response = OutgoingErrorMessage(
+            status=500, text=f"Tool '{tool_name}' failed: {error}"
+        )

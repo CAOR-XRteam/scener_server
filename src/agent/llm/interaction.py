@@ -118,7 +118,8 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
                 print("No AIMessage found.")
     except Exception as e:
         logger.error(f"\nAgent error occurred: {e}")
-        raise ValueError(f"[Error during agent execution: {e}]")
+        OutgoingErrorMessage(status=500, text=f"Error during agent execution:: {e}")
+        raise ValueError(f"Error during agent execution: {e}")
 
 
 @beartype
