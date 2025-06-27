@@ -204,6 +204,4 @@ class Scene(BaseModel):
 
 
 class FinalDecompositionOutput(BaseModel):
-    action: Literal["scene_generation"]
-    message: Literal["Scene description has been successfully generated."]
-    final_scene_json: Scene
+    scene: Scene

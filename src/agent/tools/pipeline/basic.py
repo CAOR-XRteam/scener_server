@@ -5,7 +5,6 @@ from lib import load_config
 
 def decompose_and_improve(user_input: str) -> DecompositionOutput:
     config = load_config()
-
     initial_decomposer_model_name = config.get("initial_decomposer_model")
     improver_model_name = config.get("improver_model")
 

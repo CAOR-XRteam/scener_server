@@ -5,14 +5,16 @@ from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from lib import logger
-from pydantic import BaseModel, Field, ValidationError
-from sdk.scene import Scene, FinalDecompositionOutput
+from pydantic import BaseModel, Field
+from typing import Literal
+from sdk.scene import Scene, FinalDecompositionOutput, ComponentType
 
 
 class DecomposedObject(BaseModel):
     id: str
     name: str
     prompt: str
+    type: Literal["primitive", "dynamic"]
 
 
 class DecompositionData(BaseModel):
@@ -37,9 +39,19 @@ You are a highly specialized and precise Scene Decomposer for a 3D rendering wor
 
 YOUR CRITICAL TASK:
 - Decompose the scene description into several distinct elements, ensuring at least one 'room' object.
+- **Classify each object's creation type as either "dynamic" or "primitive" based on the rules below.**
 - Convert the scene into a valid JSON object.
 - Focus ONLY on **key physical elements**. **Do NOT extract minor details** or interpret the scene beyond identifying these key elements.
 - **The most critical part of the output is the 'prompt' field for each object.** This field must contain the **exact, verbatim phrase** describing that specific object as it appeared in the user's input scene description. **Do NOT modify, enhance, or add ANY details (like camera angles, background information, or context) to this user-provided object description.**
+
+**OBJECT CLASSIFICATION RULES (`type` field):**
+You MUST classify each object into one of two types:
+
+- **`"dynamic"`**: Use for complex, unique, or highly detailed objects that require an advanced AI model to generate their 3D mesh. These are typically the "hero" objects.
+    - **Examples:** "a majestic griffin", "an ornate victorian chair", "a sleek futuristic spaceship", "a detailed black cat".
+
+- **`"primitive"`**: Use for simple, generic, geometric shapes that can be created using basic 3D primitives (cubes, spheres, planes) in a game engine. This also applies to the general room/environment.
+    - **Examples:** "a large wooden table" (can be made from cubes), "a simple wall", "a flat floor", "a cozy living room".
 
 OUTPUT FORMAT:
 - Output **ONLY** the JSON. **NO explanations**, **NO markdown**, **NO extra formatting**.
@@ -52,6 +64,7 @@ JSON STRUCTURE (STRICT AND REQUIRED):
         "id": "unique_object_id" // must be str
         "name": "concise_descriptive_object_name",  // short, clear identifier (e.g., 'black_cat', 'wooden_table')
         "prompt": "The exact, verbatim phrase describing this specific object, extracted directly from the user's input scene description. This must be the exact noun phrase or descriptive phrase from the input that **identifies or describes the object itself**. **Do NOT include prepositions (like 'on', 'in', 'under'), verbs describing actions, or phrases indicating relationships to other objects.** Do NOT modify capitalization. For example, if the user input mentions 'a fluffy white dog', this prompt should be exactly 'a fluffy white dog'. If the input is 'cat on a table', the prompt for the cat is 'cat' and the prompt for the table is 'a table' (or just 'table' depending on the exact wording around it)."
+        "type": "dynamic" // MUST be either "dynamic" or "primitive"
       }},
       // Add one entry per main object. STRICTLY follow this format.
     ]
@@ -134,7 +147,10 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
 
 class FinalDecomposerToolInput(BaseModel):
-    improved_decomposition: dict = Field(
+    user_input: str = Field(
+        description="The raw user's scene description prompt to be decomposed."
+    )
+    improved_decomposition: DecompositionOutput = Field(
         description="Initial decomposition of user's request with enhaced prompts and original user prompt."
     )
 
@@ -219,7 +235,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 """
         self.user_prompt = """
         Original User Prompt:
-        {original_user_prompt}
+        {user_input}
 
         Decomposed Objects with IDs and Improved Prompts (Preserve these IDs for these objects):
         {improved_decomposition}
@@ -239,35 +255,25 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
     def decompose(
         self,
-        improved_decomposition: dict,
-    ) -> dict:
-        try:
-            validated_data = DecompositionOutput(**improved_decomposition)
-        except ValidationError as e:
-            logger.error(
-                f"Pydantic validation failed for final_decomposer payload: {e}"
-            )
-            raise ValueError(
-                f"Invalid payload structure for final_decomposer tool: {e}"
-            )
+        user_input: str,
+        improved_decomposition: DecompositionOutput,
+    ) -> FinalDecompositionOutput:
         try:
             logger.info(
-                f"Final decomposition with input: original_prompt='{validated_data.original_user_prompt}', improved_decomposition: {validated_data.scene_data.scene}."
+                f"Final decomposition with input: original_prompt='{user_input}', improved_decomposition: {improved_decomposition.scene}."
             )
 
             result: Scene = self.chain.invoke(
                 {
-                    "original_user_prompt": validated_data.original_user_prompt,
-                    "improved_decomposition": validated_data.scene_data.model_dump(),
+                    "user_input": user_input,
+                    "improved_decomposition": improved_decomposition,
                 }
             )
             logger.info(f"Decomposition result: {result}")
 
             return FinalDecompositionOutput(
-                action="scene_generation",
-                message="Scene description has been successfully generated.",
-                final_scene_json=result,
-            ).model_dump()
+                scene=result,
+            )
 
         except Exception as e:
             logger.error(f"Decomposition failed: {str(e)}")
@@ -303,7 +309,7 @@ if __name__ == "__main__":
                 ]
             }
         },
-        "original_user_prompt": "A cup of coffee on a wooden table in a sunlit kitchen",
+        "user_input": "A cup of coffee on a wooden table in a sunlit kitchen",
     }
     output = decomposer.decompose(superprompt)
     print(output)
