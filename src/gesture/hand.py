@@ -7,6 +7,7 @@ import numpy as np
 import threading
 import cv2
 
+
 class Hand:
     # Main function
     def __init__(self, label):

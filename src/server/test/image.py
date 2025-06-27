@@ -19,4 +19,5 @@ async def main():
         await ws.send(msg.SerializeToString())
         print("Protobuf image message sent.")
 
+
 asyncio.run(main())

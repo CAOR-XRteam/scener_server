@@ -18,5 +18,5 @@ class ServerAPI:
             print(f"Error starting server: {e}")
             sys.exit(1)
         finally:
-            #self.server.connection.close()
+            # self.server.connection.close()
             print("Server stopped.")

@@ -5,6 +5,7 @@ import threading
 import websockets
 from server.api import ServerAPI
 
+
 async def test_client():
     uri = "ws://localhost:8765"
     async with websockets.connect(uri) as websocket:
@@ -12,8 +13,10 @@ async def test_client():
         response = await websocket.recv()
         print("Server:", response)
 
+
 def main():
     asyncio.run(test_client())
+
 
 if __name__ == "__main__":
     main()

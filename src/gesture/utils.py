@@ -21,10 +21,12 @@ def compute_rotation(landmarks):
     rotation_matrix = np.stack([x_axis, y_axis, z_axis], axis=1)
     return rotation_matrix
 
+
 def compute_position(landmarks):
     coords = np.array([[lm.x, lm.y, lm.z] for lm in landmarks])
     mean_position = coords.mean(axis=0)
     return mean_position
+
 
 def compute_displacement(list_pose, smoothing=True, window=5, threshold=0.02):
     list_pose = np.array(list_pose)
@@ -36,7 +38,7 @@ def compute_displacement(list_pose, smoothing=True, window=5, threshold=0.02):
         kernel = np.ones(window) / window
         smoothed = np.zeros_like(list_pose)
         for i in range(3):  # x, y, z
-            smoothed[:, i] = np.convolve(list_pose[:, i], kernel, mode='same')
+            smoothed[:, i] = np.convolve(list_pose[:, i], kernel, mode="same")
         list_pose = smoothed
 
     displacement = list_pose[-1] - list_pose[0]
@@ -45,6 +47,7 @@ def compute_displacement(list_pose, smoothing=True, window=5, threshold=0.02):
     displacement[np.abs(displacement) <= threshold] = 0
 
     return displacement
+
 
 def compute_rotation_delta(list_rotation, threshold=1.0):
     list_rotation = np.array(list_rotation)

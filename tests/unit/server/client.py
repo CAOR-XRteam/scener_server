@@ -14,9 +14,9 @@ from websockets.asyncio.server import ServerConnection
 from agent.api import AgentAPI
 
 
-#=================
+# =================
 # MOCK stuff
-#=================
+# =================
 # Pytest fixture that mocks an asynchronous WebSocket connection
 @pytest.fixture
 def mock_ws():
@@ -24,12 +24,16 @@ def mock_ws():
     ws.remote_address = ("127.0.0.1", 12345)  # Sets a fake remote address
     return ws
 
+
 # Pytest fixture that mocks an agent with a mock 'achat' method
 @pytest.fixture
 def mock_agent():
-    agent_instance = Mock(spec=AgentAPI)  # Creates a general-purpose mock object for the agent
+    agent_instance = Mock(
+        spec=AgentAPI
+    )  # Creates a general-purpose mock object for the agent
     agent_instance.achat = MagicMock()  # Mocks the 'achat' method on the agent
     return agent_instance
+
 
 # Pytest fixture that creates a Client using the mocked WebSocket and agent
 @pytest.fixture
@@ -37,9 +41,9 @@ def mock_client(mock_ws, mock_agent):
     return Client(mock_ws, mock_agent)
 
 
-#=================
+# =================
 # TEST stuff
-#=================
+# =================
 class TestClient:
     @pytest.fixture
     def mock_logger(self):

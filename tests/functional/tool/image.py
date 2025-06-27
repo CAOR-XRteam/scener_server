@@ -8,7 +8,9 @@ def llm_agent():
     def ask(prompt: str) -> dict:
         api = AgentAPI()
         return api.ask(prompt)
+
     return ask
+
 
 def test_agent_analyse_image(llm_agent):
     prompt = "Can you analyse the image of the asset 'Lego' ? "

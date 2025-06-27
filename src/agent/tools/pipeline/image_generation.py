@@ -1,12 +1,12 @@
+from beartype import beartype
 from colorama import Fore
 from langchain_core.tools import tool
 from lib import logger
 from model import black_forest
-import os
 from pathlib import Path
 from pydantic import BaseModel, Field
+
 from agent.tools.pipeline.basic import decompose_and_improve
-from beartype import beartype
 
 
 class ImageMetaData(BaseModel):
@@ -22,6 +22,11 @@ class GenerateImageOutput(BaseModel):
     data: list[ImageMetaData]
 
 
+# Langchain tool implementation doesn't work well with pydantic models when they have several fields
+# (it converts output to string with invalid format that isn't convertible to pydantic model or even json)
+# so we creating a wrapper around output structure to workaround
+
+
 class GenerateImageOutputWrapper(BaseModel):
     generate_image_output: GenerateImageOutput
 
@@ -32,81 +37,85 @@ class GenerateImageToolInput(BaseModel):
     )
 
 
-@tool(args_schema=GenerateImageToolInput)
 @beartype
-def generate_image(
+def _generate_image(
     user_input: str,
 ) -> GenerateImageOutputWrapper:
-    """Generates an image based on the decomposed user's prompt using the Black Forest model."""
     logger.info(
         f"\nReceived user input for image generation: {Fore.GREEN}{user_input}{Fore.RESET}"
     )
 
     try:
-        improved_and_decomposed_input = decompose_and_improve(user_input)
+        decomposed_input = decompose_and_improve(user_input)
     except Exception as e:
         logger.error(f"Failed to decompose and improve input: {e}")
         raise ValueError(f"Failed to decompose and improve input: {e}")
 
-    # Retrieve list of to-generate objects
-    objects_to_generate = improved_and_decomposed_input.scene.objects
-    logger.info(f"Decomposed objects to generate: {objects_to_generate}")
+    objects_to_generate = decomposed_input.scene.objects
 
     if not objects_to_generate:
-        logger.info(
-            "The decomposition resulted in no specific objects to generate images for."
+        logger.warning("Decomposition resulted in no objects to generate.")
+        return GenerateImageOutput(
+            text="No images generated from this request,", data=[]
         )
-        return "[No objects to generate images for.]"
 
-    generated_images_data = []
+    data = []
     successful_images = 0
+    output_dir = Path(__file__).resolve().parents[3] / "media" / "temp"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Objects generation
-    for i, obj in enumerate(objects_to_generate):
-        obj_prompt = obj.prompt
-        if obj_prompt:
-            logger.info(f"Generating image for object {i+1}: {obj_prompt}")
-            obj_id = obj.id
-            dir_path = str(Path(__file__).resolve().parents[3] / "media" / "temp")
-            os.makedirs(dir_path, exist_ok=True)
-            filename = dir_path + "/" + obj_id + ".png"
-            try:
-                black_forest.generate(obj_prompt, filename)
+    for obj in objects_to_generate:
+        if not obj.prompt:
+            logger.warning(f"Skipping object '{obj.id}' due to missing prompt.")
+            continue
 
-                generated_images_data.append(
-                    ImageMetaData(
-                        id=obj_id,
-                        prompt=obj_prompt,
-                        filename=f"{obj_id}.png",
-                        path=filename,
-                        error=None,
-                    )
+        logger.info(f"Generating image for '{obj.id}': {obj.prompt[:80]}...")
+        output_path = output_dir / f"{obj.id}.png"
+
+        try:
+            black_forest.generate(obj.prompt, str(output_path))
+
+            data.append(
+                ImageMetaData(
+                    id=obj.id,
+                    prompt=obj.prompt,
+                    filename=output_path.name,
+                    path=str(output_path),
+                    error=None,
                 )
-                successful_images += 1
-            except Exception as e:
-                logger.error(f"Failed to generate image:{e}")
-                generated_images_data.append(
-                    ImageMetaData(
-                        id=obj_id,
-                        prompt=obj_prompt,
-                        filename=f"{obj_id}.png",
-                        path=filename,
-                        error=f"Failed to generate image: {e}",
-                    )
+            )
+            successful_images += 1
+        except Exception as e:
+            logger.error(f"Failed to generate image for '{obj.id}': {e}", exc_info=True)
+            data.append(
+                ImageMetaData(
+                    id=obj.id,
+                    prompt=obj.prompt,
+                    filename=output_path.name,
+                    path=str(output_path),
+                    error=str(e),
                 )
-                pass
-        else:
-            logger.warning(f"Skipping object due to missing/empty prompt: {obj}")
-            logger.info(f"\n[Skipping object {i+1} - missing prompt]")
+            )
 
-    logger.info("\nImage generation process complete.")
+    logger.info("Image generation process complete.")
 
     return GenerateImageOutputWrapper(
         generate_image_output=GenerateImageOutput(
-            text=f"Generated {len(generated_images_data)} of {len(objects_to_generate)} images.",
-            data=generated_images_data,
+            text=f"Generated {successful_images} of {len(objects_to_generate)} images.",
+            data=data,
         )
     )
+
+
+@tool(args_schema=GenerateImageToolInput)
+@beartype
+def generate_image(user_input: str) -> GenerateImageOutputWrapper:
+    """Generates an image based on the decomposed user's prompt using the Black Forest model."""
+    try:
+        return _generate_image(user_input)
+    except Exception as e:
+        logger.error(f"Error in generate_image tool wrapper: {e}")
+        raise
 
 
 if __name__ == "__main__":

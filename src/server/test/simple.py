@@ -16,4 +16,5 @@ async def main():
 
         print("Protobuf message sent.")
 
+
 asyncio.run(main())
