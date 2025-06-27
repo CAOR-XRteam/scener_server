@@ -15,7 +15,7 @@ from PIL import Image
 
 
 @beartype
-def glb_to_bytes(object_path: str):
+def read_glb(object_path: str):
     with open(object_path, "rb") as f:
         return f.read()
 

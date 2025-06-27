@@ -10,7 +10,7 @@ from agent.tools import *
 from sdk.scene import *
 from sdk.messages import *
 from model.black_forest import convert_image_to_bytes
-from model.trellis import glb_to_bytes
+from model.trellis import read_glb
 
 """ Custom tool tracker for functionnal tests """
 
@@ -82,7 +82,7 @@ class Tool_callback(BaseCallbackHandler):
                             AppMediaAsset(
                                 id=td_object_meta_data.id,
                                 filename=td_object_meta_data.path,
-                                data=glb_to_bytes(td_object_meta_data.path),
+                                data=read_glb(td_object_meta_data.path),
                             )
                             for td_object_meta_data in payload.generate_3d_object_output.data
                         ],
