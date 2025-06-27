@@ -15,6 +15,12 @@ from PIL import Image
 
 
 @beartype
+def glb_to_bytes(object_path: str):
+    with open(object_path, "rb") as f:
+        return f.read()
+
+
+@beartype
 def generate(image_path: str, object_id: str):
     # # Load a pipeline from a model folder or a Hugging Face model hub.
     # pipeline = TrellisImageTo3DPipeline.from_pretrained("model/TRELLIS-image-large")

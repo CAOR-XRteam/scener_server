@@ -21,3 +21,8 @@ from agent.tools.pipeline.image_generation import (
     GenerateImageOutputWrapper,
     ImageMetaData,
 )
+from agent.tools.pipeline.td_object_generation import (
+    Generate3DObjectOutputWrapper,
+    Generate3DObjectOutput,
+    TDObjectMetaData,
+)

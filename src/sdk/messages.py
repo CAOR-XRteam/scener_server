@@ -62,6 +62,13 @@ class IncomingUnknownMessage(IIncomingMessage):
 
 
 @dataclass(frozen=True)
+class AppMediaAsset:
+    id: str
+    filename: str
+    data: bytes
+
+
+@dataclass(frozen=True)
 class OutgoingUnrelatedMessage(IOutgoingMessage):
     token: str
 
@@ -101,13 +108,23 @@ class OutgoingErrorMessage(IOutgoingMessage):
 @dataclass(frozen=True)
 class OutgoingGeneratedImagesMessage(IOutgoingMessage):
     text: str
-    data: list[bytes]
+    assets: list[AppMediaAsset]
 
     def to_proto(self) -> message_pb2.Content:
+        proto_assets = []
+
+        for app_asset in self.assets:
+            proto_assets.append(
+                message_pb2.MediaAsset(
+                    id=app_asset.id,
+                    filename=app_asset.filename,
+                    data=app_asset.data,
+                )
+            )
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_IMAGE.value,
             text=self.text,
-            data=self.data,
+            assets=proto_assets,
             status=200,
         )
 
@@ -115,13 +132,13 @@ class OutgoingGeneratedImagesMessage(IOutgoingMessage):
 @dataclass(frozen=True)
 class OutgoingGenerated3DObjectsMessage(IOutgoingMessage):
     text: str
-    data: list[bytes]
+    assets: list[AppMediaAsset]
 
     def to_proto(self) -> message_pb2.Content:
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_3D_OBJECT.value,
             text=self.text,
-            data=self.data,
+            assets=self.assets,
         )
 
 
@@ -134,7 +151,7 @@ class OutgoingGenerated3DSceneMessage(IOutgoingMessage):
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_3D_SCENE.value,
             text=self.text,
-            data=self.json_scene,
+            metadata=self.json_scene,
         )
 
 
@@ -148,7 +165,7 @@ def create_incoming_message_from_proto(proto: message_pb2.Content) -> IIncomingM
         case IncomingMessageType.TEXT:
             return IncomingTextMessage(text=proto.text)
         case IncomingMessageType.AUDIO:
-            return IncomingAudioMessage(data=proto.data[0])
+            return IncomingAudioMessage(data=proto.assets[0].data)
         case IncomingMessageType.GESTURE:
             return IncomingGestureMessage(data=proto.text)
         case IncomingMessageType.ERROR:

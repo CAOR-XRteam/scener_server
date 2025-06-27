@@ -1,12 +1,12 @@
 from beartype import beartype
 from colorama import Fore
 from langchain_core.tools import tool
-from lib import logger
-from model import trellis
 from pathlib import Path
 from pydantic import BaseModel, Field
 
 from agent.tools.pipeline.image_generation import _generate_image
+from lib import logger
+from model import trellis
 
 
 class TDObjectMetaData(BaseModel):
@@ -19,6 +19,11 @@ class TDObjectMetaData(BaseModel):
 class Generate3DObjectOutput(BaseModel):
     text: str
     data: list[TDObjectMetaData]
+
+
+# Langchain tool implementation doesn't work well with pydantic models when they have several fields
+# (it converts output to string with invalid format that isn't convertible to pydantic model or even json)
+# so we creating a wrapper around output structure to workaround
 
 
 class Generate3DObjectOutputWrapper(BaseModel):
