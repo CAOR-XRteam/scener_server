@@ -121,6 +121,7 @@ class OutgoingGeneratedImagesMessage(IOutgoingMessage):
                     data=app_asset.data,
                 )
             )
+
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_IMAGE.value,
             text=self.text,
