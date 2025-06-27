@@ -15,4 +15,9 @@ from agent.tools.scene.decomposer import (
 from agent.tools.asset.library import list_assets
 
 from agent.tools.processing.image_to_depth import image_to_depth
-from agent.tools.pipeline.image_generation import generate_image
+from agent.tools.pipeline.image_generation import (
+    generate_image,
+    GenerateImageOutput,
+    GenerateImageOutputWrapper,
+    ImageMetaData,
+)

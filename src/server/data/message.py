@@ -62,6 +62,7 @@ class Message:
 
     async def handle_gesture_message(self, message):
         """Manage gesture message"""
+        # TODO: Not implemented yet
         pass
 
     async def handle_speech_convertion_message(self, data):
@@ -79,9 +80,3 @@ class Message:
             )
         )
         await self.handle_chat_message(text)
-
-    async def handle_image_generation_message(self, message):
-        """Manage image message"""
-        if message.data:
-            with open("src/server/test/image_received.png", "wb") as f:
-                f.write(message.data)

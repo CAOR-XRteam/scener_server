@@ -107,26 +107,15 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
         # Extraire le dernier AIMessage
         messages = response.get("messages", [])
         ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
-        tool_messages = [msg for msg in messages if isinstance(msg, ToolMessage)]
+
         final_content = None
         if ai_messages:
             final_content = ai_messages[-1].content
         else:
             print("No AIMessage found.")
-        final_response = None
-        if tool_messages:
-            match tool_messages[-1].name:
-                case "generate_image":
-                    data = []
-                    res = GenerateImageOutput.model_validate(
-                        json.loads(tool_messages[-1].content)
-                    )
 
-                    for image_meta_data in res.data:
-                        data.append(convert_image_to_bytes(image_meta_data.path))
-                    final_response = OutgoingGeneratedImagesMessage(
-                        text=res.text, data=data
-                    )
+        if callback.structured_response:
+            final_response = callback.structured_response
         else:
             final_response = OutgoingUnrelatedMessage(token=final_content)
 

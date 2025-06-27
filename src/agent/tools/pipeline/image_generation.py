@@ -1,15 +1,11 @@
 from colorama import Fore
-from langchain_core.tools import tool, BaseTool
+from langchain_core.tools import tool
 from lib import logger
 from model import black_forest
-from agent.tools.scene.decomposer import DecompositionOutput
 import os
 from pathlib import Path
-from pydantic import BaseModel, Field, ValidationError
-from typing import Literal
-from typing import Type
+from pydantic import BaseModel, Field
 from agent.tools.pipeline.basic import decompose_and_improve
-from sdk.messages import OutgoingGeneratedImagesMessage
 from beartype import beartype
 
 
@@ -26,6 +22,10 @@ class GenerateImageOutput(BaseModel):
     data: list[ImageMetaData]
 
 
+class GenerateImageOutputWrapper(BaseModel):
+    generate_image_output: GenerateImageOutput
+
+
 class GenerateImageToolInput(BaseModel):
     user_input: str = Field(
         description="The raw user's description prompt to generate images from."
@@ -36,7 +36,7 @@ class GenerateImageToolInput(BaseModel):
 @beartype
 def generate_image(
     user_input: str,
-) -> dict:
+) -> GenerateImageOutputWrapper:
     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
     logger.info(
         f"\nReceived user input for image generation: {Fore.GREEN}{user_input}{Fore.RESET}"
@@ -101,40 +101,15 @@ def generate_image(
 
     logger.info("\nImage generation process complete.")
 
-    return GenerateImageOutput(
-        text=f"Generated {len(generated_images_data)} of {len(objects_to_generate)} images.",
-        data=generated_images_data,
-    ).model_dump()
+    return GenerateImageOutputWrapper(
+        generate_image_output=GenerateImageOutput(
+            text=f"Generated {len(generated_images_data)} of {len(objects_to_generate)} images.",
+            data=generated_images_data,
+        )
+    )
 
 
-# TODO: modify
 if __name__ == "__main__":
-    scene_dict = {
-        "scene": {
-            "objects": [
-                {
-                    "id": "cream_couch",
-                    "type": "furniture",
-                    "material": "plush_fabric",
-                    "prompt": "A plush, cream-colored couch with a low back and rolled arms, front camera view, placed on a white and empty background, completely detached from its surroundings.",
-                },
-                {
-                    "id": "gray_cat",
-                    "type": "prop",
-                    "material": "glossy_fur",
-                    "prompt": "A sleek, gray cat with bright green eyes, front camera view, placed on a white and empty background, completely detached from its surroundings.",
-                },
-                {
-                    "id": "living_room",
-                    "type": "room",
-                    "material": "polished_wood",
-                    "prompt": "A squared room, room view from the outside with a distant 3/4 top-down perspective, placed on a white and empty background, completely detached from its surroundings.",
-                },
-            ]
-        }
-    }
-
-    res = generate_image.invoke(
-        {"improved_decomposition": scene_dict}
-    )  # ✅ Pass a dict
+    user_input = "Big black cat on a table"
+    res = generate_image(user_input)
     print(res)

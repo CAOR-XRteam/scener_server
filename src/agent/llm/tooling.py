@@ -9,6 +9,7 @@ from typing import Literal
 from agent.tools import *
 from sdk.scene import *
 from sdk.messages import *
+from model.black_forest import convert_image_to_bytes
 
 """ Custom tool tracker for functionnal tests """
 
@@ -30,6 +31,13 @@ class Tool_callback(BaseCallbackHandler):
             "generate_3d_object",
             "generate_3d_scene",
         )
+        self.structured_response: (
+            OutgoingConvertedSpeechMessage
+            | OutgoingGenerated3DObjectsMessage
+            | OutgoingGeneratedImagesMessage
+            | OutgoingGenerated3DSceneMessage
+            | OutgoingErrorMessage
+        ) = None
 
     def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
         """Start when a tool is being to be used"""
@@ -44,46 +52,34 @@ class Tool_callback(BaseCallbackHandler):
         if tool_name and tool_name not in self.used_tools:
             self.used_tools.append(tool_name)
 
-    # def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
-    #     """Starts when a tool finishes, puts the result in the queue for further processing."""
+    def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
+        """Starts when a tool finishes, puts the result in the queue for further processing."""
 
-    #     tool_name = kwargs.get("name")
+        tool_name = kwargs.get("name")
+        tool_output = eval(f"dict({output.content})")
 
-    #     logger.info(f"Tool output: {output}")
-
-    #     if tool_name not in self.final_answer_tools:
-    #         logger.info(
-    #             f"Tool '{tool_name}' finished. Output is internal, not forwarding to client."
-    #         )
-    #         return
-
-    #     tool_output = None
-
-    #     try:
-    #         payload = None
-    #         match tool_name:
-    #             case "generate_image":
-    #                 payload = OutgoingGeneratedImagesMessage.model_validate(
-    #                     eval(f"dict({output.content})")
-    #                 )
-
-    #         tool_output = ToolOutput(
-    #             status="success",
-    #             tool_name=tool_name,
-    #             message=f"Tool '{tool_name}' completed successfully.",
-    #             payload=payload,
-    #         )
-    #     except Exception as e:
-    #         logger.error(f"Error in on_tool_end callback: {e}")
-    #         tool_output = ToolOutput(
-    #             status="error",
-    #             tool_name=tool_name,
-    #             message=str(e),
-    #             payload=None,
-    #         )
-    #     finally:
-    #         if tool_output:
-    #             self.tool_output.append(tool_output)
+        try:
+            match tool_name:
+                case "generate_image":
+                    payload = GenerateImageOutputWrapper(**tool_output)
+                    self.structured_response = OutgoingGeneratedImagesMessage(
+                        text=payload.generate_image_output.text,
+                        data=[
+                            convert_image_to_bytes(image_meta_data.path)
+                            for image_meta_data in payload.generate_image_output.data
+                        ],
+                    )
+                case "generate_3d_object":
+                    self.structured_response = OutgoingGenerated3DObjectsMessage(
+                        **tool_output
+                    )
+                case "generate_3d_scene":
+                    self.structured_response = OutgoingGenerated3DSceneMessage(
+                        **tool_output
+                    )
+        except Exception as e:
+            logger.error(f"Error in on_tool_end callback: {e}")
+            self.structured_response = OutgoingErrorMessage(status=500, text=str(e))
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")
