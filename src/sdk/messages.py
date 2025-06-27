@@ -148,7 +148,7 @@ def create_incoming_message_from_proto(proto: message_pb2.Content) -> IIncomingM
         case IncomingMessageType.TEXT:
             return IncomingTextMessage(text=proto.text)
         case IncomingMessageType.AUDIO:
-            return IncomingAudioMessage(data=proto.data)
+            return IncomingAudioMessage(data=proto.data[0])
         case IncomingMessageType.GESTURE:
             return IncomingGestureMessage(data=proto.text)
         case IncomingMessageType.ERROR:
