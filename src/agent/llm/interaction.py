@@ -105,25 +105,20 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
         response = await agent.executor.ainvoke(agent_input, config=config)
 
         # Extraire le dernier AIMessage
-        messages = response.get("messages", [])
-        ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
-
-        final_content = None
-        if ai_messages:
-            final_content = ai_messages[-1].content
-        else:
-            print("No AIMessage found.")
 
         if callback.structured_response:
-            final_response = callback.structured_response
+            yield callback.structured_response
         else:
-            final_response = OutgoingUnrelatedMessage(token=final_content)
+            messages = response.get("messages", [])
+            ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
 
+            if ai_messages:
+                yield OutgoingUnrelatedMessage(token=ai_messages[-1].content)
+            else:
+                print("No AIMessage found.")
     except Exception as e:
         logger.error(f"\nAgent error occurred: {e}")
         raise ValueError(f"[Error during agent execution: {e}]")
-
-    yield final_response
 
 
 @beartype

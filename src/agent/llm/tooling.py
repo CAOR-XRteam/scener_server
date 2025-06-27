@@ -15,15 +15,6 @@ from model.trellis import read_glb
 """ Custom tool tracker for functionnal tests """
 
 
-# class ToolOutput(BaseModel):
-#     status: Literal["success", "error"]
-#     tool_name: Literal[
-#         "generate_image", "initial_decomposer", "final_decomposer", "improver"
-#     ]
-#     message: str
-#     payload: FinalDecompositionOutput | GenerateImageOutput | None
-
-
 class Tool_callback(BaseCallbackHandler):
     def __init__(self):
         self.used_tools = []
