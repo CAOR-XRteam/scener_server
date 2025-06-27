@@ -54,7 +54,6 @@ YOUR MISSION:
         config = load_config()
 
         self.tools = [
-            # date,  # OK
             generate_image,  # OK
             # generate_3d_object
             # image_analysis,  # OK
