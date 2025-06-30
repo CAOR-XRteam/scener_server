@@ -1,3 +1,5 @@
+import os
+
 from beartype import beartype
 from colorama import Fore
 from langchain_core.tools import tool
@@ -57,7 +59,7 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
         return TDObjectMetaData(
             id=image_meta_data.id,
             filename=f"{image_meta_data.id}.glb",
-            path=f"{image_meta_data.id}.glb",
+            path=f"{os.path.dirname(image_meta_data.path) + image_meta_data.id}.glb",
             error=str(e),
         )
 

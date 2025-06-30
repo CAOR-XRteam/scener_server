@@ -55,7 +55,8 @@ YOUR MISSION:
 
         self.tools = [
             generate_image,  # OK
-            # generate_3d_object
+            generate_3d_object,
+            generate_3d_scene,
             # image_analysis,  # OK
             # list_assets,
         ]

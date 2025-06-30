@@ -3,7 +3,7 @@ import os
 import torch
 
 from beartype import beartype
-from diffusers import StableDiffusionPipeline
+from diffusers import FluxPipeline
 from dotenv import load_dotenv
 from huggingface_hub import login
 from PIL import Image
@@ -29,13 +29,16 @@ def generate(prompt: str, filename: str):
     torch.cuda.empty_cache()
     torch.cuda.ipc_collect()
 
-    login(token=os.getenv("HF_API_KEY"))
+    if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+        dtype = torch.bfloat16
+    else:
+        dtype = torch.float16
 
-    pipe = StableDiffusionPipeline.from_pretrained(
-        "runwayml/stable-diffusion-v1-5",
-        torch_dtype=torch.float16,
+    pipe = FluxPipeline.from_pretrained(
+        "black-forest-labs/FLUX.1-schnell",
+        torch_dtype=dtype,
         use_safetensors=True,
-    ).to("cuda")
+    )
 
     pipe.enable_xformers_memory_efficient_attention()
     pipe.enable_model_cpu_offload()

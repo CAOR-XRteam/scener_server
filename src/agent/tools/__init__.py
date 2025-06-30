@@ -25,4 +25,6 @@ from agent.tools.pipeline.td_object_generation import (
     Generate3DObjectOutputWrapper,
     Generate3DObjectOutput,
     TDObjectMetaData,
+    generate_3d_object,
 )
+from agent.tools.pipeline.td_scene_generation import generate_3d_scene
