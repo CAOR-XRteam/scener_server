@@ -52,6 +52,7 @@ class Tool_callback(BaseCallbackHandler):
         tool_name = kwargs.get("name")
         tool_output = eval(f"dict({output.content})")
 
+        # TODO: case of error in generation
         try:
             match tool_name:
                 case "generate_image":

@@ -52,7 +52,7 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
         return TDObjectMetaData(
             id=image_meta_data.id,
             filename=f"{image_meta_data.id}.glb",
-            path=image_meta_data.path.parent / f"{image_meta_data.id}.glb",
+            path=str(image_meta_data.path.parent / f"{image_meta_data.id}.glb"),
             error=None,
         )
 
@@ -62,7 +62,7 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
         return TDObjectMetaData(
             id=image_meta_data.id,
             filename=f"{image_meta_data.id}.glb",
-            path=image_meta_data.path.parent / f"{image_meta_data.id}.glb",
+            path=str(image_meta_data.path.parent / f"{image_meta_data.id}.glb"),
             error=str(e),
         )
 
