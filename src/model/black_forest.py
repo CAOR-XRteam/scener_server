@@ -1,5 +1,7 @@
 import io
 import os
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import torch
 
 from beartype import beartype
@@ -29,23 +31,25 @@ def generate(prompt: str, filename: str):
     torch.cuda.empty_cache()
     torch.cuda.ipc_collect()
 
+    login(token=os.getenv("HF_API_KEY"))
+
     if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
         dtype = torch.bfloat16
     else:
         dtype = torch.float16
 
     pipe = FluxPipeline.from_pretrained(
-        "black-forest-labs/FLUX.1-schnell",
+        "black-forest-labs/FLUX.1-dev",
         torch_dtype=dtype,
         use_safetensors=True,
     )
 
-    pipe.enable_xformers_memory_efficient_attention()
+    # pipe.enable_xformers_memory_efficient_attention()
     pipe.enable_model_cpu_offload()
 
     with torch.autocast("cuda"):
         image = pipe(
-            prompt, height=384, width=384, num_inference_steps=25, guidance_scale=3.5
+            prompt, height=256, width=256, num_inference_steps=10, guidance_scale=3.5
         ).images[0]
 
     image.show()

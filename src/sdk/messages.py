@@ -136,10 +136,22 @@ class OutgoingGenerated3DObjectsMessage(IOutgoingMessage):
     assets: list[AppMediaAsset]
 
     def to_proto(self) -> message_pb2.Content:
+        proto_assets = []
+
+        for app_asset in self.assets:
+            proto_assets.append(
+                message_pb2.MediaAsset(
+                    id=app_asset.id,
+                    filename=app_asset.filename,
+                    data=app_asset.data,
+                )
+            )
+
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_3D_OBJECT.value,
             text=self.text,
-            assets=self.assets,
+            assets=proto_assets,
+            status=200,
         )
 
 

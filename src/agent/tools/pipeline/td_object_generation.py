@@ -8,19 +8,21 @@ from pydantic import BaseModel, Field
 
 from agent.tools.pipeline.image_generation import generate_image_from_prompt
 from lib import logger
-from model import trellis
+from model import hunyuan
+
+# TODO: modify the tool so that it doesn't reload model on every new request
 
 
 class TDObjectMetaData(BaseModel):
     id: str
     filename: str
     path: str
-    error: str
+    error: str | None
 
 
 class Generate3DObjectOutput(BaseModel):
     text: str
-    data: list[TDObjectMetaData]
+    data: TDObjectMetaData
 
 
 # Langchain tool implementation doesn't work well with pydantic models when they have several fields
@@ -45,21 +47,22 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
 
         logger.info(f"Generating 3D object from image: {image_meta_data.path}")
 
-        trellis.generate(image_meta_data.path, image_meta_data.id)
+        hunyuan.generate(image_meta_data.path, image_meta_data.id)
 
         return TDObjectMetaData(
             id=image_meta_data.id,
             filename=f"{image_meta_data.id}.glb",
-            path=f"{image_meta_data.id}.glb",
+            path=image_meta_data.path.parent / f"{image_meta_data.id}.glb",
             error=None,
         )
+
     except Exception as e:
         logger.error(f"Failed to generate 3D object for '{image_meta_data.id}': {e}")
 
         return TDObjectMetaData(
             id=image_meta_data.id,
             filename=f"{image_meta_data.id}.glb",
-            path=f"{os.path.dirname(image_meta_data.path) + image_meta_data.id}.glb",
+            path=image_meta_data.path.parent / f"{image_meta_data.id}.glb",
             error=str(e),
         )
 
@@ -67,9 +70,10 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
 @tool(args_schema=Generate3DObjectToolInput)
 @beartype
 def generate_3d_object(user_input: str) -> Generate3DObjectOutputWrapper:
+    """Generate 3D object from user's prompt"""
     data = generate_3d_object_from_prompt(user_input)
     return Generate3DObjectOutputWrapper(
-        Generate3DObjectOutput(
+        generate_3d_object_output=Generate3DObjectOutput(
             text=f"Generated 3D object for '{user_input}'", data=data
         )
     )

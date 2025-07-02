@@ -8,14 +8,14 @@ from uuid import uuid4
 from agent.tools.pipeline.basic import decompose_and_improve
 from agent.tools.scene.improver import Improver
 from lib import logger, load_config
-from model import black_forest
+from model import stable_diffusers
 
 
 class ImageMetaData(BaseModel):
     id: str
     prompt: str
     filename: str
-    path: str
+    path: Path
     error: str | None
 
 
@@ -50,13 +50,13 @@ def generate_image_from_prompt(prompt: str) -> ImageMetaData:
     output_path = output_dir / f"{id}.png"
 
     try:
-        black_forest.generate(prompt, str(output_path))
+        stable_diffusers.generate(prompt, str(output_path))
 
         return ImageMetaData(
-            id=id,
+            id=str(id),
             prompt=prompt,
             filename=output_path.name,
-            path=str(output_path),
+            path=output_path,
             error=None,
         )
     except Exception as e:
@@ -65,7 +65,7 @@ def generate_image_from_prompt(prompt: str) -> ImageMetaData:
             id=id,
             prompt=prompt,
             filename=output_path.name,
-            path=str(output_path),
+            path=output_path,
             error=str(e),
         )
 
@@ -73,6 +73,7 @@ def generate_image_from_prompt(prompt: str) -> ImageMetaData:
 @tool(args_schema=GenerateImageToolInput)
 @beartype
 def generate_image(user_input: str):
+    """Generates an image from user's prompt"""
     config = load_config()
     improver_model_name = config.get("improver_model")
 

@@ -18,6 +18,7 @@ class Generate3DSceneToolInput(BaseModel):
 @beartype
 @tool(args_schema=Generate3DSceneToolInput)
 def generate_3d_scene(user_input: str):
+    """Generates 3D scene from user's prompt"""
     config = load_config()
     try:
         initial_decomposer_model_name = config.get("initial_decomposer_model")
