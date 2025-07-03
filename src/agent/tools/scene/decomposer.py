@@ -87,32 +87,6 @@ RULES FOR OBJECT SELECTION:
 4. DEFAULT FIELD VALUES:
    - For 'name', use inferred or standard value if not explicitly detailed for the object in the user's prompt. The 'prompt' field, however, must remain verbatim.
 
-EXAMPLE SCENE AND REQUIRED OUTPUT:
-Input: "A sleek black domestic cat lounges sitting on a beige couch"
-
-Required Output (Demonstrating full structure, object inclusion, and verbatim prompts):
-{{
-  "scene": {{
-    "objects": [
-      {{
-        "id": "1",
-        "name": "black_cat",
-        "prompt": "a sleek black domestic cat"
-      }},
-      {{
-        "id": "2",
-        "name": "beige_couch",
-        "prompt": "a beige couch"
-      }},
-       {{
-        "id": "3",
-        "name": "living_room",
-        "prompt": "a cozy living room"
-      }}
-    ]
-  }}
-}}
-
 STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL RENDERING. Ensure all main physical objects described and the required room object are included. The 'prompt' field must be the exact, verbatim text from the input that *identifies or describes* that specific object, not its relationship to others.
 """
         self.user_prompt = "User: {user_input}"
@@ -170,7 +144,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
     - Each SceneObject represents a container and MUST have these fields: id, position, rotation, scale, components, and children.
 
-    - The children field is a list of other SceneObject nodes; it is always present in the structure, and if a SceneObject logically has no children, it must be an empty list [].
+    - The children field is a list of other SceneObject nodes; **IMPORTANT**: it is ALWAYS present in the structure, and if a SceneObject logically has no children, it MUST BE an empty list [].
 
     - You must infer the relationships between objects based on the scene description. For example, if a lamp is inside a box, the lamp must be a child of the box.
 
@@ -223,7 +197,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
 **EXAMPLE OF FINAL JSON OUTPUT (Use as a structural guide):**
 
-"{{\"name\":\"A Dark Study Room\",\"skybox\":{{\"type\":\"gradient\",\"color1\":{{\"r\":0.1,\"g\":0.1,\"b\":0.2,\"a\":1}},\"color2\":{{\"r\":0.05,\"g\":0.05,\"b\":0.1,\"a\":1}},\"up_vector\":{{\"x\":0,\"y\":1,\"z\":0,\"w\":0}},\"intensity\":0.5,\"exponent\":1.0}},\"graph\":[{{\"id\":\"room_container\",\"position\":{{\"x\":0,\"y\":1.5,\"z\":0}},\"rotation\":{{\"x\":0,\"y\":0,\"z\":0}},\"scale\":{{\"x\":10,\"y\":3,\"z\":10}},\"components\":[{{\"component_type\":\"primitive\",\"shape\":\"cube\",\"color\":{{\"r\":0.2,\"g\":0.2,\"b\":0.25,\"a\":1]()_]()_
+"{{\"name\":\"A Dark Study Room\",\"skybox\":{{\"type\":\"gradient\",\"color1\":{{\"r\":0.1,\"g\":0.1,\"b\":0.2,\"a\":1}},\"color2\":{{\"r\":0.05,\"g\":0.05,\"b\":0.1,\"a\":1}},\"up_vector\":{{\"x\":0,\"y\":1,\"z\":0,\"w\":0}},\"intensity\":0.5,\"exponent\":1.0}},\"graph\":[{{\"id\":\"room_container\",\"position\":{{\"x\":0,\"y\":1.5,\"z\":0}},\"rotation\":{{\"x\":0,\"y\":0,\"z\":0}},\"scale\":{{\"x\":10,\"y\":3,\"z\":10}},\"components\":[{{\"component_type\":\"primitive\",\"shape\":\"cube\",\"color\":{{\"r\":0.2,\"g\":0.2,\"b\":0.25,\"a\":1], \"children\":[]()_]()_
 
 **CRITICAL RULES:**
 

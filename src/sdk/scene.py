@@ -90,7 +90,8 @@ class DynamicObject(SceneComponent):
 
 
 class BaseLight(BaseModel):
-    componentType: Literal[ComponentType.LIGHT] = ComponentType.LIGHT
+    component_type: Literal[ComponentType.LIGHT] = ComponentType.LIGHT
+    type: LightType
     color: ColorRGBA
     intensity: float
     indirect_multiplier: float
@@ -174,17 +175,14 @@ Skybox = Annotated[
     Union[GradientSkybox, SunSkybox, CubedSkybox], Field(discriminator="type")
 ]
 
+Light = Annotated[
+    Union[SpotLight, DirectionalLight, PointLight, AreaLight],
+    Field(discriminator="type"),
+]
 
 Component = Annotated[
-    Union[
-        PrimitiveObject,
-        DynamicObject,
-        SpotLight,
-        DirectionalLight,
-        PointLight,
-        AreaLight,
-    ],
-    Field(discriminator="componentType"),
+    Union[PrimitiveObject, DynamicObject, Light],
+    Field(discriminator="component_type"),
 ]
 
 
@@ -193,7 +191,7 @@ class SceneObject(BaseModel):
     position: Vector3
     rotation: Vector3
     scale: Vector3
-    components: list[SceneComponent]
+    components: list[Component]
     children: list["SceneObject"]
 
 

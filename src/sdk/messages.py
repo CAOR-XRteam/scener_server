@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from sdk.protobuf import message_pb2
 
+import json
+
 
 class IncomingMessageType(str, Enum):
     TEXT = "text"
@@ -159,12 +161,26 @@ class OutgoingGenerated3DObjectsMessage(IOutgoingMessage):
 class OutgoingGenerated3DSceneMessage(IOutgoingMessage):
     text: str
     json_scene: dict
+    assets: list[AppMediaAsset]
 
     def to_proto(self) -> message_pb2.Content:
+        proto_assets = []
+
+        for app_asset in self.assets:
+            proto_assets.append(
+                message_pb2.MediaAsset(
+                    id=app_asset.id,
+                    filename=app_asset.filename,
+                    data=app_asset.data,
+                )
+            )
+
         return message_pb2.Content(
             type=OutgoingMessageType.GENERATE_3D_SCENE.value,
             text=self.text,
-            metadata=self.json_scene,
+            assets=proto_assets,
+            status=200,
+            metadata=json.dumps(self.json_scene),
         )
 
 

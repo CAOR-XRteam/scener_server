@@ -69,60 +69,14 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
 
 @tool(args_schema=Generate3DObjectToolInput)
 @beartype
-def generate_3d_object(user_input: str) -> Generate3DObjectOutputWrapper:
+def generate_3d_object(user_input: str) -> dict:
     """Generate 3D object from user's prompt"""
     data = generate_3d_object_from_prompt(user_input)
     return Generate3DObjectOutputWrapper(
         generate_3d_object_output=Generate3DObjectOutput(
             text=f"Generated 3D object for '{user_input}'", data=data
         )
-    )
-
-
-# @tool(args_schema=Generate3DObjectToolInput)
-# @beartype
-# def generate_3d_object(
-#     user_input: str,
-# ) -> Generate3DObjectOutputWrapper:
-#     """Generates an image based on the decomposed user's prompt using the Black Forest model."""
-#     logger.info(
-#         f"\nReceived user input for image generation: {Fore.GREEN}{user_input}{Fore.RESET}"
-#     )
-
-#     try:
-#         generate_image_output = _generate_image(user_input)
-#     except Exception as e:
-#         logger.error(f"Failed to generate images from user's input: {e}")
-#         raise ValueError(f"Failed to generate images from user's input: {e}")
-
-#     image_meta_data = generate_image_output.generate_image_output.data
-#     data = []
-#     successful_objects = 0
-
-#     media_temp_dir = Path(__file__).resolve().parents[3] / "media" / "temp"
-#     media_temp_dir.mkdir(parents=True, exist_ok=True)
-
-#     for image_meta in image_meta_data:
-#         if image_meta.error:
-#             logger.warning(f"Skipping 3D generation for '{image_meta.id}': {e}")
-#             continue
-
-#         data.append(
-#             generate_3d_object_from_image(
-#                 image_meta_data.path,
-#                 image_meta_data.id,
-#                 media_temp_dir / f"{image_meta.id}.glb",
-#             )
-#         )
-
-#     logger.info("3D object generation process complete.")
-
-#     return Generate3DObjectOutputWrapper(
-#         generate_3d_object_output=Generate3DObjectOutput(
-#             text=f"Generated {successful_objects} of {len(image_meta_data)} 3D objects.",
-#             data=data,
-#         )
-#     )
+    ).model_dump()
 
 
 if __name__ == "__main__":

@@ -48,9 +48,8 @@ class Tool_callback(BaseCallbackHandler):
 
     def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
         """Starts when a tool finishes, puts the result in the queue for further processing."""
-
         tool_name = kwargs.get("name")
-        tool_output = eval(f"dict({output.content})")
+        tool_output = json.loads(output.content)
 
         # TODO: case of error in generation
         try:
@@ -75,7 +74,7 @@ class Tool_callback(BaseCallbackHandler):
                         assets=[
                             AppMediaAsset(
                                 id=payload.generate_3d_object_output.data.id,
-                                filename=payload.generate_3d_object_output.data.path,
+                                filename=payload.generate_3d_object_output.data.filename,
                                 data=read_glb(
                                     payload.generate_3d_object_output.data.path
                                 ),
@@ -83,7 +82,19 @@ class Tool_callback(BaseCallbackHandler):
                         ],
                     )
                 case "generate_3d_scene":
-                    pass
+                    payload = Generate3DSceneOutputWrapper(**tool_output)
+                    self.structured_response = OutgoingGenerated3DSceneMessage(
+                        text=payload.generate_3d_scene_output.text,
+                        json_scene=payload.generate_3d_scene_output.final_decomposition.model_dump(),
+                        assets=[
+                            AppMediaAsset(
+                                id=asset_meta_data.id,
+                                filename=asset_meta_data.filename,
+                                data=read_glb(asset_meta_data.path),
+                            )
+                            for asset_meta_data in payload.generate_3d_scene_output.objects_to_send
+                        ],
+                    )
         except Exception as e:
             logger.error(f"Error in on_tool_end callback: {e}")
             self.structured_response = OutgoingErrorMessage(status=500, text=str(e))

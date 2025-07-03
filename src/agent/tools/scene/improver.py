@@ -42,6 +42,8 @@ class Improver:
                 - For non-room objects (e.g., 'prop', 'furniture', 'character'): Use "front camera view".
                 - For room objects (e.g., 'room', 'environment'): Use "squared room view from the outside with a distant 3/4 top-down perspective".
 
+            **VERY IMPORTANT**: the imrpoved description MUST NOT exceed 50 characters.
+
             EXAMPLE OF AN IMPROVED *OBJECT* PROMPT (for a non-room object):
             Original: "a red chair"
             Improved: "A vibrant red armchair, crafted from polished mahogany wood, featuring a high back with button-tufted detailing, plush velvet cushioning on the seat and backrest, and elegantly curved cabriole legs. Front camera view. Placed on a white and empty background. Completely detached from surroundings."
