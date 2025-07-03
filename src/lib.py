@@ -61,7 +61,7 @@ def speech_to_text(path: str) -> str:
     result = pipe(path, return_timestamps=True)
 
     logger.info(
-        f"{Fore.GREEN}Speech to text conversion completed: {result["text"]}{Fore.RESET}"
+        f"{Fore.GREEN}Speech to text conversion completed: {result['text']}{Fore.RESET}"
     )
 
     return result["text"]

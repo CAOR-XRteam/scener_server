@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from agent.tools.pipeline.image_generation import generate_image_from_prompt
 from lib import logger
-from model import hunyuan
+from model import trellis
 
 # TODO: modify the tool so that it doesn't reload model on every new request
 
@@ -47,7 +47,7 @@ def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
 
         logger.info(f"Generating 3D object from image: {image_meta_data.path}")
 
-        hunyuan.generate(image_meta_data.path, image_meta_data.id)
+        trellis.generate(image_meta_data.path, image_meta_data.id)
 
         return TDObjectMetaData(
             id=image_meta_data.id,

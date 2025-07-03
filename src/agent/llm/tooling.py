@@ -10,7 +10,7 @@ from agent.tools import *
 from sdk.scene import *
 from sdk.messages import *
 from model.black_forest import convert_image_to_bytes
-from model.hunyuan import read_glb
+from model.trellis import read_glb
 
 # from model.trellis import read_glb
 
