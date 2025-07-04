@@ -6,6 +6,7 @@ from loguru import logger
 from colorama import Fore
 
 from library.manager.library import Asset
+from beartype import beartype
 
 
 def list_assets():
@@ -34,6 +35,7 @@ def create_description_file(path_with_name: str, asset_description: str) -> str:
         return f"Failed to create text file: {str(e)}"
 
 
+@beartype
 def find_asset_by_description(description: str) -> Asset | None:
     from langchain_core.prompts import ChatPromptTemplate
     from langchain_core.output_parsers import JsonOutputParser
@@ -45,6 +47,8 @@ def find_asset_by_description(description: str) -> Asset | None:
             return None
 
         assets = json.dumps([asset.model_dump() for asset in asset_list], indent=2)
+
+        parser = JsonOutputParser(pydantic_object=Asset)
 
         system_prompt = """You are given a list of assets, where each asset contains the following fields: 'id', 'name', 'image', 'mesh', and 'description'. Each asset represents a 3D object and may have attributes such as size, color, material, style, and other distinctive features described in the description field.
 
@@ -70,6 +74,8 @@ def find_asset_by_description(description: str) -> Asset | None:
         - Return the single best matching asset.
         - If no asset matches closely enough, return null.
         - Be precise and conservative. Do not guess.
+
+        You must respond ONLY with the JSON object of the best matching asset, or null if no match is found. Do not include any other text, explanations, or code.
         """
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -78,13 +84,17 @@ def find_asset_by_description(description: str) -> Asset | None:
             ]
         )
         model = initialize_model("llama3.1")
-        parser = JsonOutputParser(pydantic_object=Asset)
-        chain = prompt | model | parser
+
+        prompt_with_instructions = prompt.partial(
+            format_instructions=parser.get_format_instructions()
+        )
+
+        chain = prompt_with_instructions | model | parser
 
         logger.info(f"Searching for similar asset: {description}")
         asset = chain.invoke({"description": description, "assets": assets})
         logger.info(f"Asset (not)found: {asset}")
-        return asset
+        return Asset.model_validate(asset)
     except Exception as e:
         logger.error(f"Error while searching for an asset: {e}")
         return None
