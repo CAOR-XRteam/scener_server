@@ -5,6 +5,6 @@
     "log_level": "info",
     "agent_model": "qwen3:8b",
     "initial_decomposer_model": "mistral-nemo",
-    "final_decomposer_model": "mistral-nemo",
+    "final_decomposer_model": "mistral-small3.2:24b",
     "improver_model": "llama3.1"
 }

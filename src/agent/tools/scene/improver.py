@@ -6,6 +6,8 @@ from langchain_core.output_parsers import StrOutputParser
 from lib import logger
 from pydantic import BaseModel, Field, ValidationError
 
+# TODO: refacto improver without class structure
+
 
 class ImproveToolInput(BaseModel):
     initial_decomposition: DecompositionOutput = Field(

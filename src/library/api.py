@@ -60,3 +60,11 @@ class LibraryAPI:
         except Exception as e:
             logger.error(f"Failed to delete asset: {e}")
             raise
+
+    def get_asset(self, name):
+        """Get an asset by its name"""
+        try:
+            self.library.get_asset(name)
+        except Exception as e:
+            logger.error(f"Failed to get asset: {e}")
+            raise

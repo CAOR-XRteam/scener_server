@@ -41,15 +41,6 @@ class GenerateImageToolInput(BaseModel):
 
 @beartype
 def generate_image_from_prompt(prompt: str, id: str | None = None) -> ImageMetaData:
-    config = load_config()
-    try:
-        improver_model_name = config.get("improver_model")
-
-        improver = Improver(model_name=improver_model_name)
-        improved_prompt = improver.improve_single_prompt(prompt)
-    except Exception as e:
-        raise ValueError(f"Couldn't improve the prompt: {e}")
-
     if not id:
         id = uuid4()
 
@@ -60,7 +51,7 @@ def generate_image_from_prompt(prompt: str, id: str | None = None) -> ImageMetaD
     output_path = output_dir / f"{id}.png"
 
     try:
-        stable_diffusers.generate(improved_prompt, str(output_path))
+        stable_diffusers.generate(prompt, str(output_path))
 
         return ImageMetaData(
             id=str(id),

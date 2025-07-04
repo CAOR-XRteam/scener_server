@@ -7,6 +7,15 @@ from library.manager.database import Database as DB
 from loguru import logger
 import sqlite3
 import os
+from pydantic import BaseModel
+
+
+class Asset(BaseModel):
+    id: str
+    name: str
+    image: str
+    mesh: str
+    description: str
 
 
 @beartype
@@ -109,15 +118,35 @@ class Library:
             cursor = self.db._get_cursor()
             assets = SQL.query_assets(cursor)
             return [
-                {
-                    "id": asset_id,
-                    "name": name,
-                    "image": image,
-                    "mesh": mesh,
-                    "description": description,
-                }
+                Asset(
+                    id=str(asset_id),
+                    name=name,
+                    image=image,
+                    mesh=mesh,
+                    description=description,
+                )
                 for asset_id, name, image, mesh, description in assets
             ]
         except Exception as e:
             logger.error(f"Failed to read assets from the database: {e}")
+            raise
+
+    def get_asset(self, name: str):
+        """Return asset by its name"""
+        try:
+            cursor = self.db._get_cursor()
+            asset = SQL.query_asset_by_name(cursor, name)
+
+            if asset:
+                return Asset(
+                    id=str(asset[0]),
+                    name=asset[1],
+                    image=asset[2],
+                    mesh=asset[3],
+                    description=asset[4],
+                )
+            else:
+                raise ValueError(f"Asset {name} not found")
+        except Exception as e:
+            logger.error(f"Failed to get asset from the database: {e}")
             raise

@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from sdk.scene import Scene, FinalDecompositionOutput, ComponentType
 
+# TODO: refacto decomposer without class structure
+
 
 class DecomposedObject(BaseModel):
     id: str
