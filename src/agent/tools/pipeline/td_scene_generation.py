@@ -50,9 +50,11 @@ def generate_3d_scene(user_input: str) -> dict:
     try:
         for object in initial_decomposition_output.scene.objects:
             if object.type == "dynamic":
-                objects_to_send.append(
-                    generate_3d_object_from_prompt(object.prompt, object.id)
+                generated_object_meta_data = generate_3d_object_from_prompt(
+                    object.prompt, object.id
                 )
+                objects_to_send.append(generated_object_meta_data)
+                object.id = generated_object_meta_data.id
     except:
         logger.error(f"Failed to generate 3D object: {e}")
         raise ValueError(f"Failed to generate 3D object: {e}")
