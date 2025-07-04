@@ -50,17 +50,27 @@ def find_asset_by_description(description: str) -> Asset | None:
 
         parser = JsonOutputParser(pydantic_object=Asset)
 
-        system_prompt = """You are given a list of assets, where each asset contains the following fields: 'id', 'name', 'image', 'mesh', and 'description'. Each asset represents a 3D object and may have attributes such as size, color, material, style, and other distinctive features described in the description field.
+        system_prompt = """
+        You are a highly precise and logical asset-matching engine. Your task is to find the single best matching 3D asset from a list, based on a target description.
 
-        You are also given a separate text description of a target object. Your task is to:
+        You are given a list of assets, where each asset contains the following fields: 'id', 'name', 'image', 'mesh', and 'description'. Each asset represents a 3D object and may have attributes such as size, color, material, style, and other distinctive features described in the description field.
 
-        Analyze the target description and compare it against the attributes in each asset's description.
+        You are also given a separate text description of a target object.
 
-        Find the asset that best matches the target description based on shared features and specificity and return it.
+        You must follow these rules strictly:
 
-        Return only the most relevant matching asset, or return null (or None) if no asset sufficiently matches the description.
+        1.  **Identify the Core Subject:** First, identify the primary object in the 'Target Description' (e.g., 'couch', 'cat', 'car', 'sword').
 
-        Be precise. Do not guess. If the match is ambiguous or weak, return nothing."""
+        2.  **Filter by Core Subject:** Compare this primary object with the primary object of each asset in the 'Available Assets' list. An asset is ONLY a potential match if its primary object is the SAME as the target's. A 'black cat' is NOT a match for a 'black couch'.
+
+        3.  **Evaluate Secondary Attributes:** From the filtered list of potential matches (those with the same primary object), now evaluate secondary attributes like color, material, style, and size to find the single best fit.
+
+        4.  **Return the Result:**
+            - If you find a single asset that is a strong match on both the core subject and its attributes, return its full JSON object.
+            - **If NO asset has the same core subject as the target description, you MUST return null.**
+            - If there are potential matches but their secondary attributes are a poor fit, it is better to return null than to return a weak match.
+
+        Your response must be ONLY the JSON object of the best matching asset, or the literal `null` if no sufficient match is found. Do not provide explanations or any other text."""
 
         user_prompt = """
         Target Description:
@@ -83,7 +93,7 @@ def find_asset_by_description(description: str) -> Asset | None:
                 ("user", user_prompt),
             ]
         )
-        model = initialize_model("llama3.1")
+        model = initialize_model("gemma3:12b")
 
         prompt_with_instructions = prompt.partial(
             format_instructions=parser.get_format_instructions()
@@ -94,7 +104,7 @@ def find_asset_by_description(description: str) -> Asset | None:
         logger.info(f"Searching for similar asset: {description}")
         asset = chain.invoke({"description": description, "assets": assets})
         logger.info(f"Asset (not)found: {asset}")
-        return Asset.model_validate(asset)
+        return Asset.model_validate(asset) if asset else None
     except Exception as e:
         logger.error(f"Error while searching for an asset: {e}")
         return None

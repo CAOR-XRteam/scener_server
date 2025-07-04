@@ -6,8 +6,8 @@ from agent.tools.pipeline.td_object_generation import (
     generate_3d_object_from_prompt,
 )
 from agent.tools.scene.decomposer import (
-    FinalDecomposer,
-    InitialDecomposer,
+    final_decomposition,
+    initial_decomposition,
     FinalDecompositionOutput,
 )
 from lib import logger, load_config
@@ -39,13 +39,8 @@ def generate_3d_scene(user_input: str) -> dict:
     Examples: 'a cat and a dog in a room', 'a car on a road'.
     This is the correct choice for any 3D request that is NOT a single, isolated object.
     """
-    config = load_config()
     try:
-        initial_decomposer_model_name = config.get("initial_decomposer_model")
-        initial_decomposition = InitialDecomposer(
-            initial_decomposer_model_name
-        ).decompose(user_input)
-
+        initial_decomposition_output = initial_decomposition(user_input)
     except Exception as e:
         logger.error(f"Failed to decompose input: {e}")
         raise ValueError(f"Failed to decompose input: {e}")
@@ -53,7 +48,7 @@ def generate_3d_scene(user_input: str) -> dict:
     objects_to_send = []
 
     try:
-        for object in initial_decomposition.scene.objects:
+        for object in initial_decomposition_output.scene.objects:
             if object.type == "dynamic":
                 objects_to_send.append(
                     generate_3d_object_from_prompt(object.prompt, object.id)
@@ -63,17 +58,14 @@ def generate_3d_scene(user_input: str) -> dict:
         raise ValueError(f"Failed to generate 3D object: {e}")
 
     try:
-        config = load_config()
-        final_decomposer_model_name = config.get("final_decomposer_model")
-
-        final_decomposition = FinalDecomposer(final_decomposer_model_name).decompose(
-            user_input, initial_decomposition
+        final_decomposition_output = final_decomposition(
+            user_input, initial_decomposition_output
         )
 
         return Generate3DSceneOutputWrapper(
             generate_3d_scene_output=Generate3DSceneOutput(
                 text=f"Generated 3D scene for {user_input}",
-                final_decomposition=final_decomposition.scene,
+                final_decomposition=final_decomposition_output.scene,
                 objects_to_send=objects_to_send,
             )
         ).model_dump()

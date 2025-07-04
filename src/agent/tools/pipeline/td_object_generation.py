@@ -1,6 +1,6 @@
 import os
 
-from agent.tools.scene.improver import Improver
+from agent.tools.scene.improver import improve_single_prompt
 from beartype import beartype
 from colorama import Fore
 from langchain_core.tools import tool
@@ -51,15 +51,11 @@ def generate_3d_object_from_prompt(
     asset = find_asset_by_description(prompt)
     if asset:
         return TDObjectMetaData(
-            id=asset.id, filename=f"{asset.id}.glb", path=asset.mesh, error=None
+            id=asset.name, filename=f"{asset.name}.glb", path=asset.mesh, error=None
         )
     else:
-        config = load_config()
         try:
-            improver_model_name = config.get("improver_model")
-
-            improver = Improver(model_name=improver_model_name)
-            improved_prompt = improver.improve_single_prompt(prompt)
+            improved_prompt = improve_single_prompt(prompt)
         except Exception as e:
             raise ValueError(f"Couldn't improve the prompt: {e}")
         try:

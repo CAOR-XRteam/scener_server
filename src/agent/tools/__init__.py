@@ -1,13 +1,6 @@
 from agent.tools.simple.date import date
 
-from agent.tools.scene.improver import Improver, ImproveToolInput
 from agent.tools.scene.scene import SceneAnalyzer
-from agent.tools.scene.decomposer import (
-    InitialDecomposer,
-    InitialDecomposerToolInput,
-    FinalDecomposer,
-    FinalDecomposerToolInput,
-)
 
 # from agent.tools.input.gesture import hand_gesture
 

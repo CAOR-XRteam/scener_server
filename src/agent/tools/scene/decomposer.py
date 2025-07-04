@@ -4,12 +4,10 @@ from agent.llm.creation import initialize_model
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from lib import logger
+from lib import load_config, logger
 from pydantic import BaseModel, Field
 from typing import Literal
 from sdk.scene import Scene, FinalDecompositionOutput, ComponentType
-
-# TODO: refacto decomposer without class structure
 
 
 class DecomposedObject(BaseModel):
@@ -27,16 +25,9 @@ class DecompositionOutput(BaseModel):
     scene: DecompositionData
 
 
-class InitialDecomposerToolInput(BaseModel):
-    user_input: str = Field(
-        description="The raw user's scene description prompt to be decomposed."
-    )
-
-
 @beartype
-class InitialDecomposer:
-    def __init__(self, model_name: str, temperature: float = 0.0):
-        self.system_prompt = """
+def initial_decomposition(user_input: str, temperature: int = 0) -> DecompositionOutput:
+    system_prompt = """
 You are a highly specialized and precise Scene Decomposer for a 3D rendering workflow. Your sole task is to accurately convert a scene description string into structured JSON, adhering to strict rules. The output must always extract **verbatim zero-shot prompts** for each object in the scene, following the format provided below.
 
 YOUR CRITICAL TASK:
@@ -91,50 +82,51 @@ RULES FOR OBJECT SELECTION:
 
 STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL RENDERING. Ensure all main physical objects described and the required room object are included. The 'prompt' field must be the exact, verbatim text from the input that *identifies or describes* that specific object, not its relationship to others.
 """
-        self.user_prompt = "User: {user_input}"
-        self.prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", self.system_prompt),
-                ("user", self.user_prompt),
-            ]
-        )
-
-        self.model = initialize_model(model_name, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=DecompositionOutput)
-        self.chain = self.prompt | self.model | self.parser
-
-    def decompose(self, user_input: str) -> DecompositionOutput:
-        try:
-            logger.info(f"Decomposing input: {user_input}")
-            result = self.chain.invoke({"user_input": user_input})
-            logger.info(f"Decomposition result: {result}")
-            validated_result = DecompositionOutput(**result)
-
-            # Not relying on the llm to provide unique id for every object
-            for obj_dict in validated_result.scene.objects:
-                obj_dict.id = (
-                    f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
-                )
-
-            return validated_result
-        except Exception as e:
-            logger.error(f"Decomposition failed: {str(e)}")
-            raise
-
-
-class FinalDecomposerToolInput(BaseModel):
-    user_input: str = Field(
-        description="The raw user's scene description prompt to be decomposed."
+    user_prompt = "User: {user_input}"
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("user", user_prompt),
+        ]
     )
-    improved_decomposition: DecompositionOutput = Field(
-        description="Initial decomposition of user's request with enhaced prompts and original user prompt."
+
+    parser = JsonOutputParser(pydantic_object=DecompositionOutput)
+
+    prompt_with_instructions = prompt.partial(
+        format_instructions=parser.get_format_instructions()
     )
+
+    config = load_config()
+    initial_decomposer_model_name = config.get("initial_decomposer_model")
+
+    model = initialize_model(initial_decomposer_model_name, temperature=temperature)
+
+    chain = prompt_with_instructions | model | parser
+    try:
+        logger.info(f"Decomposing input: {user_input}")
+        result = chain.invoke({"user_input": user_input})
+        logger.info(f"Decomposition result: {result}")
+        validated_result = DecompositionOutput(**result)
+
+        # Not relying on the llm to provide unique id for every object
+        for obj_dict in validated_result.scene.objects:
+            obj_dict.id = (
+                f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
+            )
+
+        return validated_result
+    except Exception as e:
+        logger.error(f"Decomposition failed: {str(e)}")
+        raise
 
 
 @beartype
-class FinalDecomposer:
-    def __init__(self, model_name: str, temperature: float = 0.0):
-        self.system_prompt = """
+def final_decomposition(
+    user_input: str,
+    improved_decomposition: DecompositionOutput,
+    temperature: int = 0,
+) -> FinalDecompositionOutput:
+    system_prompt = """
 You are a highly specialized AI that generates a complete 3D scene in a strict hierarchical JSON format. Your ONLY job is to create this JSON structure based on a list of objects and a scene description.
 SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
@@ -209,7 +201,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
     - STRICT SCHEMA: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above. Every SceneObject must have a components list, even if it's empty.
 """
-        self.user_prompt = """
+    user_prompt = """
         Original User Prompt:
         {user_input}
 
@@ -218,42 +210,45 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
         Based on ALL the above information, generate the full scene JSON.
         """
-        self.prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", self.system_prompt),
-                ("user", self.user_prompt),
-            ]
+    config = load_config()
+    final_decomposer_model_name = config.get("final_decomposer_model")
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("user", user_prompt),
+        ]
+    )
+    parser = JsonOutputParser(pydantic_object=Scene)
+
+    prompt_with_instructions = prompt.partial(
+        format_instructions=parser.get_format_instructions()
+    )
+
+    model = initialize_model(final_decomposer_model_name, temperature=temperature)
+
+    chain = prompt_with_instructions | model | parser
+
+    try:
+        logger.info(
+            f"Final decomposition with input: original_prompt='{user_input}', improved_decomposition: {improved_decomposition.scene}."
         )
 
-        self.model = initialize_model(model_name, temperature=temperature)
-        self.parser = JsonOutputParser(pydantic_object=Scene)
-        self.chain = self.prompt | self.model | self.parser
+        result: Scene = chain.invoke(
+            {
+                "user_input": user_input,
+                "improved_decomposition": improved_decomposition,
+            }
+        )
+        logger.info(f"Decomposition result: {result}")
 
-    def decompose(
-        self,
-        user_input: str,
-        improved_decomposition: DecompositionOutput,
-    ) -> FinalDecompositionOutput:
-        try:
-            logger.info(
-                f"Final decomposition with input: original_prompt='{user_input}', improved_decomposition: {improved_decomposition.scene}."
-            )
+        return FinalDecompositionOutput(
+            scene=result,
+        )
 
-            result: Scene = self.chain.invoke(
-                {
-                    "user_input": user_input,
-                    "improved_decomposition": improved_decomposition,
-                }
-            )
-            logger.info(f"Decomposition result: {result}")
-
-            return FinalDecompositionOutput(
-                scene=result,
-            )
-
-        except Exception as e:
-            logger.error(f"Decomposition failed: {str(e)}")
-            raise
+    except Exception as e:
+        logger.error(f"Decomposition failed: {str(e)}")
+        raise
 
 
 if __name__ == "__main__":
@@ -262,7 +257,7 @@ if __name__ == "__main__":
     # output = decomposer.decompose(superprompt)
     # print(json.dumps(output, indent=2))
 
-    decomposer = FinalDecomposer("llama3.1")
+    decomposer = final_decomposition("llama3.1")
     superprompt = {
         "scene_data": {
             "scene": {
@@ -287,5 +282,7 @@ if __name__ == "__main__":
         },
         "user_input": "A cup of coffee on a wooden table in a sunlit kitchen",
     }
-    output = decomposer.decompose(superprompt)
+    output = final_decomposition(
+        superprompt.get("scene_data"), superprompt.get("user_input")
+    )
     print(output)

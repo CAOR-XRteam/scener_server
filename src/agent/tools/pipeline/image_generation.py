@@ -5,8 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
-from agent.tools.pipeline.basic import decompose_and_improve
-from agent.tools.scene.improver import Improver
+from agent.tools.scene.improver import improve_single_prompt
 from lib import logger, load_config
 from model import stable_diffusers
 
@@ -75,7 +74,11 @@ def generate_image_from_prompt(prompt: str, id: str | None = None) -> ImageMetaD
 @beartype
 def generate_image(user_input: str):
     """Generates an image from user's prompt"""
-    data = generate_image_from_prompt(user_input)
+    try:
+        improved_prompt = improve_single_prompt(user_input)
+    except Exception as e:
+        raise ValueError(f"Couldn't improve the prompt: {e}")
+    data = generate_image_from_prompt(improved_prompt)
 
     return GenerateImageOutputWrapper(
         GenerateImageOutput(text=f"Generated image for {user_input}", data=data)
