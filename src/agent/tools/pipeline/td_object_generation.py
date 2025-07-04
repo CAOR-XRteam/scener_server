@@ -41,9 +41,11 @@ class Generate3DObjectToolInput(BaseModel):
 
 
 @beartype
-def generate_3d_object_from_prompt(prompt: str) -> TDObjectMetaData:
+def generate_3d_object_from_prompt(
+    prompt: str, id: str | None = None
+) -> TDObjectMetaData:
     try:
-        image_meta_data = generate_image_from_prompt(prompt)
+        image_meta_data = generate_image_from_prompt(prompt, id)
 
         logger.info(f"Generating 3D object from image: {image_meta_data.path}")
 

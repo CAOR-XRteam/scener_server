@@ -40,7 +40,7 @@ class GenerateImageToolInput(BaseModel):
 
 
 @beartype
-def generate_image_from_prompt(prompt: str) -> ImageMetaData:
+def generate_image_from_prompt(prompt: str, id: str | None = None) -> ImageMetaData:
     config = load_config()
     try:
         improver_model_name = config.get("improver_model")
@@ -50,7 +50,8 @@ def generate_image_from_prompt(prompt: str) -> ImageMetaData:
     except Exception as e:
         raise ValueError(f"Couldn't improve the prompt: {e}")
 
-    id = uuid4()
+    if not id:
+        id = uuid4()
 
     logger.info(f"Generating image for '{id}': {prompt[:10]}...")
 

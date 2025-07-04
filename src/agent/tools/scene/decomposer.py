@@ -166,7 +166,7 @@ The final output is a single JSON object with three top-level keys: name, skybox
 
             The component object MUST also contain:
 
-                id: The name of the 3D model asset to load (e.g., "desk", "chair").
+                id: EXACTLY the same id as its SceneObject (for example, if a SceneObject with id cat_1234 have a component with "dynamic" component_type, id field will be also "cat_1234").
 
         - If component_type is "light":
 
