@@ -137,7 +137,7 @@ CRITICAL RULES - READ AND OBEY:
 
     **2. HIERARCHY IS MANDATORY: You MUST analyze the user's text to determine relationships. An object described as 'in' or 'on' another object (e.g., "a cat in a room") MUST be a child of that container object in the JSON.**
 
-    **3. RELATIVE COORDINATES: A child object's position and scale MUST be relative to its parent. A cat must be smaller than the room it is in. An object on a floor should have a negative y position relative to the room's center.**
+    **3. ABSOLUTE COORDINATES & SCALE: The `position` and `scale` vectors should ALWAYS represent the object's final, absolute world coordinates and size in world units, as if it had no parent. A cat with a scale of 0.5 should be 0.5 units tall in the world, no matter how large the room is.**
 
 CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 
