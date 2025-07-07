@@ -51,57 +51,49 @@ class Tool_callback(BaseCallbackHandler):
         tool_name = kwargs.get("name")
         tool_output = json.loads(output.content)
 
-        # TODO: case of error in generation
-        try:
-            match tool_name:
-                case "generate_image":
-                    payload = GenerateImageOutputWrapper(**tool_output)
-                    self.structured_response = OutgoingGeneratedImagesMessage(
-                        text=payload.generate_image_output.text,
-                        assets=[
-                            AppMediaAsset(
-                                id=image_meta_data.id,
-                                filename=image_meta_data.path,
-                                data=convert_image_to_bytes(image_meta_data.path),
-                            )
-                            for image_meta_data in payload.generate_image_output.data
-                        ],
-                    )
-                case "generate_3d_object":
-                    payload = Generate3DObjectOutputWrapper(**tool_output)
-                    self.structured_response = OutgoingGenerated3DObjectsMessage(
-                        text=payload.generate_3d_object_output.text,
-                        assets=[
-                            AppMediaAsset(
-                                id=payload.generate_3d_object_output.data.id,
-                                filename=payload.generate_3d_object_output.data.filename,
-                                data=read_glb(
-                                    payload.generate_3d_object_output.data.path
-                                ),
-                            )
-                        ],
-                    )
-                case "generate_3d_scene":
-                    payload = Generate3DSceneOutputWrapper(**tool_output)
-                    self.structured_response = OutgoingGenerated3DSceneMessage(
-                        text=payload.generate_3d_scene_output.text,
-                        json_scene=payload.generate_3d_scene_output.final_decomposition.model_dump(),
-                        assets=[
-                            AppMediaAsset(
-                                id=asset_meta_data.id,
-                                filename=asset_meta_data.filename,
-                                data=read_glb(asset_meta_data.path),
-                            )
-                            for asset_meta_data in payload.generate_3d_scene_output.objects_to_send
-                        ],
-                    )
-        except Exception as e:
-            logger.error(f"Error in on_tool_end callback: {e}")
-            self.structured_response = OutgoingErrorMessage(status=500, text=str(e))
+        match tool_name:
+            case "generate_image":
+                payload = GenerateImageOutput(**tool_output)
+                self.structured_response = OutgoingGeneratedImagesMessage(
+                    text=payload.text,
+                    assets=[
+                        AppMediaAsset(
+                            id=payload.data.id,
+                            filename=payload.data.path,
+                            data=convert_image_to_bytes(payload.data.path),
+                        )
+                    ],
+                )
+            case "generate_3d_object":
+                payload = Generate3DObjectOutput(**tool_output)
+                self.structured_response = OutgoingGenerated3DObjectsMessage(
+                    text=payload.text,
+                    assets=[
+                        AppMediaAsset(
+                            id=payload.data.id,
+                            filename=payload.data.filename,
+                            data=read_glb(payload.data.path),
+                        )
+                    ],
+                )
+            case "generate_3d_scene":
+                payload = Generate3DSceneOutput(**tool_output)
+                self.structured_response = OutgoingGenerated3DSceneMessage(
+                    text=payload.text,
+                    json_scene=payload.final_decomposition.model_dump(),
+                    assets=[
+                        AppMediaAsset(
+                            id=asset_meta_data.id,
+                            filename=asset_meta_data.filename,
+                            data=read_glb(asset_meta_data.path),
+                        )
+                        for asset_meta_data in payload.objects_to_send
+                    ],
+                )
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")
         logger.error(f"Tool '{tool_name}' encountered an error: {error}")
         self.structured_response = OutgoingErrorMessage(
-            status=500, text=f"Tool '{tool_name}' failed: {error}"
+            status=500, text=f"Internal error on '{tool_name}', please try again."
         )
