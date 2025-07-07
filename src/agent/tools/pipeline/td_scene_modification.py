@@ -12,8 +12,8 @@ from sdk.scene import Scene
 
 
 class Modify3DSceneToolInput(BaseModel):
-    user_input: str = (Field(description="The raw user's modification request."),)
-    json_scene: Scene = Field(Field(description="The JSON representing current scene."))
+    user_input: str = Field(description="The raw user's modification request.")
+    json_scene: Scene = Field(description="The JSON representing current scene.")
 
 
 class Modify3DSceneOutput(BaseModel):
@@ -26,7 +26,7 @@ class Modify3DSceneOutput(BaseModel):
 @beartype
 def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
-    logger.log(f"Modifying 3D scene from prompt: {user_input[:10]}...")
+    logger.info(f"Modifying 3D scene from prompt: {user_input[:10]}...")
 
     try:
         analysis_output = analyze(user_input, json_scene)

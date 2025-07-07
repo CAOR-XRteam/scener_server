@@ -28,7 +28,7 @@ class Generate3DSceneOutput(BaseModel):
 @beartype
 def generate_3d_scene(user_input: str) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
-    logger.log(f"Generating 3D scene from prompt: {user_input[:10]}...")
+    logger.info(f"Generating 3D scene from prompt: {user_input[:10]}...")
 
     try:
         initial_decomposition_output = initial_decomposition(user_input)
