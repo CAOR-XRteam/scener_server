@@ -1,18 +1,25 @@
+import json
+
+from colorama import Fore
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain_core.messages import ToolMessage
 from loguru import logger
-from colorama import Fore
-from asyncio import Queue
-import json
-from pydantic import BaseModel
-from typing import Literal
-from agent.tools import *
-from sdk.scene import *
-from sdk.messages import *
+
+
+from agent.tools.pipeline.image_generation import GenerateImageOutput
+from agent.tools.pipeline.td_object_generation import Generate3DObjectOutput
+from agent.tools.pipeline.td_scene_generation import Generate3DSceneOutput
+from sdk.messages import (
+    OutgoingConvertedSpeechMessage,
+    OutgoingGenerated3DObjectsMessage,
+    OutgoingGeneratedImagesMessage,
+    OutgoingGenerated3DSceneMessage,
+    OutgoingErrorMessage,
+    AppMediaAsset,
+)
 from model.black_forest import convert_image_to_bytes
 from model.trellis import read_glb
 
-# from model.trellis import read_glb
 
 """ Custom tool tracker for functionnal tests """
 
