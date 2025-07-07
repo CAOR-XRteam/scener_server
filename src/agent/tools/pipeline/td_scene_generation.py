@@ -15,9 +15,7 @@ from sdk.scene import Scene
 
 
 class Generate3DSceneToolInput(BaseModel):
-    user_input: str = Field(
-        description="The raw user's description prompt to generate images from."
-    )
+    user_input: str = Field(description="The raw user's description prompt.")
 
 
 class Generate3DSceneOutput(BaseModel):
@@ -29,11 +27,7 @@ class Generate3DSceneOutput(BaseModel):
 @tool(args_schema=Generate3DSceneToolInput)
 @beartype
 def generate_3d_scene(user_input: str) -> dict:
-    """
-    Use this to create a complete 3D environment or scene with multiple objects or a background.
-    Examples: 'a cat and a dog in a room', 'a car on a road'.
-    This is the correct choice for any 3D request that is NOT a single, isolated object.
-    """
+    """Creates a complete 3D environment or scene with multiple objects or a background."""
     logger.log(f"Generating 3D scene from prompt: {user_input[:10]}...")
 
     try:
@@ -49,8 +43,8 @@ def generate_3d_scene(user_input: str) -> dict:
                 generated_object_meta_data = generate_3d_object_from_prompt(
                     object.prompt, object.id
                 )
+                generated_object_meta_data.id = object.id
                 objects_to_send.append(generated_object_meta_data)
-                object.id = generated_object_meta_data.id
     except Exception:
         raise
 

@@ -8,7 +8,7 @@ from lib import logger
 from library.api import LibraryAPI
 from model import trellis
 
-# TODO: modify the tool so that it doesn't reload model on every new request
+# TODO: modify the tool so that it doesn't reload model on every new request; add field descriptions for pydantic models
 
 
 class TDObjectMetaData(BaseModel):
@@ -24,9 +24,7 @@ class Generate3DObjectOutput(BaseModel):
 
 
 class Generate3DObjectToolInput(BaseModel):
-    user_input: str = Field(
-        description="The raw user's description prompt to generate images from."
-    )
+    user_input: str = Field(description="The raw user's description prompt.")
 
 
 @beartype
@@ -82,7 +80,7 @@ def generate_3d_object_from_prompt(
 @tool(args_schema=Generate3DObjectToolInput)
 @beartype
 def generate_3d_object(user_input: str) -> dict:
-    """Generate 3D object from user's prompt"""
+    """Generates 3D object from user's prompt"""
     try:
         data = generate_3d_object_from_prompt(user_input)
         return Generate3DObjectOutput(

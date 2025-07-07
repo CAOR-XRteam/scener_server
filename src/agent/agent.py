@@ -2,6 +2,7 @@ from agent.llm.creation import initialize_agent
 from agent.tools.pipeline.image_generation import generate_image
 from agent.tools.pipeline.td_object_generation import generate_3d_object
 from agent.tools.pipeline.td_scene_generation import generate_3d_scene
+from agent.tools.pipeline.td_scene_modification import modify_3d_scene
 from lib import load_config
 
 
@@ -30,9 +31,11 @@ YOUR MISSION:
 - `generate_3d_scene`:
     - **Use For:** Creating a complete 3D environment or scene with multiple elements. This is for complex requests that describe a whole setting.
 
+- `modify_3d_scene`:
+    - **Use For:** **Modifying an already existing 3D scene.** This is the correct tool for any request that involves changing, adding to, removing from, or rearranging elements within a scene that has already been generated.
 ---
 **YOUR DECISION PROCESS:**
-    **Example 1**:
+    **Example 1: Creating a new, single 3D object**
         1.  **Read User Input:** "I want to create a 3D model of a magic sword."
         2.  **Analyze Intent:** The user wants a "3D model" of a "magic sword". This is a single object.
         3.  **Select Tool:** The best tool is `generate_3d_object`.
@@ -40,13 +43,21 @@ YOUR MISSION:
             - **Thought:** The user wants a single 3D model. I should use the `generate_3d_object` tool and pass the user's full request to it.
             - **Action:** `generate_3d_object(user_input="I want to create a 3D model of a magic sword.")`
     
-    **Example 2**:
+    **Example 2: Creating a new 3D scene**
         1.  **Read User Input:** "I want to create a 3D scene with 2 men sitting on a couch."
         2.  **Analyze Intent:** The user wants a "3D scene with 2 men sitting on a couch". This is a scene with multiple elements.
         3.  **Select Tool:** The best tool is `generate_3d_scene`.
         4.  **Execute:**
             - **Thought:** The user wants a single 3D model. I should use the `generate_3d_scene` tool and pass the user's full request to it.
             - **Action:** `generate_3d_scene(user_input="I want to create a 3D scene with 2 men sitting on a couch.")
+    
+    **Example 3: Modifying an existing 3D scene**
+        1.  **Read User Input:** "Now, make the couch red and add a dog next to it."
+        2.  **Analyze Intent:** The user is referring to an existing scene ("the couch") and wants to change it ("make...red") and add to it ("add a dog").
+        3.  **Select Tool:** `propose_scene_modification`.
+        4.  **Execute:**
+            - **Thought:** The user is requesting a change to the current scene. The correct tool is `propose_scene_modification`.
+            - **Action:** `propose_scene_modification(user_input="Now, make the couch red and add a dog next to it.")`
 
 **If no tool is appropriate:**
 
@@ -60,10 +71,11 @@ YOUR MISSION:
         config = load_config()
 
         self.tools = [
-            generate_image,  # OK
+            generate_image,
             generate_3d_object,
             generate_3d_scene,
-            # image_analysis,  # OK
+            modify_3d_scene,
+            # image_analysis,
             # list_assets,
         ]
 

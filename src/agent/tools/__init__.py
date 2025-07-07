@@ -1,6 +1,6 @@
 from agent.tools.simple.date import date
 
-from agent.tools.scene.scene import SceneAnalyzer
+from agent.tools.scene.analyzer import SceneAnalyzer
 
 # from agent.tools.input.gesture import hand_gesture
 

@@ -24,9 +24,7 @@ class GenerateImageOutput(BaseModel):
 
 
 class GenerateImageToolInput(BaseModel):
-    user_input: str = Field(
-        description="The raw user's description prompt to generate images from."
-    )
+    user_input: str = Field(description="The raw user's description prompt.")
 
 
 @beartype

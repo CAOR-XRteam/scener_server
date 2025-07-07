@@ -54,7 +54,6 @@ def improve_prompt(user_input: str, temperature: int = 0) -> str:
 
         config = load_config()
         improver_model_name = config.get("improver_model")
-
         model = initialize_model(improver_model_name, temperature=temperature)
 
         chain = prompt | model | parser
