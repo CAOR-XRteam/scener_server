@@ -8,7 +8,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 def initialize_model(model_name: str, temperature: int = 0):
     """Initialize the model from its name"""
     return ChatOllama(
-        model=model_name, temperature=temperature, streaming=True, keep_alive=0
+        model=model_name, temperature=temperature, streaming=True, keep_alive=2
     )
 
 

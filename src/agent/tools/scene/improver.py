@@ -1,14 +1,13 @@
-from agent.llm.creation import initialize_model
-from agent.tools.scene.decomposer import DecompositionOutput
 from beartype import beartype
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+from agent.llm.creation import initialize_model
 from lib import load_config, logger
-from pydantic import BaseModel, Field, ValidationError
 
 
 @beartype
-def improve_single_prompt(user_input: str, temperature: int = 0) -> str:
+def improve_prompt(user_input: str, temperature: int = 0) -> str:
     # TODO: mandatory room? if other type of background?
     try:
         system_prompt = """
@@ -63,18 +62,14 @@ def improve_single_prompt(user_input: str, temperature: int = 0) -> str:
         logger.info(f"Improving user's input: {user_input}")
         result: str = chain.invoke({"user_input": user_input})
         logger.info(f"Improved result: {result}")
+
         return result
     except Exception as e:
-        import traceback
-
-        # Using repr(e) and the traceback to get maximum detail
-        error_details = f"repr: {repr(e)}, traceback: {traceback.format_exc()}"
-        logger.error(f"DIAGNOSTIC FAILED: {error_details}")
-        # logger.error(f"Improvement failed: {e}")
-        raise
+        logger.error(f"Failed to improve the prompt: {e}")
+        raise ValueError(f"Failed to improve the prompt: {e}")
 
 
 if __name__ == "__main__":
     user_input = "a cat on a couch in a living room"
-    superprompt = improve_single_prompt(user_input)
+    superprompt = improve_prompt(user_input)
     print(superprompt)

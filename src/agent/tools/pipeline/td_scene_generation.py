@@ -1,18 +1,17 @@
 from beartype import beartype
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
+
+from agent.tools.scene.decomposer import (
+    final_decomposition,
+    initial_decomposition,
+)
 from agent.tools.pipeline.td_object_generation import (
     TDObjectMetaData,
     generate_3d_object_from_prompt,
 )
-from agent.tools.scene.decomposer import (
-    final_decomposition,
-    initial_decomposition,
-    FinalDecompositionOutput,
-)
-from lib import logger, load_config
-from typing import Generator
-from sdk.scene import Scene, SceneObject, SceneComponent
+from lib import logger
+from sdk.scene import Scene
 
 
 class Generate3DSceneToolInput(BaseModel):
@@ -27,10 +26,6 @@ class Generate3DSceneOutput(BaseModel):
     objects_to_send: list[TDObjectMetaData]
 
 
-class Generate3DSceneOutputWrapper(BaseModel):
-    generate_3d_scene_output: Generate3DSceneOutput
-
-
 @tool(args_schema=Generate3DSceneToolInput)
 @beartype
 def generate_3d_scene(user_input: str) -> dict:
@@ -39,11 +34,12 @@ def generate_3d_scene(user_input: str) -> dict:
     Examples: 'a cat and a dog in a room', 'a car on a road'.
     This is the correct choice for any 3D request that is NOT a single, isolated object.
     """
+    logger.log(f"Generating 3D scene from prompt: {user_input[:10]}...")
+
     try:
         initial_decomposition_output = initial_decomposition(user_input)
-    except Exception as e:
-        logger.error(f"Failed to decompose input: {e}")
-        raise ValueError(f"Failed to decompose input: {e}")
+    except Exception:
+        raise
 
     objects_to_send = []
 
@@ -55,22 +51,18 @@ def generate_3d_scene(user_input: str) -> dict:
                 )
                 objects_to_send.append(generated_object_meta_data)
                 object.id = generated_object_meta_data.id
-    except:
-        logger.error(f"Failed to generate 3D object: {e}")
-        raise ValueError(f"Failed to generate 3D object: {e}")
+    except Exception:
+        raise
 
     try:
         final_decomposition_output = final_decomposition(
             user_input, initial_decomposition_output
         )
 
-        return Generate3DSceneOutputWrapper(
-            generate_3d_scene_output=Generate3DSceneOutput(
-                text=f"Generated 3D scene for {user_input}",
-                final_decomposition=final_decomposition_output.scene,
-                objects_to_send=objects_to_send,
-            )
+        return Generate3DSceneOutput(
+            text=f"Generated 3D scene for {user_input}",
+            final_decomposition=final_decomposition_output.scene,
+            objects_to_send=objects_to_send,
         ).model_dump()
-    except Exception as e:
-        logger.error(f"Failed to do the final decomposition: {e}")
-        raise ValueError(f"Failed to do the final decomposition: {e}")
+    except Exception:
+        raise

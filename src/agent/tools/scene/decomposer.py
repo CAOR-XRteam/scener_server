@@ -1,13 +1,14 @@
 import uuid
 
-from agent.llm.creation import initialize_model
 from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-from lib import load_config, logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Literal
-from sdk.scene import Scene, FinalDecompositionOutput, ComponentType
+
+from agent.llm.creation import initialize_model
+from lib import load_config, logger
+from sdk.scene import Scene, FinalDecompositionOutput
 
 
 class DecomposedObject(BaseModel):
@@ -102,10 +103,12 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
     model = initialize_model(initial_decomposer_model_name, temperature=temperature)
 
     chain = prompt_with_instructions | model | parser
+
     try:
         logger.info(f"Decomposing input: {user_input}")
         result = chain.invoke({"user_input": user_input})
         logger.info(f"Decomposition result: {result}")
+
         validated_result = DecompositionOutput(**result)
 
         # Not relying on the llm to provide unique id for every object
@@ -116,7 +119,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
         return validated_result
     except Exception as e:
-        logger.error(f"Decomposition failed: {str(e)}")
+        logger.error(f"Failed to do initial decomposition: {str(e)}")
         raise
 
 
@@ -237,20 +240,21 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
         Based on ALL the above information, generate the full scene JSON.
         """
-    config = load_config()
-    final_decomposer_model_name = config.get("final_decomposer_model")
-
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
             ("user", user_prompt),
         ]
     )
+
     parser = JsonOutputParser(pydantic_object=Scene)
 
     prompt_with_instructions = prompt.partial(
         format_instructions=parser.get_format_instructions()
     )
+
+    config = load_config()
+    final_decomposer_model_name = config.get("final_decomposer_model")
 
     model = initialize_model(final_decomposer_model_name, temperature=temperature)
 
@@ -260,7 +264,6 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
         logger.info(
             f"Final decomposition with input: original_prompt='{user_input}', improved_decomposition: {improved_decomposition.scene}."
         )
-
         result: Scene = chain.invoke(
             {
                 "user_input": user_input,
@@ -274,18 +277,17 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
         )
 
     except Exception as e:
-        logger.error(f"Decomposition failed: {str(e)}")
+        logger.error(f"Failed to do the final decomposition: {str(e)}")
         raise
 
 
 if __name__ == "__main__":
-    # decomposer = InitialDecomposer()
-    # superprompt = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
-    # output = decomposer.decompose(superprompt)
-    # print(json.dumps(output, indent=2))
+    decomposer = initial_decomposition("llama3.1")
+    user_input = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
+    output = initial_decomposition(user_input, "llama3.1")
+    print(output)
 
-    decomposer = final_decomposition("llama3.1")
-    superprompt = {
+    user_input = {
         "scene_data": {
             "scene": {
                 "objects": [
@@ -309,7 +311,5 @@ if __name__ == "__main__":
         },
         "user_input": "A cup of coffee on a wooden table in a sunlit kitchen",
     }
-    output = final_decomposition(
-        superprompt.get("scene_data"), superprompt.get("user_input")
-    )
+    output = final_decomposition(user_input, "llama3.1")
     print(output)

@@ -3,10 +3,11 @@ import os
 import sys
 import torch
 
-from sdk.scene import Scene
 from colorama import Fore
 from loguru import logger
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+
+from sdk.scene import Scene
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.json")
@@ -31,8 +32,6 @@ logger.add(
 
 def speech_to_text(path: str) -> str:
     """Convert a vocal speech to text."""
-    import whisper
-
     logger.info(
         f"{Fore.YELLOW}Speech to text conversion started for file: {path}{Fore.RESET}"
     )

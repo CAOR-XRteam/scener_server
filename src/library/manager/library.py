@@ -1,16 +1,22 @@
-# TODO: more precise error handling to propagate to the agent
+import os
+import sqlite3
+import json
 
 from beartype import beartype
 from colorama import Fore
 from library.sql.row import SQL
 from library.manager.database import Database as DB
 from loguru import logger
-import sqlite3
-import os
 from pydantic import BaseModel
 
+from agent.llm.creation import initialize_model
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
 
-class Asset(BaseModel):
+# TODO: more precise error handling to propagate to the agent
+
+
+class AppAsset(BaseModel):
     id: str
     name: str
     image: str
@@ -118,7 +124,7 @@ class Library:
             cursor = self.db._get_cursor()
             assets = SQL.query_assets(cursor)
             return [
-                Asset(
+                AppAsset(
                     id=str(asset_id),
                     name=name,
                     image=image,
@@ -138,7 +144,7 @@ class Library:
             asset = SQL.query_asset_by_name(cursor, name)
 
             if asset:
-                return Asset(
+                return AppAsset(
                     id=str(asset[0]),
                     name=asset[1],
                     image=asset[2],
@@ -150,3 +156,73 @@ class Library:
         except Exception as e:
             logger.error(f"Failed to get asset from the database: {e}")
             raise
+
+    @beartype
+    def find_asset_by_description(self, description: str) -> AppAsset | None:
+        """Given a description, find the most corresponding asset in the database"""
+        try:
+            asset_list = self.get_list()
+            if not asset_list:
+                return None
+            assets = json.dumps([asset.model_dump() for asset in asset_list])
+
+            parser = JsonOutputParser(pydantic_object=AppAsset)
+
+            system_prompt = """
+            You are a highly precise and logical asset-matching engine. Your task is to find the single best matching 3D asset from a list, based on a target description.
+
+            You are given a list of assets, where each asset contains the following fields: 'id', 'name', 'image', 'mesh', and 'description'. Each asset represents a 3D object and may have attributes such as size, color, material, style, and other distinctive features described in the description field.
+
+            You are also given a separate text description of a target object.
+
+            You must follow these rules strictly:
+
+            1.  **Identify the Core Subject:** First, identify the primary object in the 'Target Description' (e.g., 'couch', 'cat', 'car', 'sword').
+
+            2.  **Filter by Core Subject:** Compare this primary object with the primary object of each asset in the 'Available Assets' list. An asset is ONLY a potential match if its primary object is the SAME as the target's. A 'black cat' is NOT a match for a 'black couch'.
+
+            3.  **Evaluate Secondary Attributes:** From the filtered list of potential matches (those with the same primary object), now evaluate secondary attributes like color, material, style, and size to find the single best fit.
+
+            4.  **Return the Result:**
+                - If you find a single asset that is a strong match on both the core subject and its attributes, return its full JSON object.
+                - **If NO asset has the same core subject as the target description, you MUST return null.**
+                - If there are potential matches but their secondary attributes are a poor fit, it is better to return null than to return a weak match.
+
+            Your response must be ONLY the JSON object of the best matching asset, or the literal `null` if no sufficient match is found. Do not provide explanations or any other text."""
+
+            user_prompt = """
+            Target Description:
+            {description}
+
+            Available Assets:
+            {assets}
+
+            Instructions:
+            - Compare the target description with the descriptions of all assets.
+            - Return the single best matching asset.
+            - If no asset matches closely enough, return null.
+            - Be precise and conservative. Do not guess.
+
+            You must respond ONLY with the JSON object of the best matching asset, or null if no match is found. Do not include any other text, explanations, or code.
+            """
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", system_prompt),
+                    ("user", user_prompt),
+                ]
+            )
+            prompt_with_instructions = prompt.partial(
+                format_instructions=parser.get_format_instructions()
+            )
+
+            model = initialize_model("gemma3:12b")
+            chain = prompt_with_instructions | model | parser
+
+            logger.info(f"Searching for similar asset: {description}")
+            asset = chain.invoke({"description": description, "assets": assets})
+            logger.info(f"Asset (not)found: {asset}")
+
+            return AppAsset.model_validate(asset) if asset else None
+        except Exception as e:
+            logger.error(f"Error while searching for an asset: {e}")
+            return None

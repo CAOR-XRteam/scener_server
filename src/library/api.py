@@ -1,12 +1,15 @@
+from beartype import beartype
 from lib import logger
 from library import db
-from library.manager.database import Database
-from library.manager.library import Library
+
 from library.manager.asset import Asset
+from library.manager.library import AppAsset
+from library.manager.library import Library
 
 # TODO: more precise error handling to propagate to the agent, tests
 
 
+@beartype
 class LibraryAPI:
     def __init__(self):
         self.db = db
@@ -68,3 +71,7 @@ class LibraryAPI:
         except Exception as e:
             logger.error(f"Failed to get asset: {e}")
             raise
+
+    def find_asset_by_description(self, description: str) -> AppAsset | None:
+        """Find the closest asset to a given description"""
+        return self.library.find_asset_by_description(description)
