@@ -9,11 +9,13 @@ from loguru import logger
 from agent.tools.pipeline.image_generation import GenerateImageOutput
 from agent.tools.pipeline.td_object_generation import Generate3DObjectOutput
 from agent.tools.pipeline.td_scene_generation import Generate3DSceneOutput
+from agent.tools.pipeline.td_scene_modification import Modify3DSceneOutput
 from sdk.messages import (
     OutgoingConvertedSpeechMessage,
     OutgoingGenerated3DObjectsMessage,
     OutgoingGeneratedImagesMessage,
     OutgoingGenerated3DSceneMessage,
+    OutgoingModified3DSceneMessage,
     OutgoingErrorMessage,
     AppMediaAsset,
 )
@@ -31,12 +33,14 @@ class Tool_callback(BaseCallbackHandler):
             "generate_image",
             "generate_3d_object",
             "generate_3d_scene",
+            "modify_3d_scene",
         )
         self.structured_response: (
             OutgoingConvertedSpeechMessage
             | OutgoingGenerated3DObjectsMessage
             | OutgoingGeneratedImagesMessage
             | OutgoingGenerated3DSceneMessage
+            | OutgoingModified3DSceneMessage
             | OutgoingErrorMessage
         ) = None
 
@@ -88,6 +92,20 @@ class Tool_callback(BaseCallbackHandler):
                 self.structured_response = OutgoingGenerated3DSceneMessage(
                     text=payload.text,
                     json_scene=payload.final_decomposition.model_dump(),
+                    assets=[
+                        AppMediaAsset(
+                            id=asset_meta_data.id,
+                            filename=asset_meta_data.filename,
+                            data=read_glb(asset_meta_data.path),
+                        )
+                        for asset_meta_data in payload.objects_to_send
+                    ],
+                )
+            case "modify_3d_scene":
+                payload = Modify3DSceneOutput(**tool_output)
+                self.structured_response = OutgoingModified3DSceneMessage(
+                    text=payload.text,
+                    json_scene=payload.modified_scene.model_dump(),
                     assets=[
                         AppMediaAsset(
                             id=asset_meta_data.id,

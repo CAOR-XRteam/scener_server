@@ -19,6 +19,7 @@ class OutgoingMessageType(str, Enum):
     GENERATE_IMAGE = "generate_image"
     GENERATE_3D_OBJECT = "generate_3d_object"
     GENERATE_3D_SCENE = "generate_3d_scene"
+    MODIFY_3D_SCENE = "modify_3d_scene"
     CONVERT_SPEECH = "convert_speech"
     ERROR = "error"
 
@@ -181,6 +182,33 @@ class OutgoingGenerated3DSceneMessage(IOutgoingMessage):
             assets=proto_assets,
             status=200,
             metadata=json.dumps(self.json_scene),
+        )
+
+
+@dataclass(frozen=True)
+class OutgoingModified3DSceneMessage(IOutgoingMessage):
+    text: str
+    modified_scene: dict
+    assets: list[AppMediaAsset]
+
+    def to_proto(self) -> message_pb2.Content:
+        proto_assets = []
+
+        for app_asset in self.assets:
+            proto_assets.append(
+                message_pb2.MediaAsset(
+                    id=app_asset.id,
+                    filename=app_asset.filename,
+                    data=app_asset.data,
+                )
+            )
+
+        return message_pb2.Content(
+            type=OutgoingMessageType.MODIFY_3D_SCENE.value,
+            text=self.text,
+            assets=proto_assets,
+            status=200,
+            metadata=json.dumps(self.modified_scene),
         )
 
 
