@@ -1,8 +1,8 @@
 from beartype import beartype
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.memory import InMemorySaver
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import create_react_agent
-from langgraph.checkpoint.memory import InMemorySaver
 
 
 def initialize_model(model_name: str, temperature: int = 0):
