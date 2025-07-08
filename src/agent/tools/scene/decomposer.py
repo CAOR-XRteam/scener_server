@@ -166,12 +166,13 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
         - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
-        - Each SceneObject represents a container and MUST have these fields: id, position, rotation, scale, components, and children.
+        - Each SceneObject represents a container and MUST have these fields: id, parent_id, position, rotation, scale, components, and children.
 
         - The children field is a list of other SceneObject nodes; **IMPORTANT**: it is ALWAYS present in the structure, and if a SceneObject logically has no children, it MUST BE an empty list [].
 
         - You must infer the relationships between objects based on the scene description. For example, if a lamp is inside a box, the lamp must be a child of the box.
 
+        - If a SceneObject1 is a children of SceneObject2, parent_id of SceneObject1 must be id of SceneObject2. Always keep this coherence between parent and child ids.
     **2. "components" (Defining what a SceneObject is):**
 
         - The components list is the most important part. Every item in it MUST have a component_type field.
