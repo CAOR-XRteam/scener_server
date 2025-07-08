@@ -1,3 +1,4 @@
+from sdk.messages import OutgoingErrorMessage
 from server.client import Client
 from server.data.message import Message
 from sdk.protobuf import message_pb2
@@ -34,8 +35,10 @@ class Input:
                 break
             except Exception as e:
                 logger.error(f"Client input error: {e}")
-                await self.client.send_error(
-                    500, f"Internal server error in thread {self.client.get_uid()}"
+                await self.client.send_message(
+                    OutgoingErrorMessage(
+                        500, f"Internal server error in thread {self.client.get_uid()}"
+                    )
                 )
                 break
 

@@ -1,9 +1,10 @@
-from agent.api import AgentAPI
-from server.client import Client
-from sdk.protobuf import message_pb2
-from beartype import beartype
-from lib import logger
 import asyncio
+
+from beartype import beartype
+
+from lib import logger
+from server.client import Client
+from sdk.messages import OutgoingErrorMessage
 
 
 @beartype
@@ -35,7 +36,9 @@ class Output:
             except Exception as e:
                 logger.error(f"Output error: {e}")
                 await self.client.send_error(
-                    500, message=f"Internal server error in thread {self.client.uid}"
+                    OutgoingErrorMessage(
+                        500, f"Internal server error in thread {self.client.get_uid()}"
+                    )
                 )
                 break
 

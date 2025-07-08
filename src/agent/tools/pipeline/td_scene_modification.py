@@ -55,4 +55,5 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
 @tool(args_schema=Modify3DSceneToolInput)
 @beartype
 def request_context():
+    """Requests for additional context."""
     logger.info(f"Requesting context for scene modification.")
