@@ -20,6 +20,7 @@ class Message:
 
     def __init__(self, client: Client):
         self.client = client
+        self.pending_modification_request: str | None = None
 
     async def handle_incoming_message(self, proto_message: message_pb2.Content):
         """Process incoming message according to his type"""
@@ -32,12 +33,47 @@ class Message:
                 await self.handle_speech_convertion_message(message.data)
             case IncomingGestureMessage():
                 await self.handle_gesture_message(message.data)
+            case IncomingRequestContextMessage():
+                await self.handle_context_request_message(message.metadata)
+
+    async def handle_context_request_message(self, message: str):
+        combined_prompt = (
+            f"The user wants to modify the scene. Their request was: '{self.pending_modification_request}'.\n\n"
+            f"Here is the JSON for the current scene:\n{message}"
+        )
+        try:
+            output_generator = self.client.agent.aask(
+                combined_prompt, str(self.client.uid)
+            )
+            async for token in output_generator:
+                logger.info(
+                    f"Received token for client {self.client.get_uid()}: {token}"
+                )
+        # Manage exceptions
+        except asyncio.CancelledError:
+            logger.info(
+                f"Stream cancelled for client {self.client.get_uid()} for websocket {self.client.websocket.remote_address}"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"Error during chat stream: {e}")
+            await self.client.send_message(
+                OutgoingErrorMessage(
+                    status=500,
+                    text=f"Error during chat stream in thread {self.client.uid}: {e}",
+                )
+            )
 
     async def handle_chat_message(self, message: str):
         """Manage chat message"""
         try:
             output_generator = self.client.agent.aask(message, str(self.client.uid))
             async for token in output_generator:
+                if isinstance(token, OutgoingRequestContextMessage):
+                    self.pending_modification_request = token.metadata
+                    logger.info(
+                        f"Stored pending modification request: '{self.pending_modification_request}'"
+                    )
                 logger.info(
                     f"Received token for client {self.client.get_uid()}: {token}"
                 )

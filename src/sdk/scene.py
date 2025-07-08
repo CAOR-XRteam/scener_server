@@ -198,7 +198,7 @@ class SceneObject(BaseModel):
 
 class Scene(BaseModel):
     name: str
-    skybox: Skybox
+    skybox: Optional[Skybox]
     graph: list[SceneObject]
 
 

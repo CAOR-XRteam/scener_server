@@ -21,7 +21,8 @@ class Regenerate3DObjectInfo(BaseModel):
 
 
 class ModifySceneOutput(BaseModel):
-    final_graph: list[SceneObject] = Field(
+    name: str = Field(description="Name of the scene.")
+    graph: list[SceneObject] = Field(
         description="A list of objects from the scene that are relevant to the user's request."
     )
     skybox: Optional[Skybox] = Field(
@@ -46,73 +47,39 @@ def analyze(
         system_prompt = """You are an expert 3D scene graph editor. Your task is to take a user's modification request and the current scene's JSON, and output the **complete, final JSON state of the scene** after applying all changes. You are not creating a patch; you are rewriting the entire scene graph to reflect all changes, including hierarchy.
 
 **Output Structure:**
-Your output must be a single JSON object with three keys: `final_graph`, `skybox`, and `regenerations`.
+Your output must be a single JSON object with three keys: `name`, `graph`, `skybox`, and `regenerations`.
 
 **Your Logic for Building the New Scene:**
-You must start with the original scene and apply the user's request by following these rules to construct the `final_graph`:
+Name field is the name from original scene you received.
+
+You must start with the original scene and apply the user's request by following these rules to construct the `graph`:
 
 1.  **IF the request changes the SKYBOX** (e.g., "make it sunset"):
     *   **Action:** Generate a *new, complete JSON object* for the skybox. This will be the value for the output `skybox` field. If unchanged, copy the original.
 
 2.  **IF the request is a SIMPLE CHANGE to an EXISTING object** (e.g., move, scale, rotate, change primitive color):
-    *   **Action:** In your construction of the `final_graph`, find the object and modify its properties directly. Ensure its position in the hierarchy (its parent) remains correct unless the request implies a move.
+    *   **Action:** In your construction of the `graph`, find the object and modify its properties directly. Ensure its position in the hierarchy (its parent) remains correct unless the request implies a move.
 
 3.  **IF the request is a COMPLEX CHANGE to an EXISTING `dynamic` object** (e.g., "turn the cat into a dog"):
-    *   **Action:** Add an entry to the `regenerations` list: `{{"object_id": "the_cat_id", "generation_prompt": "a dog"}}`. In the `final_graph`, the object itself should retain its original properties (like components) but its hierarchy and position can still be changed if requested.
+    *   **Action:** Add an entry to the `regenerations` list: `{{"object_id": "the_cat_id", "generation_prompt": "a dog"}}`. In the `graph`, the object itself should retain its original properties (like components) but its hierarchy and position can still be changed if requested.
 
 4.  **IF the request is a COMBINATION of SIMPLE and COMPLEX changes** (e.g., "move the dog near the table and make it black"):
-    *   **Action:** Apply both instructions. In the `final_graph`, modify the object's simple properties (like its new `position`). ALSO, add an entry to the `regenerations` list with the new prompt (`{{"object_id": "the_dog_id", "generation_prompt": "a black dog"}}`).
+    *   **Action:** Apply both instructions. In the `graph`, modify the object's simple properties (like its new `position`). ALSO, add an entry to the `regenerations` list with the new prompt (`{{"object_id": "the_dog_id", "generation_prompt": "a black dog"}}`).
 
 5.  **IF the request is an ADDITION of a NEW object** (e.g., "add a chair"):
-    *   **Action:** Create the full `SceneObject` JSON for the new object. Use a temporary placeholder `id` like "new_object_1". Critically, place this new object in the `children` list of its correct parent within the `final_graph`.
+    *   **Action:** Create the full `SceneObject` JSON for the new object. Use a temporary placeholder `id` like "new_object_1". Critically, place this new object in the `children` list of its correct parent within the `graph`.
 
 **CRITICAL HIERARCHY RULE**:
-1.  **If a request changes an object's parent (e.g., "take the dog out of the room", "put the lamp on the table"), you MUST modify the `children` lists of both the old parent (to remove it) and the new parent (to add it). You MUST also recalculate the object's `position` to be relative to its new parent. All unchanged objects must be copied to the new `final_graph` in their correct hierarchical position.**
+1.  **If a request changes an object's parent (e.g., "take the dog out of the room", "put the lamp on the table"), you MUST modify the `children` lists of both the old parent (to remove it) and the new parent (to add it). You MUST also recalculate the object's `position` to be relative to its new parent. All unchanged objects must be copied to the new `graph` in their correct hierarchical position.**
 
 2. **Handle ALL Object Operations (Updates and Additions)**:
     For every object you update or add, you MUST determine its parent.
     - If an object is being moved (e.g., "put the lamp on the table"), its `parent_id` should be the ID of the new parent (e.g., "table_id_456").
     - If an object is added, its `parent_id` should be its container (e.g., the room or another object).
     - If an object is at the root of the scene, its `parent_id` must be `null`.
----
-**Example of a move (Hierarchy Change)**
-* **Current Scene:** A `room` object is a parent of `cat` object.
-* **User Request:** "Put the cat that was on the floor onto the sofa."
-* **Correct Output**:
-{{
-  "object_operations": [
-    {{
-      "object": {{
-        "id": "cat_id_123",
-        "parent_id": "sofa_id_789",
-        "position": {{"x": 0, "y": 0.3, "z": 0}},
-        ...
-      }},
-      "regeneration_required": false,
-      "generation_prompt": null
-    }}
-  ],
-  "skybox": null
-}}
 
-**Example of adding an object with a parent**
-* **User Request**: "Add a book on the table."
-* **Correct Output**:
-{{
-  "object_operations": [
-    {{
-      "object": {{
-        "id": "new_object_1",
-        "parent_id": "table_id_456",
-        "position": {{"x": -0.2, "y": 0.02, "z": 0}},
-        ...
-      }},
-      "regeneration_required": true,
-      "generation_prompt": "a book"
-    }}
-  ],
-  "skybox": null
-}}
+**You MUST preserve the original structure, objects in the output MUST have the same fields present as objects in the input.**
+
 """
         user_prompt = "Current scene: {json_scene}\nUser: {user_input}"
         prompt = ChatPromptTemplate.from_messages(
@@ -131,7 +98,7 @@ You must start with the original scene and apply the user's request by following
         scene_analyzer_model_name = config.get("scene_analyzer_model")
         model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-        chain = prompt_with_instructions | model | parser
+        chain = prompt | model.with_structured_output(ModifySceneOutput)
 
         logger.info(f"Analyzing current scene for modifications: {user_input}")
         result: ModifySceneOutput = chain.invoke(

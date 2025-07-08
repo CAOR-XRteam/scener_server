@@ -218,9 +218,7 @@ class Library:
             model = initialize_model("gemma3:12b")
             chain = prompt_with_instructions | model | parser
 
-            logger.info(f"Searching for similar asset: {description}")
             asset = chain.invoke({"description": description, "assets": assets})
-            logger.info(f"Asset (not)found: {asset}")
 
             return AppAsset.model_validate(asset) if asset else None
         except Exception as e:

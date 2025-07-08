@@ -35,6 +35,7 @@ class Tool_callback(BaseCallbackHandler):
             "generate_3d_object",
             "generate_3d_scene",
             "modify_3d_scene",
+            "request_context",
         )
         self.structured_response: (
             OutgoingConvertedSpeechMessage
@@ -42,6 +43,7 @@ class Tool_callback(BaseCallbackHandler):
             | OutgoingGeneratedImagesMessage
             | OutgoingGenerated3DSceneMessage
             | OutgoingModified3DSceneMessage
+            | OutgoingRequestContextMessage
             | OutgoingErrorMessage
         ) = None
 
@@ -61,7 +63,9 @@ class Tool_callback(BaseCallbackHandler):
     def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
         """Starts when a tool finishes, puts the result in the queue for further processing."""
         tool_name = kwargs.get("name")
-        tool_output = json.loads(output.content)
+        tool_output = {}
+        if tool_name != "request_context":
+            tool_output = json.loads(output.content)
 
         match tool_name:
             case "generate_image":
@@ -90,6 +94,7 @@ class Tool_callback(BaseCallbackHandler):
                 )
             case "generate_3d_scene":
                 payload = Generate3DSceneOutput(**tool_output)
+                logger.info(f"Payload: {payload}")
                 self.structured_response = OutgoingGenerated3DSceneMessage(
                     text=payload.text,
                     json_scene=payload.final_decomposition.model_dump(),
@@ -117,7 +122,10 @@ class Tool_callback(BaseCallbackHandler):
                     ],
                 )
             case "request_context":
-                self.structured_response = OutgoingRequestContextMessage()
+                logger.info(f"Output: {output.content}")
+                self.structured_response = OutgoingRequestContextMessage(
+                    metadata=output.content
+                )
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")

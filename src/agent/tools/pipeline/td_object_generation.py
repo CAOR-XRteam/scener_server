@@ -39,8 +39,8 @@ def generate_3d_object_from_prompt(
     if asset:
         logger.info(f"Found already existing asset: {asset}.")
         return TDObjectMetaData(
-            id=asset.name if not id else id,
-            filename=f"{asset.name if not id else id}.glb",
+            id=asset.name,
+            filename=f"{asset.name}.glb",
             path=asset.mesh,
             error=None,
         )

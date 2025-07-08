@@ -11,6 +11,7 @@ class IncomingMessageType(str, Enum):
     TEXT = "text"
     AUDIO = "audio"
     GESTURE = "gesture"
+    CONTEXT = "request_context"
     ERROR = "error"
 
 
@@ -52,6 +53,11 @@ class IncomingAudioMessage(IIncomingMessage):
 @dataclass(frozen=True)
 class IncomingGestureMessage(IIncomingMessage):
     data: bytes
+
+
+@dataclass(frozen=True)
+class IncomingRequestContextMessage(IIncomingMessage):
+    metadata: str
 
 
 @dataclass(frozen=True)
@@ -215,9 +221,12 @@ class OutgoingModified3DSceneMessage(IOutgoingMessage):
 
 @dataclass(frozen=True)
 class OutgoingRequestContextMessage(IOutgoingMessage):
+    metadata: str
+
     def to_proto(self) -> message_pb2.Content:
         return message_pb2.Content(
             type=OutgoingMessageType.REQUEST_CONTEXT.value,
+            metadata=self.metadata,
             status=200,
         )
 
@@ -235,5 +244,7 @@ def create_incoming_message_from_proto(proto: message_pb2.Content) -> IIncomingM
             return IncomingAudioMessage(data=proto.assets[0].data)
         case IncomingMessageType.GESTURE:
             return IncomingGestureMessage(data=proto.text)
+        case IncomingMessageType.CONTEXT:
+            return IncomingRequestContextMessage(metadata=proto.metadata)
         case IncomingMessageType.ERROR:
-            return IncomingErrorMessage(status=proto.status, text=proto.error)
+            return IncomingErrorMessage(status=proto.status, text=proto.text)

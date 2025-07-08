@@ -102,22 +102,23 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
     model = initialize_model(initial_decomposer_model_name, temperature=temperature)
 
-    chain = prompt_with_instructions | model | parser
+    chain = prompt | model.with_structured_output(schema=DecompositionOutput)
 
     try:
         logger.info(f"Decomposing input: {user_input}")
-        result = chain.invoke({"user_input": user_input})
-        logger.info(f"Decomposition result: {result}")
+        result: DecompositionOutput = chain.invoke({"user_input": user_input})
 
-        validated_result = DecompositionOutput(**result)
+        # validated_result = DecompositionOutput(**result)
 
         # Not relying on the llm to provide unique id for every object
-        for obj_dict in validated_result.scene.objects:
+        for obj_dict in result.scene.objects:
             obj_dict.id = (
                 f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
             )
 
-        return validated_result
+        logger.info(f"Decomposition result: {result}")
+
+        return result
     except Exception as e:
         logger.error(f"Failed to do initial decomposition: {str(e)}")
         raise
@@ -138,9 +139,24 @@ CRITICAL RULES - READ AND OBEY:
 
     **1. JSON ONLY: DO NOT write any other text, explanations, apologies, markdown, or reasoning steps like <think>...</think>.**
 
-    **2. HIERARCHY IS MANDATORY: You MUST analyze the user's text to determine relationships. An object described as 'in' or 'on' another object (e.g., "a cat in a room") MUST be a child of that container object in the JSON.**
+    **2. Establish Hierarchy and Relationships (The Container Principle):**
+        - Your absolute first priority is to establish a logical parent-child hierarchy. Do not create a flat list of objects.
+        - Identify the Main Container (e.g., "a room", "a forest") and place all other objects as its children or descendants.
+        - A "cat in a room" means the cat object is a child of the room object. A "lamp on a desk" means the lamp is a child of the desk.
 
-    **3. ABSOLUTE COORDINATES & SCALE: The `position` and `scale` vectors should ALWAYS represent the object's final, absolute world coordinates and size in world units, as if it had no parent. A cat with a scale of 0.5 should be 0.5 units tall in the world, no matter how large the room is.**
+    **3. Set Global and Local Lighting (The Illumination Principle):**
+        - **This is a mandatory step for every scene.**
+        - **Step A: Global Light (Skybox and Sun):** First, analyze the user's prompt for ambiance clues ("sunny day", "nighttime", "dusk", "overcast").
+            - For outdoor or bright indoor scenes (e.g., "a sunlit kitchen"), you MUST use a `sun` type skybox and you MUST also add a `directional` light to the scene graph to act as the sun. The rotation of this directional light should correspond to the sun's direction.
+            - For moody, abstract, or simple indoor scenes (e.g., "a dark room"), a `gradient` or `cubed` skybox is appropriate. A directional light is not required in this case unless specified.
+        - **Step B: Local Lights (Point, Spot, Area):** Second, add artificial lights where logically necessary.
+            - If the scene is an enclosed space (like a room, cave, or hallway) and it's not described as brightly sunlit, you MUST add at least one `point` or `spot` light to illuminate the interior.
+            - If the user explicitly mentions a light source (e.g., "a desk lamp", "a glowing crystal", "a street light"), you MUST create a `SceneObject` for that item (e.g., a primitive cylinder for the lamp base) AND add a `light` component to it. The light component should be positioned at the source of illumination (e.g., at the bulb of the lamp).
+
+    **4. Define Object Transforms (Coordinates & Scale):**
+        - A child object's `position` and `rotation` MUST be relative to its parent's center.
+        - An object's `scale` is always local to itself.
+        - Use common sense for placement. Objects rest on surfaces, not inside them. A floor is a large, flat plane.
 
 CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 

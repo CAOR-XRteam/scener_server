@@ -40,20 +40,25 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
             generated_object_meta_data = generate_3d_object_from_prompt(
                 object.prompt, object.id
             )
-            generated_object_meta_data.id = object.id
+            object.id = generated_object_meta_data.id
             objects_to_send.append(generated_object_meta_data)
     except Exception:
         raise
 
     return Modify3DSceneOutput(
         text=f"Scene modification for {user_input}",
-        modified_scene=analysis_output.final_graph,
+        modified_scene=Scene(
+            name=analysis_output.name,
+            graph=analysis_output.graph,
+            skybox=analysis_output.skybox,
+        ),
         objects_to_send=objects_to_send,
     ).model_dump()
 
 
-@tool(args_schema=Modify3DSceneToolInput)
+@tool()
 @beartype
-def request_context():
+def request_context(user_input: str) -> str:
     """Requests for additional context."""
     logger.info(f"Requesting context for scene modification.")
+    return user_input
