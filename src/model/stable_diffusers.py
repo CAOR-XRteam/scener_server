@@ -6,9 +6,11 @@ from diffusers import StableDiffusion3Pipeline, EulerDiscreteScheduler
 
 @beartype
 def generate(prompt: str, filename: str):
-    model_id = "stabilityai/stable-diffusion-3.5-large"
+    model_id = "stabilityai/stable-diffusion-3.5-large-turbo"
 
-    pipe = StableDiffusion3Pipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+    pipe = StableDiffusion3Pipeline.from_pretrained(
+        model_id, torch_dtype=torch.bfloat16
+    )
     pipe = pipe.to("cuda")
 
     image = pipe(prompt).images[0]

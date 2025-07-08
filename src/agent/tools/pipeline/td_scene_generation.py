@@ -43,7 +43,6 @@ def generate_3d_scene(user_input: str) -> dict:
                 generated_object_meta_data = generate_3d_object_from_prompt(
                     object.prompt, object.id
                 )
-                generated_object_meta_data.id = object.id
                 objects_to_send.append(generated_object_meta_data)
     except Exception:
         raise
