@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel, Field, model_validator
-from typing import Literal, Union, Annotated
+from typing import Literal, Optional, Union, Annotated
 
 
 class ColorRGBA(BaseModel):
@@ -188,7 +188,7 @@ Component = Annotated[
 
 class SceneObject(BaseModel):
     id: str
-    parent_id: str
+    parent_id: Optional[str] = Field(default=None)
     position: Vector3
     rotation: Vector3
     scale: Vector3

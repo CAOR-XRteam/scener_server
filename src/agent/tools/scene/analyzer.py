@@ -66,33 +66,53 @@ You must start with the original scene and apply the user's request by following
 5.  **IF the request is an ADDITION of a NEW object** (e.g., "add a chair"):
     *   **Action:** Create the full `SceneObject` JSON for the new object. Use a temporary placeholder `id` like "new_object_1". Critically, place this new object in the `children` list of its correct parent within the `final_graph`.
 
-**CRITICAL HIERARCHY RULE:**
-If a request changes an object's parent (e.g., "take the dog out of the room", "put the lamp on the table"), you MUST modify the `children` lists of both the old parent (to remove it) and the new parent (to add it). You MUST also recalculate the object's `position` to be relative to its new parent. All unchanged objects must be copied to the new `final_graph` in their correct hierarchical position.
+**CRITICAL HIERARCHY RULE**:
+1.  **If a request changes an object's parent (e.g., "take the dog out of the room", "put the lamp on the table"), you MUST modify the `children` lists of both the old parent (to remove it) and the new parent (to add it). You MUST also recalculate the object's `position` to be relative to its new parent. All unchanged objects must be copied to the new `final_graph` in their correct hierarchical position.**
 
+2. **Handle ALL Object Operations (Updates and Additions)**:
+    For every object you update or add, you MUST determine its parent.
+    - If an object is being moved (e.g., "put the lamp on the table"), its `parent_id` should be the ID of the new parent (e.g., "table_id_456").
+    - If an object is added, its `parent_id` should be its container (e.g., the room or another object).
+    - If an object is at the root of the scene, its `parent_id` must be `null`.
 ---
-
-**Example: Reparenting and Complex Change**
-*   **Current Scene:** A `cat` object is a child of a `room` object.
-*   **User Request**: "Turn the cat into a spaceship and move it outside the room."
-*   **Correct Output**:
-
+**Example of a move (Hierarchy Change)**
+* **Current Scene:** A `room` object is a parent of `cat` object.
+* **User Request:** "Put the cat that was on the floor onto the sofa."
+* **Correct Output**:
+{{
+  "object_operations": [
     {{
-      "final_graph": [
-        {{
-          "id": "room_123",
-          "children": []
-        }},
-        {{
-          "id": "cat_abc",
-          "position": {{ "x": 10, "y": 5, "z": 0 }},
-          ...
-        }}
-      ],
-      "skybox": {{ ...original or modified skybox... }},
-      "regenerations": [
-        {{ "object_id": "cat_abc", "generation_prompt": "a spaceship" }}
-      ]
+      "object": {{
+        "id": "cat_id_123",
+        "parent_id": "sofa_id_789",
+        "position": {{"x": 0, "y": 0.3, "z": 0}},
+        ...
+      }},
+      "regeneration_required": false,
+      "generation_prompt": null
     }}
+  ],
+  "skybox": null
+}}
+
+**Example of adding an object with a parent**
+* **User Request**: "Add a book on the table."
+* **Correct Output**:
+{{
+  "object_operations": [
+    {{
+      "object": {{
+        "id": "new_object_1",
+        "parent_id": "table_id_456",
+        "position": {{"x": -0.2, "y": 0.02, "z": 0}},
+        ...
+      }},
+      "regeneration_required": true,
+      "generation_prompt": "a book"
+    }}
+  ],
+  "skybox": null
+}}
 """
         user_prompt = "Current scene: {json_scene}\nUser: {user_input}"
         prompt = ChatPromptTemplate.from_messages(

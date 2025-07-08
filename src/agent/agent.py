@@ -2,7 +2,7 @@ from agent.llm.creation import initialize_agent
 from agent.tools.pipeline.image_generation import generate_image
 from agent.tools.pipeline.td_object_generation import generate_3d_object
 from agent.tools.pipeline.td_scene_generation import generate_3d_scene
-from agent.tools.pipeline.td_scene_modification import modify_3d_scene
+from agent.tools.pipeline.td_scene_modification import modify_3d_scene, request_context
 from lib import load_config
 
 
@@ -31,8 +31,19 @@ YOUR MISSION:
 - `generate_3d_scene`:
     - **Use For:** Creating a complete 3D environment or scene with multiple elements. This is for complex requests that describe a whole setting.
 
-- `modify_3d_scene`:
-    - **Use For:** **Modifying an already existing 3D scene.** This is the correct tool for any request that involves changing, adding to, removing from, or rearranging elements within a scene that has already been generated.
+**MODIFICATION WORKFLOW (for "change", "add", "move", "remove" in an existing scene):**
+
+This is a **two-step process** that you must orchestrate.
+
+1.  **Step 1: Get Scene Context.** You MUST first call the `request_context` tool to retrieve the JSON representation of the scene that the user wants to modify. This tool takes no arguments.
+
+2.  **Step 2: Propose Modifications.** After you have the scene JSON, you MUST then call the `modify_3d_scene` tool. This tool requires TWO arguments: the user's original request and the scene JSON you just retrieved.
+
+**`request_context()`**
+  - **Use For:** The mandatory first step for any scene modification request. Retrieves the scene's current state.
+
+**`modify_3d_scene(user_input: str, json_scene: str)`**
+  - **Use For:** The mandatory second step for any scene modification. Takes the user's change request and the current scene data to generate a "patch".
 ---
 **YOUR DECISION PROCESS:**
     **Example 1: Creating a new, single 3D object**
@@ -51,13 +62,14 @@ YOUR MISSION:
             - **Thought:** The user wants a single 3D model. I should use the `generate_3d_scene` tool and pass the user's full request to it.
             - **Action:** `generate_3d_scene(user_input="I want to create a 3D scene with 2 men sitting on a couch.")
     
-    **Example 3: Modifying an existing 3D scene**
+    **Example 2: Modifying an existing 3D scene (IMPORTANT)**
         1.  **Read User Input:** "Now, make the couch red and add a dog next to it."
-        2.  **Analyze Intent:** The user is referring to an existing scene ("the couch") and wants to change it ("make...red") and add to it ("add a dog").
-        3.  **Select Tool:** `propose_scene_modification`.
+        2.  **Analyze Intent:** The user is referring to an existing scene ("the couch") and wants to change it. This is a modification.
+        3.  **Select Workflow:** Modification Workflow (Two Steps).
         4.  **Execute:**
-            - **Thought:** The user is requesting a change to the current scene. The correct tool is `propose_scene_modification`.
-            - **Action:** `propose_scene_modification(user_input="Now, make the couch red and add a dog next to it.")`
+            - **Thought:** The user is requesting a change to the current scene. I must first get the current scene's data, and then propose the modification.
+            - **Action (Step 1):** `request_context()`
+            - **Action (Step 2, after receiving the scene data):** `modify_3d_scene(user_input="Now, make the couch red and add a dog next to it.", json_scene=<the_json_data_from_step_1>)`
 
 **If no tool is appropriate:**
 
@@ -75,6 +87,7 @@ YOUR MISSION:
             generate_3d_object,
             generate_3d_scene,
             modify_3d_scene,
+            request_context,
             # image_analysis,
             # list_assets,
         ]

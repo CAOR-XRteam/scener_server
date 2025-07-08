@@ -50,3 +50,9 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
         modified_scene=analysis_output.final_graph,
         objects_to_send=objects_to_send,
     ).model_dump()
+
+
+@tool(args_schema=Modify3DSceneToolInput)
+@beartype
+def request_context():
+    logger.info(f"Requesting context for scene modification.")

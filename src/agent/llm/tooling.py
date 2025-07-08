@@ -16,6 +16,7 @@ from sdk.messages import (
     OutgoingGeneratedImagesMessage,
     OutgoingGenerated3DSceneMessage,
     OutgoingModified3DSceneMessage,
+    OutgoingRequestContextMessage,
     OutgoingErrorMessage,
     AppMediaAsset,
 )
@@ -115,6 +116,8 @@ class Tool_callback(BaseCallbackHandler):
                         for asset_meta_data in payload.objects_to_send
                     ],
                 )
+            case "request_context":
+                self.structured_response = OutgoingRequestContextMessage()
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")

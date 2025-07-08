@@ -21,6 +21,7 @@ class OutgoingMessageType(str, Enum):
     GENERATE_3D_SCENE = "generate_3d_scene"
     MODIFY_3D_SCENE = "modify_3d_scene"
     CONVERT_SPEECH = "convert_speech"
+    REQUEST_CONTEXT = "request_context"
     ERROR = "error"
 
 
@@ -209,6 +210,15 @@ class OutgoingModified3DSceneMessage(IOutgoingMessage):
             assets=proto_assets,
             status=200,
             metadata=json.dumps(self.modified_scene),
+        )
+
+
+@dataclass(frozen=True)
+class OutgoingRequestContextMessage(IOutgoingMessage):
+    def to_proto(self) -> message_pb2.Content:
+        return message_pb2.Content(
+            type=OutgoingMessageType.REQUEST_CONTEXT.value,
+            status=200,
         )
 
 

@@ -222,7 +222,7 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
 **EXAMPLE OF FINAL JSON OUTPUT (Use as a structural guide):**
 
-"{{\"name\":\"A Dark Study Room\",\"skybox\":{{\"type\":\"gradient\",\"color1\":{{\"r\":0.1,\"g\":0.1,\"b\":0.2,\"a\":1}},\"color2\":{{\"r\":0.05,\"g\":0.05,\"b\":0.1,\"a\":1}},\"up_vector\":{{\"x\":0,\"y\":1,\"z\":0,\"w\":0}},\"intensity\":0.5,\"exponent\":1.0}},\"graph\":[{{\"id\":\"room_container\",\"position\":{{\"x\":0,\"y\":1.5,\"z\":0}},\"rotation\":{{\"x\":0,\"y\":0,\"z\":0}},\"scale\":{{\"x\":10,\"y\":3,\"z\":10}},\"components\":[{{\"component_type\":\"primitive\",\"shape\":\"cube\",\"color\":{{\"r\":0.2,\"g\":0.2,\"b\":0.25,\"a\":1], \"children\":[]()_]()_
+"{{\"name\":\"A Dark Study Room\",\"skybox\":{{\"type\":\"gradient\",\"color1\":{{\"r\":0.1,\"g\":0.1,\"b\":0.2,\"a\":1}},\"color2\":{{\"r\":0.05,\"g\":0.05,\"b\":0.1,\"a\":1}},\"up_vector\":{{\"x\":0,\"y\":1,\"z\":0,\"w\":0}},\"intensity\":0.5,\"exponent\":1.0}},\"graph\":[{{\"id\":\"room_container\",\"parent_id\":null, \"position\":{{\"x\":0,\"y\":1.5,\"z\":0}},\"rotation\":{{\"x\":0,\"y\":0,\"z\":0}},\"scale\":{{\"x\":10,\"y\":3,\"z\":10}},\"components\":[{{\"component_type\":\"primitive\",\"shape\":\"cube\",\"color\":{{\"r\":0.2,\"g\":0.2,\"b\":0.25,\"a\":1], \"children\":[]()_]()_
 
 **CRITICAL RULES:**
 
