@@ -145,7 +145,7 @@ CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 
         - Place Objects Inside: For every other object mentioned, determine its parent. A "cat in a room" means the cat object is a child of the room object. A "lamp on a desk" means the lamp is a child of the desk.
 
-    **2. Local Coordinates & Relative Scale: This is critical for making the hierarchy work.**
+    **2. Relative Coordinates & Relative Scale: This is critical for making the hierarchy work.**
 
         - A child object's position MUST be relative to its parent's center. For an object on the floor of a room, its y position will be negative (relative to the room's center). For an object on a table, its y position will be positive (relative to the table's center).
 

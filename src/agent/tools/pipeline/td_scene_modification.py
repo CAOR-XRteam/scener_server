@@ -2,15 +2,13 @@ from beartype import beartype
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
-from agent.tools.scene.analyzer import analyze
+from agent.tools.scene.analyzer import SceneUpdate, analyze
 from agent.tools.pipeline.td_object_generation import (
     TDObjectMetaData,
     generate_3d_object_from_prompt,
 )
 from lib import logger
 from sdk.scene import Scene
-
-# TODO: finish
 
 
 class Modify3DSceneToolInput(BaseModel):
@@ -20,7 +18,7 @@ class Modify3DSceneToolInput(BaseModel):
 
 class Modify3DSceneOutput(BaseModel):
     text: str
-    modified_scene: Scene
+    modified_scene: SceneUpdate
     objects_to_send: list[TDObjectMetaData]
 
 
@@ -38,7 +36,7 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
     objects_to_send = []
 
     try:
-        for object in analysis_output.regenerations:
+        for object in analysis_output.objects_to_regenerate:
             generated_object_meta_data = generate_3d_object_from_prompt(
                 object.prompt, object.id
             )
@@ -49,18 +47,6 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
 
     return Modify3DSceneOutput(
         text=f"Scene modification for {user_input}",
-        modified_scene=Scene(
-            name=analysis_output.name,
-            graph=analysis_output.graph,
-            skybox=analysis_output.skybox,
-        ),
+        modified_scene=analysis_output,
         objects_to_send=objects_to_send,
     ).model_dump()
-
-
-@tool()
-@beartype
-def request_context(user_input: str) -> str:
-    """Requests for additional context."""
-    logger.info(f"Requesting context for scene modification.")
-    return user_input
