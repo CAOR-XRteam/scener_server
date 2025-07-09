@@ -56,7 +56,6 @@ def generate_3d_object_from_prompt(
 
             trellis.generate(image_meta_data.path, image_meta_data.id)
 
-            library_api = LibraryAPI()
             library_api.add_asset(
                 image_meta_data.id,
                 str(image_meta_data.path),

@@ -10,6 +10,8 @@ from agent.tools.pipeline.td_object_generation import (
 from lib import logger
 from sdk.scene import Scene
 
+# TODO: finish
+
 
 class Modify3DSceneToolInput(BaseModel):
     user_input: str = Field(description="The raw user's modification request.")

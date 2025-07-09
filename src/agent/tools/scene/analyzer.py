@@ -11,8 +11,10 @@ from model.black_forest import generate
 from pydantic import BaseModel, Field, model_validator
 from langchain_core.tools import tool
 from beartype import beartype
-from typing import Optional
+from typing import Literal, Optional
 from sdk.scene import Scene, SceneObject, Skybox
+
+# TODO: finish
 
 
 class Regenerate3DObjectInfo(BaseModel):

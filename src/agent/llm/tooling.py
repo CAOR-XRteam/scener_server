@@ -106,25 +106,25 @@ class Tool_callback(BaseCallbackHandler):
                         for asset_meta_data in payload.objects_to_send
                     ],
                 )
-            case "modify_3d_scene":
-                payload = Modify3DSceneOutput(**tool_output)
-                self.structured_response = OutgoingModified3DSceneMessage(
-                    text=payload.text,
-                    modified_scene=payload.modified_scene.model_dump(),
-                    assets=[
-                        AppMediaAsset(
-                            id=asset_meta_data.id,
-                            filename=asset_meta_data.filename,
-                            data=read_glb(asset_meta_data.path),
-                        )
-                        for asset_meta_data in payload.objects_to_send
-                    ],
-                )
-            case "request_context":
-                logger.info(f"Output: {output.content}")
-                self.structured_response = OutgoingRequestContextMessage(
-                    metadata=output.content
-                )
+            # case "modify_3d_scene":
+            #     payload = Modify3DSceneOutput(**tool_output)
+            #     self.structured_response = OutgoingModified3DSceneMessage(
+            #         text=payload.text,
+            #         modified_scene=payload.modified_scene.model_dump(),
+            #         assets=[
+            #             AppMediaAsset(
+            #                 id=asset_meta_data.id,
+            #                 filename=asset_meta_data.filename,
+            #                 data=read_glb(asset_meta_data.path),
+            #             )
+            #             for asset_meta_data in payload.objects_to_send
+            #         ],
+            #     )
+            # case "request_context":
+            #     logger.info(f"Output: {output.content}")
+            #     self.structured_response = OutgoingRequestContextMessage(
+            #         metadata=output.content
+            #     )
 
     def on_tool_error(self, error: BaseException, **kwargs) -> None:
         tool_name = kwargs.get("name")

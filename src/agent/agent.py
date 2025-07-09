@@ -5,8 +5,6 @@ from agent.tools.pipeline.td_scene_generation import generate_3d_scene
 from agent.tools.pipeline.td_scene_modification import modify_3d_scene, request_context
 from lib import load_config
 
-# TODO: init db on agent init
-
 
 class Agent:
     def __init__(self):
@@ -32,22 +30,6 @@ YOUR MISSION:
 
 - `generate_3d_scene`:
     - **Use For:** Creating a complete 3D environment or scene with multiple elements. This is for complex requests that describe a whole setting.
-
-**MODIFICATION WORKFLOW (for "change", "add", "move", "remove" in an existing scene):**
-
-This is a **two-step process** that you must orchestrate.
-
-1.  **Step 1: Get Scene Context.** You MUST first call the `request_context` tool to retrieve the JSON representation of the scene that the user wants to modify. This tool takes user request as argument. You MUST finish and return the tool output. DO NOT call the 'modify_3d_scene' tool directly. Wait until you will receive another call with json description of the current scene.
-
-2.  **Step 2: Propose Modifications.** After you receive the scene JSON, you MUST then call the `modify_3d_scene` tool. This tool requires TWO arguments: the user's original request and the scene JSON you were communicated. 
-
-**`request_context(user_input: str)`**
-  - **Use For:** The mandatory first step for any scene modification request. Retrieves the scene's current state.
-
-**`modify_3d_scene(user_input: str, json_scene: str)`**
-  - **Use For:** The mandatory second step for any scene modification. Takes the user's change request and the current scene data to generate a "patch".
-
- **IMPORTANT:** modifications are handled by the `modify_3d_scene`. Your only job is to call this tool with user's initial input and recevied json scene, NEVER analyze the scene or the change than should be made, this IS NOT your concern and will be handled by the tool. You MUST just call the tool with the appropriate arguments.
 ---
 **YOUR DECISION PROCESS:**
 
@@ -66,22 +48,6 @@ This is a **two-step process** that you must orchestrate.
         4.  **Execute:**
             - **Thought:** The user wants a single 3D model. I should use the `generate_3d_scene` tool and pass the user's full request to it.
             - **Action:** `generate_3d_scene(user_input="I want to create a 3D scene with 2 men sitting on a couch.")
-    
-    **Example 2a: Modifying an existing scene (Turn 1 - Initial Request)**
-        1.  **Read User Input:** "Now make the couch red."
-        2.  **Analyze Intent:** This is a modification request.
-        3.  **Select Workflow:** Modification Workflow, Step 1.
-        4.  **Execute:**
-            - **Thought:** The user wants to modify the scene. The first step is always to get the current scene's context. I will call `request_context`.
-            - **Action:** `request_context(user_input="Now make the couch red")`
-        
-    **Example 2b: Modifying an existing scene (Turn 2 - Context Provided)**
-        1.  **Read User Input:** (The agent now has the scene JSON from the previous turn)
-        2.  **Analyze Intent:** I have the user's original request ("make the couch red") and the scene context. My task is to combine these and propose the modification.
-        3.  **Select Workflow:** Modification Workflow, Step 2.
-        4.  **Execute:**
-            - **Thought:** I have the user's request and the scene JSON. I must now call `modify_3d_scene` with both pieces of information to generate the patch.
-            - **Action:** `modify_3d_scene(user_input="make the couch red", json_scene=<the_json_data_from_the_previous_turn>)`
 
 **If no tool is appropriate:**
 
@@ -101,8 +67,8 @@ You have analyzed the user's request and the available workflows. Now, you must 
             generate_image,
             generate_3d_object,
             generate_3d_scene,
-            modify_3d_scene,
-            request_context,
+            # modify_3d_scene,
+            # request_context,
             # image_analysis,
             # list_assets,
         ]

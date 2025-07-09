@@ -10,6 +10,8 @@ from agent.llm.creation import initialize_model
 from lib import load_config, logger
 from sdk.scene import Scene, FinalDecompositionOutput
 
+# TODO: pydantic field descr
+
 
 class DecomposedObject(BaseModel):
     id: str
