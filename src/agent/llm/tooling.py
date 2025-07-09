@@ -16,7 +16,6 @@ from sdk.messages import (
     OutgoingGeneratedImagesMessage,
     OutgoingGenerated3DSceneMessage,
     OutgoingModified3DSceneMessage,
-    OutgoingRequestContextMessage,
     OutgoingErrorMessage,
     AppMediaAsset,
 )
@@ -35,7 +34,6 @@ class Tool_callback(BaseCallbackHandler):
             "generate_3d_object",
             "generate_3d_scene",
             "modify_3d_scene",
-            "request_context",
         )
         self.structured_response: (
             OutgoingConvertedSpeechMessage
@@ -43,7 +41,6 @@ class Tool_callback(BaseCallbackHandler):
             | OutgoingGeneratedImagesMessage
             | OutgoingGenerated3DSceneMessage
             | OutgoingModified3DSceneMessage
-            | OutgoingRequestContextMessage
             | OutgoingErrorMessage
         ) = None
 
@@ -63,9 +60,7 @@ class Tool_callback(BaseCallbackHandler):
     def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
         """Starts when a tool finishes, puts the result in the queue for further processing."""
         tool_name = kwargs.get("name")
-        tool_output = {}
-        if tool_name != "request_context":
-            tool_output = json.loads(output.content)
+        tool_output = json.loads(output.content)
 
         match tool_name:
             case "generate_image":

@@ -11,7 +11,6 @@ class IncomingMessageType(str, Enum):
     TEXT = "text"
     AUDIO = "audio"
     GESTURE = "gesture"
-    CONTEXT = "request_context"
     ERROR = "error"
 
 
@@ -22,14 +21,27 @@ class OutgoingMessageType(str, Enum):
     GENERATE_3D_SCENE = "generate_3d_scene"
     MODIFY_3D_SCENE = "modify_3d_scene"
     CONVERT_SPEECH = "convert_speech"
-    REQUEST_CONTEXT = "request_context"
     ERROR = "error"
 
 
 class IIncomingMessage(ABC):
     """Base class for all messages received from the client."""
 
-    pass
+    def from_proto(proto: message_pb2.Content) -> IIncomingMessage:
+        try:
+            msg_type = IncomingMessageType(proto.type)
+        except ValueError:
+            return IncomingUnknownMessage(original_type=proto.type)
+
+        match msg_type:
+            case IncomingMessageType.TEXT:
+                return IncomingTextMessage(text=proto.text)
+            case IncomingMessageType.AUDIO:
+                return IncomingAudioMessage(data=proto.assets[0].data)
+            case IncomingMessageType.GESTURE:
+                return IncomingGestureMessage(data=proto.text)
+            case IncomingMessageType.ERROR:
+                return IncomingErrorMessage(status=proto.status, text=proto.text)
 
 
 class IOutgoingMessage(ABC):
@@ -53,11 +65,6 @@ class IncomingAudioMessage(IIncomingMessage):
 @dataclass(frozen=True)
 class IncomingGestureMessage(IIncomingMessage):
     data: bytes
-
-
-@dataclass(frozen=True)
-class IncomingRequestContextMessage(IIncomingMessage):
-    metadata: str
 
 
 @dataclass(frozen=True)
@@ -217,34 +224,3 @@ class OutgoingModified3DSceneMessage(IOutgoingMessage):
             status=200,
             metadata=json.dumps(self.modified_scene),
         )
-
-
-@dataclass(frozen=True)
-class OutgoingRequestContextMessage(IOutgoingMessage):
-    metadata: str
-
-    def to_proto(self) -> message_pb2.Content:
-        return message_pb2.Content(
-            type=OutgoingMessageType.REQUEST_CONTEXT.value,
-            metadata=self.metadata,
-            status=200,
-        )
-
-
-def create_incoming_message_from_proto(proto: message_pb2.Content) -> IIncomingMessage:
-    try:
-        msg_type = IncomingMessageType(proto.type)
-    except ValueError:
-        return IncomingUnknownMessage(original_type=proto.type)
-
-    match msg_type:
-        case IncomingMessageType.TEXT:
-            return IncomingTextMessage(text=proto.text)
-        case IncomingMessageType.AUDIO:
-            return IncomingAudioMessage(data=proto.assets[0].data)
-        case IncomingMessageType.GESTURE:
-            return IncomingGestureMessage(data=proto.text)
-        case IncomingMessageType.CONTEXT:
-            return IncomingRequestContextMessage(metadata=proto.metadata)
-        case IncomingMessageType.ERROR:
-            return IncomingErrorMessage(status=proto.status, text=proto.text)

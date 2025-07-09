@@ -2,7 +2,7 @@ from agent.llm.creation import initialize_agent
 from agent.tools.pipeline.image_generation import generate_image
 from agent.tools.pipeline.td_object_generation import generate_3d_object
 from agent.tools.pipeline.td_scene_generation import generate_3d_scene
-from agent.tools.pipeline.td_scene_modification import modify_3d_scene, request_context
+from agent.tools.pipeline.td_scene_modification import modify_3d_scene
 from lib import load_config
 
 
@@ -68,7 +68,6 @@ You have analyzed the user's request and the available workflows. Now, you must 
             generate_3d_object,
             generate_3d_scene,
             # modify_3d_scene,
-            # request_context,
             # image_analysis,
             # list_assets,
         ]
