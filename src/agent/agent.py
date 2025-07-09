@@ -5,6 +5,8 @@ from agent.tools.pipeline.td_scene_generation import generate_3d_scene
 from agent.tools.pipeline.td_scene_modification import modify_3d_scene, request_context
 from lib import load_config
 
+# TODO: init db on agent init
+
 
 class Agent:
     def __init__(self):
@@ -35,7 +37,7 @@ YOUR MISSION:
 
 This is a **two-step process** that you must orchestrate.
 
-1.  **Step 1: Get Scene Context.** You MUST first call the `request_context` tool to retrieve the JSON representation of the scene that the user wants to modify. This tool takes user request as argument. Then you will receive a json description of the current scene.
+1.  **Step 1: Get Scene Context.** You MUST first call the `request_context` tool to retrieve the JSON representation of the scene that the user wants to modify. This tool takes user request as argument. You MUST finish and return the tool output. DO NOT call the 'modify_3d_scene' tool directly. Wait until you will receive another call with json description of the current scene.
 
 2.  **Step 2: Propose Modifications.** After you receive the scene JSON, you MUST then call the `modify_3d_scene` tool. This tool requires TWO arguments: the user's original request and the scene JSON you were communicated. 
 
@@ -48,6 +50,7 @@ This is a **two-step process** that you must orchestrate.
  **IMPORTANT:** modifications are handled by the `modify_3d_scene`. Your only job is to call this tool with user's initial input and recevied json scene, NEVER analyze the scene or the change than should be made, this IS NOT your concern and will be handled by the tool. You MUST just call the tool with the appropriate arguments.
 ---
 **YOUR DECISION PROCESS:**
+
     **Example 1: Creating a new, single 3D object**
         1.  **Read User Input:** "I want to create a 3D model of a magic sword."
         2.  **Analyze Intent:** The user wants a "3D model" of a "magic sword". This is a single object.

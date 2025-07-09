@@ -94,7 +94,6 @@ class Tool_callback(BaseCallbackHandler):
                 )
             case "generate_3d_scene":
                 payload = Generate3DSceneOutput(**tool_output)
-                logger.info(f"Payload: {payload}")
                 self.structured_response = OutgoingGenerated3DSceneMessage(
                     text=payload.text,
                     json_scene=payload.final_decomposition.model_dump(),
@@ -111,7 +110,7 @@ class Tool_callback(BaseCallbackHandler):
                 payload = Modify3DSceneOutput(**tool_output)
                 self.structured_response = OutgoingModified3DSceneMessage(
                     text=payload.text,
-                    json_scene=payload.modified_scene.model_dump(),
+                    modified_scene=payload.modified_scene.model_dump(),
                     assets=[
                         AppMediaAsset(
                             id=asset_meta_data.id,

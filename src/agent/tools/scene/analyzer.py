@@ -44,7 +44,7 @@ def analyze(
     and determines if 'dynamic' objects require regeneration based on the nature of the request.
     """
     try:
-        system_prompt = """You are an expert 3D scene graph editor. Your task is to take a user's modification request and the current scene's JSON, and output the **complete, final JSON state of the scene** after applying all changes. You are not creating a patch; you are rewriting the entire scene graph to reflect all changes, including hierarchy.
+        system_prompt = """You are an expert 3D scene graph editor. Your task is to analyze a user's request and the current scene's JSON, and then generate a JSON object describing only the specific changes required to update the scene. You are creating a "patch" or a set of instructions, not the final scene graph.
 
 **Output Structure:**
 Your output must be a single JSON object with three keys: `name`, `graph`, `skybox`, and `regenerations`.
@@ -98,7 +98,7 @@ You must start with the original scene and apply the user's request by following
         scene_analyzer_model_name = config.get("scene_analyzer_model")
         model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-        chain = prompt | model.with_structured_output(ModifySceneOutput)
+        chain = prompt_with_instructions | model | parser
 
         logger.info(f"Analyzing current scene for modifications: {user_input}")
         result: ModifySceneOutput = chain.invoke(
@@ -106,7 +106,7 @@ You must start with the original scene and apply the user's request by following
         )
         logger.info(f"Analysis result: {result}")
 
-        return result
+        return ModifySceneOutput(**result)
     except Exception as e:
         logger.error(f"Failed to analyze the scene: {e}")
         raise ValueError(f"Failed to analyze the scene: {e}")

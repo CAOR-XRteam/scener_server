@@ -6,6 +6,6 @@
     "agent_model": "devstral:24b",
     "improver_model": "llama3.1",
     "initial_decomposer_model": "mistral-nemo",
-    "final_decomposer_model": "deepseek-r1:14b",
-    "scene_analyzer_model": "deepseek-r1:14b"
+    "final_decomposer_model": "codellama:34b",
+    "scene_analyzer_model": "codellama:34b"
 }
