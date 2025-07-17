@@ -1,3 +1,4 @@
+import asyncio
 from beartype import beartype
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
@@ -9,6 +10,7 @@ from agent.tools.pipeline.td_object_generation import (
 )
 from lib import logger
 from sdk.scene import Scene
+from server.data.redis import Redis
 
 
 class Modify3DSceneToolInput(BaseModel):
@@ -22,14 +24,17 @@ class Modify3DSceneOutput(BaseModel):
     objects_to_send: list[TDObjectMetaData]
 
 
-@tool(args_schema=Modify3DSceneToolInput)
 @beartype
-def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
+async def modify_3d_scene_async(
+    redis_api: Redis, thread_id: str, user_input: str
+) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
     logger.info(f"Modifying 3D scene from prompt: {user_input[:10]}...")
 
+    current_scene_json = await redis_api.get_scene(thread_id)
+
     try:
-        analysis_output = analyze(user_input, json_scene)
+        analysis_output = analyze(user_input, current_scene_json)
     except Exception:
         raise
 
@@ -50,3 +55,12 @@ def modify_3d_scene(user_input: str, json_scene: Scene) -> dict:
         modified_scene=analysis_output,
         objects_to_send=objects_to_send,
     ).model_dump()
+
+
+@tool(args_schema=Modify3DSceneToolInput)
+@beartype
+def modify_3d_scene(redis_api: Redis, user_input: str, thread_id: str) -> dict:
+    """Creates a complete 3D environment or scene with multiple objects or a background."""
+    return asyncio.run(
+        modify_3d_scene_async(redis_api, thread_id, user_input=user_input)
+    )

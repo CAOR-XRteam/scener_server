@@ -1,13 +1,17 @@
+from functools import partial
+
 from agent.llm.creation import initialize_agent
 from agent.tools.pipeline.image_generation import generate_image
 from agent.tools.pipeline.td_object_generation import generate_3d_object
 from agent.tools.pipeline.td_scene_generation import generate_3d_scene
 from agent.tools.pipeline.td_scene_modification import modify_3d_scene
 from lib import load_config
+from library.api import LibraryAPI
+from server.data.redis import Redis
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, redis_api: Redis = None, library_api: LibraryAPI = None):
         # Define the template for the prompt
         self.preprompt = """
 You are a specialized AI assistant and task router. Your primary function is to understand a user's request and select the single most appropriate tool to fulfill it. You do not perform tasks yourself; you delegate them to the correct tool.
@@ -61,13 +65,42 @@ YOUR MISSION:
 **FINAL INSTRUCTION:**
 You have analyzed the user's request and the available workflows. Now, you must act. Your response MUST be either a direct answer to the user (if no tool is needed) OR a single, valid tool call in the specified format. DO NOT stop after the `<think>` block if a tool is required. You MUST proceed to the `<action>` block.    
 """
+        self.redis_api = redis_api
+        self.library_api = library_api
+
         config = load_config()
+
+        bound_modify_3d_scene_tool = modify_3d_scene.model_copy()
+        bound_modify_3d_scene_tool.func = partial(modify_3d_scene.func, self.redis_api)
+        bound_generate_3d_object_tool = generate_3d_object.model_copy()
+        bound_generate_3d_object_tool.func = partial(
+            generate_3d_object.func, self.library_api
+        )
+        bound_generate_3d_scene_tool = generate_3d_scene.model_copy()
+        bound_generate_3d_scene_tool.func = partial(
+            generate_3d_scene.func, self.library_api
+        )
+
+        # bound_modify_3d_scene_tool = partial(modify_3d_scene, self.redis_api)
+        # bound_modify_3d_scene_tool.name = modify_3d_scene.name
+        # bound_modify_3d_scene_tool.description = modify_3d_scene.description
+        # bound_modify_3d_scene_tool.args = modify_3d_scene.args
+
+        # bound_generate_3d_object_tool = partial(generate_3d_object, self.library_api)
+        # bound_generate_3d_object_tool.name = generate_3d_object.name
+        # bound_generate_3d_object_tool.description = generate_3d_object.description
+        # bound_generate_3d_object_tool.args = generate_3d_object.args
+
+        # bound_generate_3d_scene_tool = partial(generate_3d_scene, self.library_api)
+        # bound_generate_3d_scene_tool.name = generate_3d_scene.name
+        # bound_generate_3d_scene_tool.description = generate_3d_scene.description
+        # bound_generate_3d_scene_tool.args = generate_3d_scene.args
 
         self.tools = [
             generate_image,
-            generate_3d_object,
-            generate_3d_scene,
-            # modify_3d_scene,
+            bound_generate_3d_object_tool,
+            bound_generate_3d_scene_tool,
+            bound_modify_3d_scene_tool,
             # image_analysis,
             # list_assets,
         ]
@@ -79,5 +112,6 @@ You have analyzed the user's request and the available workflows. Now, you must 
 
 # Usage
 if __name__ == "__main__":
-    agent = Agent()
-    agent.run()
+    # agent = Agent()
+    # agent.run()
+    pass

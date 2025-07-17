@@ -1,8 +1,11 @@
+import sys
 from agent.api import AgentAPI
+from library.api import LibraryAPI
 from server.client import Client
 from lib import logger
 from beartype import beartype
 from colorama import Fore, Style
+from server.data.redis import Redis
 import websockets
 import asyncio
 import signal
@@ -24,20 +27,35 @@ class Server:
         self.shutdown_event = asyncio.Event()
         self.server = None
         self.agent = None
+        self.redis_api = None
+        self.library_api = None
 
     def start(self):
         # Add stopping event
         loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGINT, self.handler_shutdown)
 
+        try:
+            # Initialize Redis connection
+            self.redis_api = Redis()
+            loop.run_until_complete(self.redis_api.connect())
+            logger.info("Redis connection established successfully.")
+
+            # Initialize Library API
+            self.library_api = LibraryAPI()
+            logger.info("LibraryAPI initialized successfully.")
+        except Exception as e:
+            logger.critical(f"Failed to initialize Redis or LibraryAPI: {e}")
+            sys.exit(1)
+
         # Initiate agent
         try:
-            self.agent = AgentAPI()
+            self.agent = AgentAPI(self.redis_api, self.library_api)
             logger.info("AgentAPI initialized successfully at server startup.")
         except Exception as e:
             # Shutdown the server if agent init failed?
             logger.critical(f"Failed to initialize AgentAPI at server startup: {e}")
-            self.agent = None
+            sys.exit(1)
 
         # Run into async thread
         try:

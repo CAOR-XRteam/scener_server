@@ -2,6 +2,8 @@ from agent.agent import Agent
 from agent.llm.interaction import chat, achat, ask, aask
 from asyncio import Queue
 from beartype import beartype
+from library.api import LibraryAPI
+from server.data.redis import Redis
 
 # from langchain.globals import set_debug
 
@@ -10,8 +12,8 @@ from beartype import beartype
 
 @beartype
 class AgentAPI:
-    def __init__(self):
-        self.agent = Agent()
+    def __init__(self, redis_api: Redis = None, library_api: LibraryAPI = None):
+        self.agent = Agent(redis_api, library_api)
 
     def chat(self, user_input: str, thread_id: str = 0) -> str:
         chat(self.agent, user_input, thread_id)

@@ -1,5 +1,6 @@
 from beartype import beartype
 from langchain_core.tools import tool
+from library.api import LibraryAPI
 from pydantic import BaseModel, Field
 
 from agent.tools.scene.decomposer import (
@@ -26,7 +27,7 @@ class Generate3DSceneOutput(BaseModel):
 
 @tool(args_schema=Generate3DSceneToolInput)
 @beartype
-def generate_3d_scene(user_input: str) -> dict:
+def generate_3d_scene(library_api: LibraryAPI, user_input: str) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
     logger.info(f"Generating 3D scene from prompt: {user_input[:10]}...")
 
@@ -41,7 +42,7 @@ def generate_3d_scene(user_input: str) -> dict:
         for object in initial_decomposition_output.scene.objects:
             if object.type == "dynamic":
                 generated_object_meta_data = generate_3d_object_from_prompt(
-                    object.prompt, object.id
+                    library_api, object.prompt, object.id
                 )
                 object.id = generated_object_meta_data.id
                 objects_to_send.append(generated_object_meta_data)

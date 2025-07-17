@@ -29,12 +29,12 @@ class Generate3DObjectToolInput(BaseModel):
 
 @beartype
 def generate_3d_object_from_prompt(
-    prompt: str, id: str | None = None
+    library_api: LibraryAPI, prompt: str, id: str | None = None
 ) -> TDObjectMetaData:
     logger.info(f"Generating 3D object from prompt: {prompt[:10]}...")
 
     logger.info("Searching for already existing assets...")
-    library_api = LibraryAPI()
+
     asset = library_api.find_asset_by_description(prompt)
     if asset:
         logger.info(f"Found already existing asset: {asset}.")
@@ -81,10 +81,10 @@ def generate_3d_object_from_prompt(
 
 @tool(args_schema=Generate3DObjectToolInput)
 @beartype
-def generate_3d_object(user_input: str) -> dict:
+def generate_3d_object(library_api: LibraryAPI, user_input: str) -> dict:
     """Generates 3D object from user's prompt"""
     try:
-        data = generate_3d_object_from_prompt(user_input)
+        data = generate_3d_object_from_prompt(library_api, user_input)
         return Generate3DObjectOutput(
             text=f"Generated 3D object for '{user_input}'", data=data
         ).model_dump()
