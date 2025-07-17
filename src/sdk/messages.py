@@ -15,6 +15,7 @@ class IncomingMessageType(str, Enum):
 
 
 class OutgoingMessageType(str, Enum):
+    SESSION_START = "session_start"
     UNRELATED_RESPONSE = "unrelated_response"
     GENERATE_IMAGE = "generate_image"
     GENERATE_3D_OBJECT = "generate_3d_object"
@@ -83,6 +84,18 @@ class AppMediaAsset:
     id: str
     filename: str
     data: bytes
+
+
+@dataclass(frozen=True)
+class OutgoingSessionStartMessage(IOutgoingMessage):
+    text: str
+
+    def to_proto(self) -> message_pb2.Content:
+        return message_pb2.Content(
+            type=OutgoingMessageType.SESSION_START.value,
+            text=self.text,
+            status=200,
+        )
 
 
 @dataclass(frozen=True)

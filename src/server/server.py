@@ -1,6 +1,7 @@
 import sys
 from agent.api import AgentAPI
 from library.api import LibraryAPI
+from sdk.messages import OutgoingSessionStartMessage
 from server.client import Client
 from lib import logger
 from beartype import beartype
@@ -106,6 +107,7 @@ class Server:
             # Create client and run it
             client = Client(websocket, self.agent)
             client.start()
+            await client.send_message(OutgoingSessionStartMessage(client.get_uid()))
 
             self.list_client.append(client)
 
