@@ -104,7 +104,7 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
     try:
         response = await agent.executor.ainvoke(agent_input, config=config)
 
-        # Extraire le dernier AIMessage
+        # Extract last AIMessage
 
         if callback.structured_response:
             yield callback.structured_response
