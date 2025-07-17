@@ -81,21 +81,6 @@ You have analyzed the user's request and the available workflows. Now, you must 
             generate_3d_scene.func, self.library_api
         )
 
-        # bound_modify_3d_scene_tool = partial(modify_3d_scene, self.redis_api)
-        # bound_modify_3d_scene_tool.name = modify_3d_scene.name
-        # bound_modify_3d_scene_tool.description = modify_3d_scene.description
-        # bound_modify_3d_scene_tool.args = modify_3d_scene.args
-
-        # bound_generate_3d_object_tool = partial(generate_3d_object, self.library_api)
-        # bound_generate_3d_object_tool.name = generate_3d_object.name
-        # bound_generate_3d_object_tool.description = generate_3d_object.description
-        # bound_generate_3d_object_tool.args = generate_3d_object.args
-
-        # bound_generate_3d_scene_tool = partial(generate_3d_scene, self.library_api)
-        # bound_generate_3d_scene_tool.name = generate_3d_scene.name
-        # bound_generate_3d_scene_tool.description = generate_3d_scene.description
-        # bound_generate_3d_scene_tool.args = generate_3d_scene.args
-
         self.tools = [
             generate_image,
             bound_generate_3d_object_tool,
