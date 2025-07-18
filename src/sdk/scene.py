@@ -188,6 +188,7 @@ Component = Annotated[
 
 class SceneObject(BaseModel):
     id: str
+    name: str
     parent_id: Optional[str] = Field(default=None)
     position: Vector3
     rotation: Vector3

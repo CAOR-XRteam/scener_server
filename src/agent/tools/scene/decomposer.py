@@ -114,9 +114,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
         # Not relying on the llm to provide unique id for every object
         for obj_dict in result.scene.objects:
-            obj_dict.id = (
-                f"{obj_dict.name.replace(' ', '_').lower()}_{uuid.uuid4().hex[:6]}"
-            )
+            obj_dict.id = uuid.uuid4()
 
         logger.info(f"Decomposition result: {result}")
 
@@ -170,7 +168,7 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
         - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
-        - Each SceneObject represents a container and MUST have these fields: id, parent_id, position, rotation, scale, components, and children.
+        - Each SceneObject represents a container and MUST have these fields: id, name, parent_id, position, rotation, scale, components, and children.
 
         - The children field is a list of other SceneObject nodes; **IMPORTANT**: it is ALWAYS present in the structure, and if a SceneObject logically has no children, it MUST BE an empty list [].
 
@@ -256,7 +254,8 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
   }},
   "graph": [
     {{
-      "id": "the_sun",
+      "id": "1",
+      "name": "the_sun"
       "parent_id": null,
       "position": {{"x": 0, "y": 100, "z": 0}},
       "rotation": {{"x": 45, "y": 30, "z": 0}},
@@ -275,7 +274,8 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
       "children": []
     }},
     {{
-      "id": "street_plane",
+      "id": "2",
+      "name": "street_plane",
       "parent_id": null,
       "position": {{"x": 0, "y": 0, "z": 0}},
       "rotation": {{"x": 0, "y": 0, "z": 0}},
@@ -289,15 +289,16 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
       ],
       "children": [
         {{
-          "id": "red_car_1",
-          "parent_id": "street_plane",
+          "id": "3",
+          "name": "red_car",
+          "parent_id": "2",
           "position": {{"x": 2, "y": 0.5, "z": 5}},
           "rotation": {{"x": 0, "y": 15, "z": 0}},
           "scale": {{"x": 2, "y": 1, "z": 4}},
           "components": [
             {{
               "component_type": "dynamic",
-              "id": "red_car_1"
+              "id": "3"
             }}
           ],
           "children": []
@@ -320,7 +321,8 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
   }},
   "graph": [
     {{
-      "id": "room_container",
+      "id": "1",
+      "name": "room_container",
       "parent_id": null,
       "position": {{"x": 0, "y": 1.5, "z": 0}},
       "rotation": {{"x": 0, "y": 0, "z": 0}},
@@ -328,8 +330,9 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
       "components": [],
       "children": [
         {{
-          "id": "table_1",
-          "parent_id": "room_container",
+          "id": "2",
+          "name": "wooden_table",
+          "parent_id": "1",
           "position": {{"x": 0, "y": -1.0, "z": 2}},
           "rotation": {{"x": 0, "y": 0, "z": 0}},
           "scale": {{"x": 3, "y": 0.8, "z": 1.5}},
@@ -342,8 +345,9 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
           ],
           "children": [
             {{
-              "id": "glowing_lamp_1",
-              "parent_id": "table_1",
+              "id": "3",
+              "name": "glowing_lamp",
+              "parent_id": "2",
               "position": {{"x": 0, "y": 0.6, "z": 0}},
               "rotation": {{"x": 0, "y": 0, "z": 0}},
               "scale": {{"x": 0.2, "y": 0.4, "z": 0.2}},
