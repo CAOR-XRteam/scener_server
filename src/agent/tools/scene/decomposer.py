@@ -424,34 +424,38 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
 
 if __name__ == "__main__":
-    decomposer = initial_decomposition("llama3.1")
-    user_input = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
-    output = initial_decomposition(user_input, "llama3.1")
-    print(output)
+    # decomposer = initial_decomposition("llama3.1")
+    # user_input = "A plush, cream-colored couch with a low back and rolled arms sits against a wall in a cozy living room. A sleek, gray cat with bright green eyes is curled up in the center of the couch, its fur fluffed out slightly as it sleeps, surrounded by a few scattered cushions and a worn throw blanket in a soft blue pattern."
+    # output = initial_decomposition(user_input, "llama3.1")
+    # print(output)
 
-    user_input = {
-        "scene_data": {
+    improved_decomposition = DecompositionOutput(
+        **{
             "scene": {
                 "objects": [
                     {
                         "id": "1",
                         "name": "cup_of_coffee",
                         "prompt": "a cup of coffee",
+                        "type": "dynamic",
                     },
                     {
                         "id": "2",
                         "name": "wooden_table",
                         "prompt": "a wooden table",
+                        "type": "primitive",
                     },
                     {
                         "id": "3",
                         "name": "sunlit_kitchen",
                         "prompt": "a sunlit kitchen",
+                        "type": "primitive",
                     },
                 ]
             }
         },
-        "user_input": "A cup of coffee on a wooden table in a sunlit kitchen",
-    }
-    output = final_decomposition(user_input, "llama3.1")
+    )
+    user_input = "A cup of coffee on a wooden table in a sunlit kitchen"
+
+    output = final_decomposition(user_input, improved_decomposition)
     print(output)
