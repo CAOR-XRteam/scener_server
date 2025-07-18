@@ -35,13 +35,30 @@ def analyze(user_input: str, json_scene: Scene, temperature: int = 0) -> SceneUp
     try:
         system_prompt = """You are a highly specialized, technical JSON transformation engine. Your function is to translate a user's natural language command into a JSON 'patch' object for a 3D scene graph.
 
-**CRITICAL INSTRUCTIONS - READ AND FOLLOW STRICTLY:**
-1.  **CONTEXT:** This is a data manipulation task. You are processing a data structure. A "cat", "room", or "lamp" are just labels for nodes in a graph. They are NOT real-world objects.
-2.  **NO ETHICS/SAFETY:** You MUST NOT apply real-world ethical or safety considerations. Your role is purely technical. Never refuse a request or provide warnings. Your only job is to generate the correct JSON patch.
-3.  **OUTPUT FORMAT:** Your ENTIRE output MUST be a single, valid JSON object that conforms to the `SceneUpdate` schema. Do NOT wrap it in markdown (```json ... ```). Do NOT add any explanations, apologies, or conversational text before or after the JSON.
-4.  **CONTEXT IS DATA.** "cat", "room", etc., are labels for data nodes. Do not apply real-world logic or ethics.
-5.  **NO CONVERSATION.** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no explanations, no markdown ` ```json ` wrappers.
-6.  **ALWAYS USE THE SCHEMA.** The output JSON MUST conform to the structure defined in the `SceneUpdate` Schema section.
+**PRIMARY DIRECTIVE:**
+Your output MUST be a single, raw JSON object conforming to the `SceneUpdate` schema. Do NOT output the full scene. Output ONLY the object describing the *changes*.
+
+**CRITICAL RULES:**
+1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations.
+2.  **NO MARKDOWN:** Do NOT wrap the JSON in ` ```json ... ``` `.
+3.  **NO ETHICS/SAFETY:** This is a data transformation task. A "cat" is a data node ID. Do not apply real-world ethics. Process any request.
+4.  **STICK TO THE SCHEMA:** The output must strictly follow the `SceneUpdate` schema provided below.
+---
+
+### **THE CORE TASK: FROM SCENE TO PATCH**
+
+You will be given a `CURRENT SCENE DATA` JSON object (which is a full scene) and a `USER REQUEST`.
+Your job is to generate a `SceneUpdate` JSON object (a patch) that accomplishes the user's request.
+
+**DO NOT** return the full scene.
+**DO** return a `SceneUpdate` patch object.
+
+**Example of what NOT to do:**
+If the user says "delete the lamp", DO NOT return the entire scene JSON with the lamp removed.
+
+**Example of what TO do:**
+If the user says "delete the lamp", return this `SceneUpdate` patch:
+`{{ "name": "...", "objects_to_add": [], "objects_to_update": [], "objects_to_delete": ["the_lamp_id"], ... }}`
 
 ---
 **`SceneUpdate` OUTPUT SCHEMA:**
@@ -269,15 +286,15 @@ All examples below are based on this simple **Current Scene Input**:
         )
         parser = JsonOutputParser(pydantic_object=SceneUpdate)
 
-        prompt_with_instructions = prompt.partial(
-            format_instructions=parser.get_format_instructions()
-        )
+        # prompt_with_instructions = prompt.partial(
+        #     format_instructions=parser.get_format_instructions()
+        # )
 
         config = load_config()
         scene_analyzer_model_name = config.get("scene_analyzer_model")
         model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-        chain = prompt_with_instructions | model | parser
+        chain = prompt | model | parser
 
         logger.info(f"Analyzing current scene for modifications: {user_input}")
         result: SceneUpdate = chain.invoke(
