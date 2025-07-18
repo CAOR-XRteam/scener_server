@@ -57,6 +57,49 @@ You MUST generate a JSON object with the following structure. Fill in the fields
   "objects_to_regenerate": "array (A list of RegenerationInfo objects)"
 }}
 
+**CRITICAL HIERARCHY RULES - YOU MUST FOLLOW THESE:**
+
+The scene is a hierarchy (a tree structure). Every object has a unique `id` and a `parent_id` that points to its parent's `id`. A `parent_id` of `null` means it is a root object.
+
+1.  **POSITION AND SCALE ARE ALWAYS RELATIVE TO THE PARENT:** An object's `position` is its local offset from its parent's origin. It is NOT a world coordinate.
+    *   Example: A table is at `position: {{x: 5, y: 0, z: 2}}`. A flower on the table would have `parent_id: "table_id"` and `position: {{x: 0, y: 1.1, z: 0}}`.
+
+2.  **REPARENTING (Moving an object to a new parent):** If the user says "move the flower from the floor to the table":
+    *   You MUST create a `SceneObjectUpdate` for the flower in the `objects_to_update` list.
+    *   In that update object, you MUST set the `parent_id` to the `id` of the new parent (the table).
+    *   You MUST also provide a new `position` for the flower that is relative to its NEW parent (the table).
+
+3.  **ADDITION:** When adding a new object to the `objects_to_add` list:
+    *   You MUST determine its correct parent from the context (e.g., "a book on the shelf" means the shelf is the parent).
+    *   Set the new object's `parent_id` to the parent's `id` and set its `position` relative to that parent.
+
+4.  **DELETION WITH CHILDREN:** When you add an object's `id` to the `objects_to_delete` list, all of its children will also be deleted.
+    *   If the user says "remove the table, but leave the flower floating", you must perform TWO operations:
+        1.  Reparent the flower (create a `SceneObjectUpdate` to move it to a new parent, like the room, with a new position).
+        2.  Delete the table (add the table's `id` to `objects_to_delete`).
+
+---
+**General Logic for Generating the Patch:**
+
+*   **ADDITION:** If adding a new object, create a full `SceneObject` in the `objects_to_add` list. Assign a new unique `id` and follow the hierarchy rules.
+
+*   **DELETION:** If removing an object, add its `id` string to the `objects_to_delete` list.
+
+*   **UPDATE (TRANSFORMS & COMPONENTS):** For changes to an object's transform OR its component properties, create a `SceneObjectUpdate` in the `objects_to_update` list.
+    *   Identify the object by its `id`.
+    *   Changes to `position`, `rotation`, `scale`, or `parent_id` go directly into the fields of the `SceneObjectUpdate` object.
+    *   Changes to a component's properties (like a light's color or a primitive's shape) MUST be placed in a corresponding `ComponentPatch` object (e.g., `SpotLightPatch`, `PrimitiveObjectPatch`). You then place this `ComponentPatch` inside the `components_to_update` list of the `SceneObjectUpdate`.
+
+*   **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object and add it to the `objects_to_regenerate` list.
+
+*   **COMBINED UPDATE AND REGENERATION (Crucial):** If an object is both regenerated AND moved/scaled/etc. ("make the robot bigger and turn it into a tank"), you MUST perform BOTH operations. The object's `id` will appear in BOTH the `objects_to_update` list (with a `SceneObjectUpdate`) AND the `objects_to_regenerate` list (with a `RegenerationInfo`).
+
+*   **SKYBOX:** If the user's request concerns the skybox, generate a NEW, COMPLETE skybox object and place it in the `skybox` field of the output. If the skybox is not mentioned, this field MUST be `null`.
+
+**Source of Truth:** Always use the provided `current_scene` JSON to find object `id`s and understand the current state and hierarchy. The `name` in the output must match the name from the `current_scene`.
+
+---
+
 **EXAMPLES OF MODIFICATION TYPES**
 
 All examples below are based on this simple **Current Scene Input**:
@@ -215,47 +258,6 @@ All examples below are based on this simple **Current Scene Input**:
         "sun_vector": {{ "x": 0.8, "y": 0.2, "z": 0, "w": 0 }}
       }}
     }}                           
----
-**CRITICAL HIERARCHY RULES - YOU MUST FOLLOW THESE:**
-
-The scene is a hierarchy (a tree structure). Every object has a unique `id` and a `parent_id` that points to its parent's `id`. A `parent_id` of `null` means it is a root object.
-
-1.  **POSITION AND SCALE ARE ALWAYS RELATIVE TO THE PARENT:** An object's `position` is its local offset from its parent's origin. It is NOT a world coordinate.
-    *   Example: A table is at `position: {{x: 5, y: 0, z: 2}}`. A flower on the table would have `parent_id: "table_id"` and `position: {{x: 0, y: 1.1, z: 0}}`.
-
-2.  **REPARENTING (Moving an object to a new parent):** If the user says "move the flower from the floor to the table":
-    *   You MUST create a `SceneObjectUpdate` for the flower in the `objects_to_update` list.
-    *   In that update object, you MUST set the `parent_id` to the `id` of the new parent (the table).
-    *   You MUST also provide a new `position` for the flower that is relative to its NEW parent (the table).
-
-3.  **ADDITION:** When adding a new object to the `objects_to_add` list:
-    *   You MUST determine its correct parent from the context (e.g., "a book on the shelf" means the shelf is the parent).
-    *   Set the new object's `parent_id` to the parent's `id` and set its `position` relative to that parent.
-
-4.  **DELETION WITH CHILDREN:** When you add an object's `id` to the `objects_to_delete` list, all of its children will also be deleted.
-    *   If the user says "remove the table, but leave the flower floating", you must perform TWO operations:
-        1.  Reparent the flower (create a `SceneObjectUpdate` to move it to a new parent, like the room, with a new position).
-        2.  Delete the table (add the table's `id` to `objects_to_delete`).
-
----
-**General Logic for Generating the Patch:**
-
-*   **ADDITION:** If adding a new object, create a full `SceneObject` in the `objects_to_add` list. Assign a new unique `id` and follow the hierarchy rules.
-
-*   **DELETION:** If removing an object, add its `id` string to the `objects_to_delete` list.
-
-*   **UPDATE (TRANSFORMS & COMPONENTS):** For changes to an object's transform OR its component properties, create a `SceneObjectUpdate` in the `objects_to_update` list.
-    *   Identify the object by its `id`.
-    *   Changes to `position`, `rotation`, `scale`, or `parent_id` go directly into the fields of the `SceneObjectUpdate` object.
-    *   Changes to a component's properties (like a light's color or a primitive's shape) MUST be placed in a corresponding `ComponentPatch` object (e.g., `SpotLightPatch`, `PrimitiveObjectPatch`). You then place this `ComponentPatch` inside the `components_to_update` list of the `SceneObjectUpdate`.
-
-*   **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object and add it to the `objects_to_regenerate` list.
-
-*   **COMBINED UPDATE AND REGENERATION (Crucial):** If an object is both regenerated AND moved/scaled/etc. ("make the robot bigger and turn it into a tank"), you MUST perform BOTH operations. The object's `id` will appear in BOTH the `objects_to_update` list (with a `SceneObjectUpdate`) AND the `objects_to_regenerate` list (with a `RegenerationInfo`).
-
-*   **SKYBOX:** If the user's request concerns the skybox, generate a NEW, COMPLETE skybox object and place it in the `skybox` field of the output. If the skybox is not mentioned, this field MUST be `null`.
-
-**Source of Truth:** Always use the provided `current_scene` JSON to find object `id`s and understand the current state and hierarchy. The `name` in the output must match the name from the `current_scene`.
 """
         user_prompt = "Current scene: {json_scene}\nUser: {user_input}"
         prompt = ChatPromptTemplate.from_messages(
