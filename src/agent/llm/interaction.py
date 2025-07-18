@@ -1,6 +1,8 @@
+from functools import partial
 from agent.agent import Agent
 from agent.llm.tooling import Tool_callback
 from asyncio import Queue
+from agent.tools.pipeline.td_scene_modification import modify_3d_scene
 from beartype import beartype
 from colorama import Fore
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
@@ -99,7 +101,11 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
     """Send a prompt to the LLM and receive a structured response."""
     callback = Tool_callback()
     agent_input = {"messages": [HumanMessage(content=query)]}
-    config = {"configurable": {"thread_id": thread_id}, "callbacks": [callback]}
+    logger.info(f"Session thread ID: {thread_id}")
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "callbacks": [callback],
+    }
 
     try:
         response = await agent.executor.ainvoke(agent_input, config=config)

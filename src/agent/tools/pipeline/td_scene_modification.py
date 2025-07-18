@@ -1,5 +1,6 @@
 import asyncio
 from beartype import beartype
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
@@ -15,7 +16,6 @@ from server.data.redis import Redis
 
 class Modify3DSceneToolInput(BaseModel):
     user_input: str = Field(description="The raw user's modification request.")
-    json_scene: Scene = Field(description="The JSON representing current scene.")
 
 
 class Modify3DSceneOutput(BaseModel):
@@ -24,17 +24,22 @@ class Modify3DSceneOutput(BaseModel):
     objects_to_send: list[TDObjectMetaData]
 
 
+@tool(args_schema=Modify3DSceneToolInput)
 @beartype
-async def modify_3d_scene_async(
-    redis_api: Redis, thread_id: str, user_input: str
+def modify_3d_scene(
+    redis_api: Redis, user_input: str, *, config: RunnableConfig
 ) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
-    logger.info(f"Modifying 3D scene from prompt: {user_input[:10]}...")
+    logger.info(f"Modifying 3D scene from prompt: {user_input}...")
 
-    current_scene_json = await redis_api.get_scene(thread_id)
+    thread_id = config.get("configurable", {}).get("thread_id")
+
+    current_scene_json = redis_api.get_scene(thread_id)
+    validated_current_scene = Scene.model_validate_json(current_scene_json)
+    logger.info(f"Current scene JSON: {validated_current_scene}...")
 
     try:
-        analysis_output = analyze(user_input, current_scene_json)
+        analysis_output = analyze(user_input, validated_current_scene)
     except Exception:
         raise
 
@@ -57,10 +62,10 @@ async def modify_3d_scene_async(
     ).model_dump()
 
 
-@tool(args_schema=Modify3DSceneToolInput)
-@beartype
-def modify_3d_scene(redis_api: Redis, user_input: str, thread_id: str) -> dict:
-    """Creates a complete 3D environment or scene with multiple objects or a background."""
-    return asyncio.run(
-        modify_3d_scene_async(redis_api, thread_id, user_input=user_input)
-    )
+# @tool(args_schema=Modify3DSceneToolInput)
+# @beartype
+# def modify_3d_scene(redis_api: Redis, user_input: str, thread_id: str) -> dict:
+#     """Creates a complete 3D environment or scene with multiple objects or a background."""
+#     return asyncio.run(
+#         modify_3d_scene_async(redis_api, thread_id, user_input=user_input)
+#     )

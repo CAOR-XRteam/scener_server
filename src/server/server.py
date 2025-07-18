@@ -39,7 +39,7 @@ class Server:
         try:
             # Initialize Redis connection
             self.redis_api = Redis()
-            loop.run_until_complete(self.redis_api.connect())
+            self.redis_api.connect()
             logger.info("Redis connection established successfully.")
 
             # Initialize Library API
@@ -107,7 +107,7 @@ class Server:
             # Create client and run it
             client = Client(websocket, self.agent)
             client.start()
-            await client.send_message(OutgoingSessionStartMessage(client.get_uid()))
+            await client.send_message(OutgoingSessionStartMessage(str(client.uid)))
 
             self.list_client.append(client)
 
