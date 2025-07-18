@@ -27,6 +27,9 @@ class Generate3DObjectToolInput(BaseModel):
     user_input: str = Field(description="The raw user's description prompt.")
 
 
+# TODO: fix ids inconsistency
+
+
 @beartype
 def generate_3d_object_from_prompt(
     library_api: LibraryAPI, prompt: str, id: str | None = None

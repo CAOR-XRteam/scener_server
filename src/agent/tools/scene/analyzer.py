@@ -1,11 +1,12 @@
 from beartype import beartype
+from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from pydantic import BaseModel
 from typing import Optional
 
 from agent.llm.creation import initialize_model
-from lib import load_config, logger
+from lib import extract_json_blob, load_config, logger
 from sdk.patch import SceneObjectUpdate
 from sdk.scene import Scene, SceneObject, Skybox
 
@@ -294,8 +295,13 @@ All examples below are based on this simple **Current Scene Input**:
         scene_analyzer_model_name = config.get("scene_analyzer_model")
         model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-        chain = prompt | model | parser
-
+        chain = (
+            prompt
+            | model
+            | StrOutputParser()
+            | RunnableLambda(extract_json_blob)
+            | parser
+        )
         logger.info(f"Analyzing current scene for modifications: {user_input}")
         result: SceneUpdate = chain.invoke(
             {"user_input": user_input, "json_scene": json_scene.model_dump_json()}

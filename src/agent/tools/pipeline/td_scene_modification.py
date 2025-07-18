@@ -2,6 +2,7 @@ import asyncio
 from beartype import beartype
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
+from library.api import LibraryAPI
 from pydantic import BaseModel, Field
 
 from agent.tools.scene.analyzer import SceneUpdate, analyze
@@ -27,7 +28,11 @@ class Modify3DSceneOutput(BaseModel):
 @tool(args_schema=Modify3DSceneToolInput)
 @beartype
 def modify_3d_scene(
-    redis_api: Redis, user_input: str, *, config: RunnableConfig
+    redis_api: Redis,
+    library_api: LibraryAPI,
+    user_input: str,
+    *,
+    config: RunnableConfig,
 ) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
     logger.info(f"Modifying 3D scene from prompt: {user_input}...")
@@ -48,7 +53,7 @@ def modify_3d_scene(
     try:
         for object in analysis_output.objects_to_regenerate:
             generated_object_meta_data = generate_3d_object_from_prompt(
-                object.prompt, object.id
+                library_api, object.prompt, object.id
             )
             object.id = generated_object_meta_data.id
             objects_to_send.append(generated_object_meta_data)

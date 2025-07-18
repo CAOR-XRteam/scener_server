@@ -13,6 +13,21 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.json")
 
 
+def extract_json_blob(raw_response: str) -> str:
+    """
+    Extracts the first JSON blob from a string that might contain other text.
+    Finds the first '{' and the last '}' to demarcate the JSON.
+    """
+    start_index = raw_response.find("{")
+    end_index = raw_response.rfind("}")
+
+    if start_index != -1 and end_index != -1 and end_index > start_index:
+        json_str = raw_response[start_index : end_index + 1]
+        return json_str
+    else:
+        return raw_response
+
+
 def load_config():
     """Load the configuration from the JSON file."""
     if not os.path.exists(CONFIG_PATH):

@@ -83,7 +83,9 @@ You have analyzed the user's request and the available workflows. Now, you must 
         config = load_config()
 
         bound_modify_3d_scene_tool = modify_3d_scene.model_copy()
-        bound_modify_3d_scene_tool.func = partial(modify_3d_scene.func, self.redis_api)
+        bound_modify_3d_scene_tool.func = partial(
+            modify_3d_scene.func, self.redis_api, self.library_api
+        )
         bound_generate_3d_object_tool = generate_3d_object.model_copy()
         bound_generate_3d_object_tool.func = partial(
             generate_3d_object.func, self.library_api
