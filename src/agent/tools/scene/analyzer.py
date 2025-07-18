@@ -79,6 +79,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
         2.  Delete the table (add the table's `id` to `objects_to_delete`).
 
 ---
+
 **General Logic for Generating the Patch:**
 
 *   **ADDITION:** If adding a new object, create a full `SceneObject` in the `objects_to_add` list. Assign a new unique `id` and follow the hierarchy rules.
