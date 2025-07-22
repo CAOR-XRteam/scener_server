@@ -15,6 +15,7 @@ from sdk.scene import Scene, SceneObject, Skybox
 
 class RegenerationInfo(BaseModel):
     id: str
+    new_id: Optional[str] = None
     prompt: str
 
 
@@ -109,7 +110,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
     *   Changes to `position`, `rotation`, `scale`, or `parent_id` go directly into the fields of the `SceneObjectUpdate` object.
     *   Changes to a component's properties (like a light's color or a primitive's shape) MUST be placed in a corresponding `ComponentPatch` object (e.g., `SpotLightPatch`, `PrimitiveObjectPatch`). You then place this `ComponentPatch` inside the `components_to_update` list of the `SceneObjectUpdate`.
 
-*   **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object and add it to the `objects_to_regenerate` list.
+*   **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object and add it to the `objects_to_regenerate` list. Leave the `new_id` field empty.
 
 *   **COMBINED UPDATE AND REGENERATION (Crucial):** If an object is both regenerated AND moved/scaled/etc. ("make the robot bigger and turn it into a tank"), you MUST perform BOTH operations. The object's `id` will appear in BOTH the `objects_to_update` list (with a `SceneObjectUpdate`) AND the `objects_to_regenerate` list (with a `RegenerationInfo`).
 

@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 from beartype import beartype
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
@@ -52,10 +53,11 @@ def modify_3d_scene(
 
     try:
         for object in analysis_output.objects_to_regenerate:
+            id = uuid.uuid4()
             generated_object_meta_data = generate_3d_object_from_prompt(
-                library_api, object.prompt, object.id
+                library_api, object.prompt, str(id)
             )
-            object.id = generated_object_meta_data.id
+            object.new_id = generated_object_meta_data.id
             objects_to_send.append(generated_object_meta_data)
     except Exception:
         raise
