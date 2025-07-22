@@ -51,6 +51,24 @@ def modify_3d_scene(
 
     objects_to_send = []
 
+    for object in analysis_output.objects_to_add:
+        object.scene_object.id = str(uuid.uuid4())
+
+        if any(
+            component.component_type == "dynamic"
+            for component in object.scene_object.components
+        ):
+            try:
+                generated_object_meta_data = generate_3d_object_from_prompt(
+                    library_api, object.prompt, object.scene_object.id
+                )
+                object.scene_object.id = generated_object_meta_data.id
+                objects_to_send.append(generated_object_meta_data)
+            except Exception:
+                raise
+
+        object = object.scene_object
+
     try:
         for object in analysis_output.objects_to_regenerate:
             id = uuid.uuid4()

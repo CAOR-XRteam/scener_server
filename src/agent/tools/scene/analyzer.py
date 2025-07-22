@@ -19,10 +19,15 @@ class RegenerationInfo(BaseModel):
     prompt: str
 
 
+class AdditionInfo(BaseModel):
+    scene_object: SceneObject
+    prompt: str
+
+
 class SceneUpdate(BaseModel):
     name: str
     skybox: Optional[Skybox] = None
-    objects_to_add: list[SceneObject]
+    objects_to_add: list[AdditionInfo]
     objects_to_update: list[SceneObjectUpdate]
     objects_to_delete: list[str]
     objects_to_regenerate: list[RegenerationInfo]
@@ -70,7 +75,7 @@ You MUST generate a JSON object with the following structure. Fill in the fields
 {{
   "name": "string (must match the name from the input scene)",
   "skybox": "object (A complete Skybox object) OR null",
-  "objects_to_add": "array (A list of complete SceneObject objects to add)",
+  "objects_to_add": "array (A list of AdditionInfo objects to add)",
   "objects_to_update": "array (A list of SceneObjectUpdate partial objects)",
   "objects_to_delete": "array (A list of string IDs of objects to delete)",
   "objects_to_regenerate": "array (A list of RegenerationInfo objects)"
@@ -101,7 +106,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 
 **General Logic for Generating the Patch:**
 
-*   **ADDITION:** If adding a new object, create a full `SceneObject` in the `objects_to_add` list. Assign a new unique `id` and follow the hierarchy rules.
+*   **ADDITION:** If adding a new object, create a `AdditionInfo` object in the `objects_to_add` list. You must infer its prompt from the user's request.
 
 *   **DELETION:** If removing an object, add its `id` string to the `objects_to_delete` list.
 
@@ -129,20 +134,23 @@ All examples below are based on this simple **Current Scene Input**:
   "skybox": {{ "type": "gradient", "color1": {{ "r": 0.8, "g": 0.8, "b": 1.0, "a": 1.0 }}, "color2": {{ "r": 0.5, "g": 0.5, "b": 0.7, "a": 1.0 }}, "up_vector": {{ "x": 0, "y": 1, "z": 0, "w": 0 }}, "intensity": 1.0, "exponent": 1.0 }},
   "graph": [
     {{
-      "id": "the_room",
+      "name": "the_room",
+      "id": "the_room_01",
       "parent_id": null,
       "position": {{ "x": 0, "y": 0, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
       "components": [ {{ "component_type": "primitive", "shape": "cube", "color": null }} ],
       "children": [
         {{
-          "id": "the_table",
-          "parent_id": "the_room",
+          "name": "the_table",
+          "id": "the_table_01",
+          "parent_id": "the_room_01",
           "position": {{ "x": 0, "y": -0.5, "z": 2 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "primitive", "shape": "cube" }} ],
           "children": [
             {{
-              "id": "the_lamp",
-              "parent_id": "the_table",
+              "name": "the_lamp",
+              "id": "the_lamp_01",
+              "parent_id": "the_table_01",
               "position": {{ "x": 0, "y": 1, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 0.2, "y": 0.5, "z": 0.2 }},
               "components": [
                 {{ "component_type": "light", "type": "point", "color": {{ "r": 1, "g": 1, "b": 0.8, "a": 1 }}, "intensity": 5.0, "indirect_multiplier": 1.0, "range": 10.0, "mode": "realtime", "shadow_type": "soft_shadows" }}
@@ -152,8 +160,9 @@ All examples below are based on this simple **Current Scene Input**:
           ]
         }},
         {{
-          "id": "the_cat",
-          "parent_id": "the_room",
+          "name": "the_cat",
+          "id": "the_cat_01",
+          "parent_id": "the_room_01",
           "position": {{ "x": -2, "y": 0, "z": -1 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "dynamic", "id": "the_cat" }} ],
           "children": []
@@ -170,8 +179,11 @@ All examples below are based on this simple **Current Scene Input**:
         "name": "A simple room", "skybox": null, "objects_to_delete": [], "objects_to_update": [], "objects_to_regenerate": [],
         "objects_to_add": [
         {{
+        "prompt": "a red sphere",
+        "scene_object": {{
+            "name": "sphere_01",
             "id": "new_sphere_01",
-            "parent_id": "the_table",
+            "parent_id": "the_table_01",
             "position": {{ "x": 0, "y": 1.1, "z": 0 }},
             "rotation": {{ "x": 0, "y": 0, "z": 0 }},
             "scale": {{ "x": 0.5, "y": 0.5, "z": 0.5 }},
@@ -179,6 +191,7 @@ All examples below are based on this simple **Current Scene Input**:
             {{ "component_type": "primitive", "shape": "sphere", "color": {{ "r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0 }} }}
             ],
             "children": []
+            }}
         }}
         ]
     }}
@@ -188,7 +201,7 @@ All examples below are based on this simple **Current Scene Input**:
     **Correct Patch Output:**
     {{
     "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_regenerate": [],
-    "objects_to_delete": ["the_lamp"]
+    "objects_to_delete": ["the_lamp_01"]
     }}
 
 3. **User Request: "Move the lamp from the table onto the floor of the room."**
@@ -198,8 +211,8 @@ All examples below are based on this simple **Current Scene Input**:
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "objects_to_update": [
         {{
-          "id": "the_lamp",
-          "parent_id": "the_room",
+          "id": "the_lamp_01",
+          "parent_id": "the_room_01",
           "position": {{ "x": 0.5, "y": 0, "z": 0.5 }}
         }}
       ]
@@ -212,7 +225,7 @@ All examples below are based on this simple **Current Scene Input**:
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "objects_to_update": [
         {{
-          "id": "the_lamp",
+          "id": "the_lamp_01",
           "components_to_update": [
             {{
               "component_type": "light",
@@ -232,7 +245,8 @@ All examples below are based on this simple **Current Scene Input**:
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_delete": [],
       "objects_to_regenerate": [
         {{
-          "id": "the_cat",
+          "id": "the_cat_01",
+          "new_id": null,
           "prompt": "a dog"
         }}
       ]
@@ -245,14 +259,15 @@ All examples below are based on this simple **Current Scene Input**:
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [],
       "objects_to_update": [
         {{
-          "id": "the_cat",
+          "id": "the_cat_01",
           "position": {{ "x": 0, "y": 1, "z": 0 }},
           "scale": {{ "x": 3.0, "y": 3.0, "z": 3.0 }}
         }}
       ],
       "objects_to_regenerate": [
         {{
-          "id": "the_cat",
+          "id": "the_cat_01",
+          new_id": null
           "prompt": "a large dragon"
         }}
       ]
