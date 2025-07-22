@@ -8,7 +8,7 @@ from colorama import Fore
 
 class Redis:
     def __init__(self):
-        self.host = os.getenv("HOST", "localhost")
+        self.host = os.getenv("REDIS_HOST", "localhost")
         self.port = int(os.getenv("REDIS_PORT", 8765))
         self.client: redis.Redis | None = None
         logger.info(f"Redis initialized for {self.host}:{self.port}")
@@ -21,7 +21,7 @@ class Redis:
         try:
             logger.info("Connecting to Redis...")
             self.client = redis.Redis(
-                host=self.host, port=self.port, db=0, decode_responses=True
+                "0.0.0.0", port=self.port, db=0, decode_responses=True
             )
             self.client.ping()
             logger.success(
