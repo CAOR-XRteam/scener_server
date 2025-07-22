@@ -114,7 +114,7 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
         # Not relying on the llm to provide unique id for every object
         for obj_dict in result.scene.objects:
-            obj_dict.id = uuid.uuid4()
+            obj_dict.id = str(uuid.uuid4())
 
         logger.info(f"Decomposition result: {result}")
 
