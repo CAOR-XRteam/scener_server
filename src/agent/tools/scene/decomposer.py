@@ -416,6 +416,9 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
                 "improved_decomposition": improved_decomposition,
             }
         )
+
+        for obj in result.graph:
+            obj.id = str(uuid.uuid4())
         logger.info(f"Decomposition result: {result}")
 
         return FinalDecompositionOutput(
