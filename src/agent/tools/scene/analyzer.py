@@ -96,6 +96,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 3.  **ADDITION:** When adding a new object to the `objects_to_add` list:
     *   You MUST determine its correct parent from the context (e.g., "a book on the shelf" means the shelf is the parent).
     *   Set the new object's `parent_id` to the parent's `id` and set its `position` relative to that parent.
+    *   You must infer the prompt for the new object from the user's request.
 
 4.  **DELETION WITH CHILDREN:** When you add an object's `id` to the `objects_to_delete` list, all of its children will also be deleted.
     *   If the user says "remove the table, but leave the flower floating", you must perform TWO operations:
@@ -106,7 +107,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 
 **General Logic for Generating the Patch:**
 
-*   **ADDITION:** If adding a new object, create a `AdditionInfo` object in the `objects_to_add` list. You must infer its prompt from the user's request.
+*   **ADDITION:** If adding a new object, create a `AdditionInfo` object containing a SceneObject and a prompt in the `objects_to_add` list.
 
 *   **DELETION:** If removing an object, add its `id` string to the `objects_to_delete` list.
 
@@ -127,29 +128,29 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 
 **EXAMPLES OF MODIFICATION TYPES**
 
-All examples below are based on this simple **Current Scene Input**:
+All examples below are based on this simple **Current Scene**:
 
 {{
   "name": "A simple room",
   "skybox": {{ "type": "gradient", "color1": {{ "r": 0.8, "g": 0.8, "b": 1.0, "a": 1.0 }}, "color2": {{ "r": 0.5, "g": 0.5, "b": 0.7, "a": 1.0 }}, "up_vector": {{ "x": 0, "y": 1, "z": 0, "w": 0 }}, "intensity": 1.0, "exponent": 1.0 }},
   "graph": [
     {{
-      "name": "the_room",
       "id": "the_room_01",
+      "name": "the_room",
       "parent_id": null,
       "position": {{ "x": 0, "y": 0, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
       "components": [ {{ "component_type": "primitive", "shape": "cube", "color": null }} ],
       "children": [
         {{
-          "name": "the_table",
           "id": "the_table_01",
+          "name": "the_table",
           "parent_id": "the_room_01",
           "position": {{ "x": 0, "y": -0.5, "z": 2 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "primitive", "shape": "cube" }} ],
           "children": [
             {{
-              "name": "the_lamp",
               "id": "the_lamp_01",
+              "name": "the_lamp",
               "parent_id": "the_table_01",
               "position": {{ "x": 0, "y": 1, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 0.2, "y": 0.5, "z": 0.2 }},
               "components": [
@@ -160,8 +161,8 @@ All examples below are based on this simple **Current Scene Input**:
           ]
         }},
         {{
-          "name": "the_cat",
           "id": "the_cat_01",
+          "name": "the_cat",
           "parent_id": "the_room_01",
           "position": {{ "x": -2, "y": 0, "z": -1 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "dynamic", "id": "the_cat" }} ],
@@ -181,8 +182,8 @@ All examples below are based on this simple **Current Scene Input**:
         {{
         "prompt": "a red sphere",
         "scene_object": {{
-            "name": "sphere_01",
-            "id": "new_sphere_01",
+            "id": "sphere_01",
+            "name": "sphere",
             "parent_id": "the_table_01",
             "position": {{ "x": 0, "y": 1.1, "z": 0 }},
             "rotation": {{ "x": 0, "y": 0, "z": 0 }},
@@ -267,7 +268,7 @@ All examples below are based on this simple **Current Scene Input**:
       "objects_to_regenerate": [
         {{
           "id": "the_cat_01",
-          new_id": null
+          "new_id": null
           "prompt": "a large dragon"
         }}
       ]
@@ -294,7 +295,7 @@ All examples below are based on this simple **Current Scene Input**:
       }}
     }}                           
 """
-        user_prompt = "Current scene: {json_scene}\nUser: {user_input}"
+        user_prompt = "Current Scene: {json_scene}\nUser Request: {user_input}"
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system_prompt),

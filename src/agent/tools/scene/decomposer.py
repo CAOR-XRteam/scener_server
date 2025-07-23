@@ -381,7 +381,7 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
         Original User Prompt:
         {user_input}
 
-        Decomposed Objects with IDs, Improved Prompts and Types (Preserve these IDs and Types for these objects):
+        Decomposed Objects with IDs, Improved Prompts and Types (You MUST preserve ID and Type (for the components) fields for these objects):
         {improved_decomposition}
 
         Based on ALL the above information, generate the full scene JSON.
