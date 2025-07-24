@@ -26,7 +26,6 @@ class Modify3DSceneOutput(BaseModel):
     objects_to_send: list[TDObjectMetaData]
 
 
-# @tool(args_schema=Modify3DSceneToolInput)
 @beartype
 async def modify_3d_scene_async(
     redis_api: Redis,
