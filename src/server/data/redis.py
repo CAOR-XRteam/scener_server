@@ -23,7 +23,7 @@ class Redis:
         try:
             logger.info("Connecting to Redis...")
             self.client = redis.Redis(
-                host="0.0.0.0", port=self.port, db=0, decode_responses=True
+                host=self.host, port=self.port, db=0, decode_responses=True
             )
             await self.client.ping()
             logger.success(
