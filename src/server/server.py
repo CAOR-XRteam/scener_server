@@ -39,7 +39,6 @@ class Server:
         try:
             # Initialize Redis connection
             self.redis_api = Redis()
-            self.redis_api.connect()
             logger.info("Redis connection established successfully.")
 
             # Initialize Library API
@@ -51,7 +50,7 @@ class Server:
 
         # Initiate agent
         try:
-            self.agent = AgentAPI(self.redis_api, self.library_api)
+            self.agent = AgentAPI(self.redis_api, self.library_api, loop)
             logger.info("AgentAPI initialized successfully at server startup.")
         except Exception as e:
             # Shutdown the server if agent init failed?
@@ -76,6 +75,8 @@ class Server:
     async def run(self):
         """Run the WebSocket server."""
         try:
+            await self.redis_api.connect()
+
             # Start serveur and wait to close
             self.server = await websockets.serve(
                 self.handler_client, "0.0.0.0", self.port, max_size=10 * 1024 * 1024

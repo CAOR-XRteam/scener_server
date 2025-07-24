@@ -1,3 +1,4 @@
+import asyncio
 from functools import partial
 
 from agent.llm.creation import initialize_agent
@@ -11,7 +12,12 @@ from server.data.redis import Redis
 
 
 class Agent:
-    def __init__(self, redis_api: Redis = None, library_api: LibraryAPI = None):
+    def __init__(
+        self,
+        redis_api: Redis = None,
+        library_api: LibraryAPI = None,
+        main_loop: asyncio.AbstractEventLoop = None,
+    ):
         # Define the template for the prompt
         self.preprompt = """
 You are a specialized AI assistant and task router. Your primary function is to understand a user's request and select the single most appropriate tool to fulfill it. You do not perform tasks yourself; you delegate them to the correct tool.
@@ -84,7 +90,7 @@ You have analyzed the user's request and the available workflows. Now, you must 
 
         bound_modify_3d_scene_tool = modify_3d_scene.model_copy()
         bound_modify_3d_scene_tool.func = partial(
-            modify_3d_scene.func, self.redis_api, self.library_api
+            modify_3d_scene.func, self.redis_api, self.library_api, main_loop
         )
         bound_generate_3d_object_tool = generate_3d_object.model_copy()
         bound_generate_3d_object_tool.func = partial(

@@ -1,3 +1,4 @@
+import asyncio
 from agent.agent import Agent
 from agent.llm.interaction import chat, achat, ask, aask
 from asyncio import Queue
@@ -12,8 +13,13 @@ from server.data.redis import Redis
 
 @beartype
 class AgentAPI:
-    def __init__(self, redis_api: Redis = None, library_api: LibraryAPI = None):
-        self.agent = Agent(redis_api, library_api)
+    def __init__(
+        self,
+        redis_api: Redis = None,
+        library_api: LibraryAPI = None,
+        main_loop: asyncio.AbstractEventLoop = None,
+    ):
+        self.agent = Agent(redis_api, library_api, main_loop)
 
     def chat(self, user_input: str, thread_id: str = 0) -> str:
         chat(self.agent, user_input, thread_id)

@@ -26,21 +26,18 @@ class Modify3DSceneOutput(BaseModel):
     objects_to_send: list[TDObjectMetaData]
 
 
-@tool(args_schema=Modify3DSceneToolInput)
+# @tool(args_schema=Modify3DSceneToolInput)
 @beartype
-def modify_3d_scene(
+async def modify_3d_scene_async(
     redis_api: Redis,
     library_api: LibraryAPI,
     user_input: str,
-    *,
-    config: RunnableConfig,
+    thread_id: str,
 ) -> dict:
     """Creates a complete 3D environment or scene with multiple objects or a background."""
     logger.info(f"Modifying 3D scene from prompt: {user_input}...")
 
-    thread_id = config.get("configurable", {}).get("thread_id")
-
-    current_scene_json = redis_api.get_scene(thread_id)
+    current_scene_json = await redis_api.get_scene(thread_id)
     validated_current_scene = Scene.model_validate_json(current_scene_json)
     logger.info(f"Current scene JSON: {validated_current_scene}...")
 
@@ -87,10 +84,30 @@ def modify_3d_scene(
     ).model_dump()
 
 
-# @tool(args_schema=Modify3DSceneToolInput)
-# @beartype
-# def modify_3d_scene(redis_api: Redis, user_input: str, thread_id: str) -> dict:
-#     """Creates a complete 3D environment or scene with multiple objects or a background."""
-#     return asyncio.run(
-#         modify_3d_scene_async(redis_api, thread_id, user_input=user_input)
-#     )
+@tool(args_schema=Modify3DSceneToolInput)
+@beartype
+def modify_3d_scene(
+    redis_api: Redis,
+    library_api: LibraryAPI,
+    main_loop: asyncio.AbstractEventLoop,
+    user_input: str,
+    *,
+    config: RunnableConfig,
+) -> dict:
+    """Creates a complete 3D environment or scene with multiple objects or a background."""
+    thread_id = config.get("configurable", {}).get("thread_id")
+
+    coro = modify_3d_scene_async(
+        redis_api=redis_api,
+        library_api=library_api,
+        user_input=user_input,
+        thread_id=thread_id,
+    )
+
+    future = asyncio.run_coroutine_threadsafe(coro, main_loop)
+
+    try:
+        result = future.result()
+        return result
+    except Exception:
+        raise

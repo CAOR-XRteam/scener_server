@@ -1,4 +1,4 @@
-import redis
+import redis.asyncio as redis
 import os
 
 from beartype import beartype
@@ -17,7 +17,7 @@ class Redis:
         self.client: redis.Redis | None = None
         logger.info(f"Redis initialized for {self.host}:{self.port}")
 
-    def connect(self):
+    async def connect(self):
         if self.client:
             logger.info("Redis client already connected.")
             return
@@ -25,9 +25,9 @@ class Redis:
         try:
             logger.info("Connecting to Redis...")
             self.client = redis.Redis(
-                "0.0.0.0", port=self.port, db=0, decode_responses=True
+                host="0.0.0.0", port=self.port, db=0, decode_responses=True
             )
-            self.client.ping()
+            await self.client.ping()
             logger.success(
                 f"Successfully connected to Redis at {Fore.GREEN}{self.host}:{self.port}{Fore.RESET}"
             )
@@ -36,17 +36,17 @@ class Redis:
             self.client = None
             raise
 
-    def disconnect(self):
+    async def disconnect(self):
         if self.client:
             logger.info("Disconnecting from Redis...")
-            self.client.close()
+            await self.client.close()
             self.client = None
             logger.success("Redis connection closed")
 
-    def get_scene(self, thread_id: str) -> str | None:
+    async def get_scene(self, thread_id: str) -> str | None:
         if not self.client:
             logger.error("Redis client is not connected")
             raise ValueError("Redis client is not connected")
 
         key = f"scene:{thread_id}"
-        return self.client.get(key)
+        return await self.client.get(key)
