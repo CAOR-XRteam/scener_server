@@ -6,8 +6,6 @@ from beartype import beartype
 from lib import logger
 from colorama import Fore
 
-# TODO: make async
-
 
 @beartype
 class Redis:
