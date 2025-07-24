@@ -121,5 +121,5 @@ class Tool_callback(BaseCallbackHandler):
         tool_name = kwargs.get("name")
         logger.error(f"Tool '{tool_name}' encountered an error: {error}")
         self.structured_response = OutgoingErrorMessage(
-            status=500, text=f"Internal error on '{tool_name}', please try again."
+            status=500, text=f"Internal error, please try again."
         )
