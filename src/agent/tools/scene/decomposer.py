@@ -168,7 +168,7 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
         - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
-        - Each SceneObject represents a container and MUST have these fields: id, name, parent_id, position, rotation, scale, components, and children.
+        - Each SceneObject represents a container and MUST have these fields: id, name, parent_id, position, rotation, scale, components, and children. Name should be a short, descriptive identifier (e.g., "cat", "wooden_table", "sunlit_kitchen").
 
         - The children field is a list of other SceneObject nodes; **IMPORTANT**: it is ALWAYS present in the structure, and if a SceneObject logically has no children, it MUST BE an empty list [].
 
