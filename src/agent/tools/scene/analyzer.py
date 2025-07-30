@@ -91,7 +91,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 
 3.  **ADDITION:** When adding a new object to the `objects_to_add` list:
     *   You MUST determine its correct parent from the context (e.g., "a book on the shelf" means the shelf is the parent).
-    *   Set the new object's `parent_id` to the parent's `id` and set its `position` relative to that parent.
+    *   Set the new object's `parent_id` to the parent's `id`.
     *   You must infer the prompt for the new object from the user's request.
 
 4.  **DELETION WITH CHILDREN:** When you add an object's `id` to the `objects_to_delete` list, all of its children will also be deleted.
@@ -169,23 +169,23 @@ All examples below are based on this simple **Current Scene**:
   ]
 }}
 
-1. **User Request: "Add a red sphere on the table."**
+1. **User Request: "Add a red sport car outside."**
 
     **Correct Output:**    
     {{
         "name": "A simple room", "skybox": null, "objects_to_delete": [], "objects_to_update": [], "objects_to_regenerate": [],
         "objects_to_add": [
         {{
-        "prompt": "a red sphere",
+        "prompt": "a red sport car",
         "scene_object": {{
-            "id": "04",
-            "name": "sphere",
-            "parent_id": "02",
-            "position": {{ "x": 0, "y": 1.1, "z": 0 }},
+            "id": "05",
+            "name": "red_sport_car",
+            "parent_id": null,
+            "position": {{ "x": 2.5, "y": 4.1, "z": 0 }},
             "rotation": {{ "x": 0, "y": 0, "z": 0 }},
-            "scale": {{ "x": 0.5, "y": 0.5, "z": 0.5 }},
+            "scale": {{ "x": 2, "y": 2, "z": 2}},
             "components": [
-            {{ "component_type": "primitive", "shape": "sphere", "color": {{ "r": 1.0, "g": 0.0, "b": 0.0, "a": 1.0 }} }}
+            {{ "component_type": "dynamic", "id": "04" }}
             ],
             "children": []
             }}
@@ -198,7 +198,7 @@ All examples below are based on this simple **Current Scene**:
     **Correct Output:**
     {{
     "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_regenerate": [],
-    "objects_to_delete": ["the_lamp_01"]
+    "objects_to_delete": ["03"]
     }}
 
 3. **User Request: "Move the lamp from the table onto the floor of the room."**
