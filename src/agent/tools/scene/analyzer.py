@@ -120,6 +120,7 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 
 **Source of Truth:** Always use the provided `current_scene` JSON to find object `id`s and understand the current state and hierarchy. The `name` in the output must match the name from the `current_scene`.
 
+WHEN ASKED TO CHANGE PROPERTIES OF A PRIMITIVE OBJECT, DO NOT REGENERATE IT. Instead, update its properties in the `components_to_update` list of a `SceneObjectUpdate`.
 ---
 
 **EXAMPLES OF MODIFICATION TYPES**
