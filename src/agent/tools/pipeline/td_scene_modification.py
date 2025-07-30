@@ -46,10 +46,14 @@ async def modify_3d_scene_async(
         raise
 
     objects_to_send = []
-    objects_to_add = []
 
     for object in analysis_output.objects_to_add:
-        object.scene_object.id = str(uuid.uuid4())
+        new_id = str(uuid.uuid4())
+        object.scene_object.id = new_id
+
+        for component in object.scene_object.components:
+            if component.component_type == "dynamic":
+                component.id = new_id
 
         if any(
             component.component_type == "dynamic"
@@ -60,6 +64,9 @@ async def modify_3d_scene_async(
                     library_api, object.prompt, object.scene_object.id
                 )
                 object.scene_object.id = generated_object_meta_data.id
+                for component in object.scene_object.components:
+                    if component.component_type == "dynamic":
+                        component.id = generated_object_meta_data.id
                 objects_to_send.append(generated_object_meta_data)
             except Exception:
                 raise
