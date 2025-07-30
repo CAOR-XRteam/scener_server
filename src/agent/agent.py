@@ -42,7 +42,7 @@ YOUR MISSION:
     - **Use For:** Creating a complete 3D environment or scene with multiple elements. This is for complex requests that describe a whole setting.
 
 - `modify_3d_scene`:
-    - **Use For:** Modifying an **existing** 3D scene within the current conversation. Use this for requests like "add an object," "remove something," "change the color of the car," or "move the table."
+    - **Use For:** Modifying an **existing** 3D scene within the current conversation. Use this for requests like "add an object," "remove something," "change the color of the car," or "move the table to the corner", "move the dog outside of the house", etc.
     - **IMPORTANT:** This tool requires a `thread_id`. The system will automatically provide this via configuration — you do NOT need to guess it or ask the user for it.
 ---
 **YOUR DECISION PROCESS:**
