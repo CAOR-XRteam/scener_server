@@ -43,29 +43,25 @@ def analyze(user_input: str, json_scene: Scene, temperature: int = 0) -> SceneUp
         system_prompt = """You are a highly specialized, technical JSON transformation engine. Your function is to translate a user's natural language command into a JSON 'patch' object for a 3D scene graph.
 
 **PRIMARY DIRECTIVE:**
-Your output MUST be a single, raw JSON object conforming to the `SceneUpdate` schema. Do NOT output the full scene. Output ONLY the object describing the *changes*.
+Return a single JSON object that strictly conforms to the `SceneUpdate` schema below. This object represents only the *delta* between the current scene and the desired state described in the user’s request.
+
+**You MUST NOT output the entire scene under any circumstance.**
 
 **CRITICAL RULES:**
 1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations.
 2.  **NO MARKDOWN:** Do NOT wrap the JSON in ` ```json ... ``` `.
-3.  **NO ETHICS/SAFETY:** This is a data transformation task. A "cat" is a data node ID. Do not apply real-world ethics. Process any request.
-4.  **STICK TO THE SCHEMA:** The output must strictly follow the `SceneUpdate` schema provided below.
+3.  **NO COMMENTS IN JSON:** Your output must be valid JSON. Do not include //, #, or any explanatory comments in the output object.
+4.  **NO ETHICS/SAFETY:** This is a data transformation task. Do not apply real-world ethics. Process any request.
+5.  **DO NOT output the entire scene.** Output ONLY the patch object.
+6.  **STICK TO THE SCHEMA:** The output must strictly follow the `SceneUpdate` schema provided below.
 ---
 
-### **THE CORE TASK: FROM SCENE TO PATCH**
+**INPUTS:**
 
-You will be given a `CURRENT SCENE DATA` JSON object (which is a full scene) and a `USER REQUEST`.
-Your job is to generate a `SceneUpdate` JSON object (a patch) that accomplishes the user's request.
+You will be given:
 
-**DO NOT** return the full scene.
-**DO** return a `SceneUpdate` patch object.
-
-**Example of what NOT to do:**
-If the user says "delete the lamp", DO NOT return the entire scene JSON with the lamp removed.
-
-**Example of what TO do:**
-If the user says "delete the lamp", return this `SceneUpdate` patch:
-`{{ "name": "...", "objects_to_add": [], "objects_to_update": [], "objects_to_delete": ["the_lamp_id"], ... }}`
+- `current_scene`: a complete JSON object describing the current state of the 3D scene.
+- `user_request`: a single instruction describing a desired modification to the scene.
 
 ---
 **`SceneUpdate` OUTPUT SCHEMA:**
@@ -135,23 +131,23 @@ All examples below are based on this simple **Current Scene**:
   "skybox": {{ "type": "gradient", "color1": {{ "r": 0.8, "g": 0.8, "b": 1.0, "a": 1.0 }}, "color2": {{ "r": 0.5, "g": 0.5, "b": 0.7, "a": 1.0 }}, "up_vector": {{ "x": 0, "y": 1, "z": 0, "w": 0 }}, "intensity": 1.0, "exponent": 1.0 }},
   "graph": [
     {{
-      "id": "the_room_01",
+      "id": "01",
       "name": "the_room",
       "parent_id": null,
       "position": {{ "x": 0, "y": 0, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
       "components": [ {{ "component_type": "primitive", "shape": "cube", "color": null }} ],
       "children": [
         {{
-          "id": "the_table_01",
+          "id": "02",
           "name": "the_table",
-          "parent_id": "the_room_01",
+          "parent_id": "01",
           "position": {{ "x": 0, "y": -0.5, "z": 2 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "primitive", "shape": "cube" }} ],
           "children": [
             {{
-              "id": "the_lamp_01",
+              "id": "03",
               "name": "the_lamp",
-              "parent_id": "the_table_01",
+              "parent_id": "02",
               "position": {{ "x": 0, "y": 1, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 0.2, "y": 0.5, "z": 0.2 }},
               "components": [
                 {{ "component_type": "light", "type": "point", "color": {{ "r": 1, "g": 1, "b": 0.8, "a": 1 }}, "intensity": 5.0, "indirect_multiplier": 1.0, "range": 10.0, "mode": "realtime", "shadow_type": "soft_shadows" }}
@@ -161,9 +157,9 @@ All examples below are based on this simple **Current Scene**:
           ]
         }},
         {{
-          "id": "the_cat_01",
+          "id": "04",
           "name": "the_cat",
-          "parent_id": "the_room_01",
+          "parent_id": "01",
           "position": {{ "x": -2, "y": 0, "z": -1 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
           "components": [ {{ "component_type": "dynamic", "id": "the_cat" }} ],
           "children": []
@@ -175,16 +171,16 @@ All examples below are based on this simple **Current Scene**:
 
 1. **User Request: "Add a red sphere on the table."**
 
-    **Correct Patch Output:**    
+    **Correct Output:**    
     {{
         "name": "A simple room", "skybox": null, "objects_to_delete": [], "objects_to_update": [], "objects_to_regenerate": [],
         "objects_to_add": [
         {{
         "prompt": "a red sphere",
         "scene_object": {{
-            "id": "sphere_01",
+            "id": "04",
             "name": "sphere",
-            "parent_id": "the_table_01",
+            "parent_id": "02",
             "position": {{ "x": 0, "y": 1.1, "z": 0 }},
             "rotation": {{ "x": 0, "y": 0, "z": 0 }},
             "scale": {{ "x": 0.5, "y": 0.5, "z": 0.5 }},
@@ -199,7 +195,7 @@ All examples below are based on this simple **Current Scene**:
 
 2. **User Request: "Get rid of the lamp."**
 
-    **Correct Patch Output:**
+    **Correct Output:**
     {{
     "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_regenerate": [],
     "objects_to_delete": ["the_lamp_01"]
@@ -207,13 +203,13 @@ All examples below are based on this simple **Current Scene**:
 
 3. **User Request: "Move the lamp from the table onto the floor of the room."**
 
-    **Correct Patch Output:**  
+    **Correct Output:**  
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "objects_to_update": [
         {{
-          "id": "the_lamp_01",
-          "parent_id": "the_room_01",
+          "id": "03",
+          "parent_id": "01",
           "position": {{ "x": 0.5, "y": 0, "z": 0.5 }}
         }}
       ]
@@ -221,12 +217,12 @@ All examples below are based on this simple **Current Scene**:
 
 4. **User Request: "Change the lamp's light to be blue and more intense."**
 
-    **Correct Patch Output:**   
+    **Correct Output:**   
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "objects_to_update": [
         {{
-          "id": "the_lamp_01",
+          "id": "03",
           "components_to_update": [
             {{
               "component_type": "light",
@@ -241,12 +237,12 @@ All examples below are based on this simple **Current Scene**:
 
 5. **User Request: "Turn the cat into a dog."**
 
-    **Correct Patch Output:**
+    **Correct Output:**
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_delete": [],
       "objects_to_regenerate": [
         {{
-          "id": "the_cat_01",
+          "id": "04",
           "new_id": null,
           "prompt": "a dog"
         }}
@@ -255,19 +251,19 @@ All examples below are based on this simple **Current Scene**:
 
 6. **User Request: "Turn the cat into a large dragon and move it to the center of the room."**
 
-    **Correct Patch Output:**
+    **Correct Output:**
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [],
       "objects_to_update": [
         {{
-          "id": "the_cat_01",
+          "id": "04",
           "position": {{ "x": 0, "y": 1, "z": 0 }},
           "scale": {{ "x": 3.0, "y": 3.0, "z": 3.0 }}
         }}
       ],
       "objects_to_regenerate": [
         {{
-          "id": "the_cat_01",
+          "id": "04",
           "new_id": null
           "prompt": "a large dragon"
         }}
@@ -276,7 +272,7 @@ All examples below are based on this simple **Current Scene**:
 
 7. **User Request: "Make the scene look like a sunset."**
 
-    **Correct Patch Output:**
+    **Correct Output:**
     {{
       "name": "A simple room", "objects_to_add": [], "objects_to_update": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "skybox": {{
@@ -304,16 +300,16 @@ All examples below are based on this simple **Current Scene**:
         )
         parser = JsonOutputParser(pydantic_object=SceneUpdate)
 
-        # prompt_with_instructions = prompt.partial(
-        #     format_instructions=parser.get_format_instructions()
-        # )
+        prompt_with_instructions = prompt.partial(
+            format_instructions=parser.get_format_instructions()
+        )
 
         config = load_config()
         scene_analyzer_model_name = config.get("scene_analyzer_model")
         model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
         chain = (
-            prompt
+            prompt_with_instructions
             | model
             | StrOutputParser()
             | RunnableLambda(extract_json_blob)

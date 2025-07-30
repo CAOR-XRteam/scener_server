@@ -16,7 +16,6 @@ CONFIG_PATH = os.path.join(PROJECT_ROOT, "config.json")
 def extract_json_blob(raw_response: str) -> str:
     """
     Extracts the first JSON blob from a string that might contain other text.
-    Finds the first '{' and the last '}' to demarcate the JSON.
     """
     start_index = raw_response.find("{")
     end_index = raw_response.rfind("}")

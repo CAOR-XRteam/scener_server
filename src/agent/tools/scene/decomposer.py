@@ -1,13 +1,14 @@
 import uuid
 
 from beartype import beartype
+from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from pydantic import BaseModel
 from typing import Literal
 
 from agent.llm.creation import initialize_model
-from lib import load_config, logger
+from lib import extract_json_blob, load_config, logger
 from sdk.scene import Scene, FinalDecompositionOutput
 
 # TODO: pydantic field descr
@@ -404,17 +405,25 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
     model = initialize_model(final_decomposer_model_name, temperature=temperature)
 
-    chain = prompt_with_instructions | model | parser
+    chain = (
+        prompt_with_instructions
+        | model
+        | StrOutputParser()
+        | RunnableLambda(extract_json_blob)
+        | parser
+    )
 
     try:
         logger.info(
             f"Final decomposition with input: original_prompt='{user_input}', improved_decomposition: {improved_decomposition.scene}."
         )
-        result: Scene = chain.invoke(
-            {
-                "user_input": user_input,
-                "improved_decomposition": improved_decomposition,
-            }
+        result: Scene = Scene(
+            **chain.invoke(
+                {
+                    "user_input": user_input,
+                    "improved_decomposition": improved_decomposition,
+                }
+            )
         )
 
         for obj in result.graph:
