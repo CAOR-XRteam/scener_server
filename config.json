@@ -1,7 +1,4 @@
 {
-    "host": "localhost",
-    "port": 8765,
-    "ping_interval": 30,
     "log_level": "info",
     "agent_model": "devstral:24b",
     "improver_model": "llama3.1",
