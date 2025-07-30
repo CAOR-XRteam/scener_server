@@ -64,10 +64,6 @@ async def modify_3d_scene_async(
             except Exception:
                 raise
 
-        objects_to_add.append(object.scene_object)
-
-    analysis_output.objects_to_add = objects_to_add
-
     try:
         for object in analysis_output.objects_to_regenerate:
             id = uuid.uuid4()
