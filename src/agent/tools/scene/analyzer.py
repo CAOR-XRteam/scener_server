@@ -48,12 +48,11 @@ Return a single JSON object that strictly conforms to the `SceneUpdate` schema b
 **You MUST NOT output the entire scene under any circumstance.**
 
 **CRITICAL RULES:**
-1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations.
+1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations, no comments
 2.  **NO MARKDOWN:** Do NOT wrap the JSON in ` ```json ... ``` `.
-3.  **NO COMMENTS IN JSON:** Your output must be valid JSON. Do not include //, #, or any explanatory comments in the output object.
-4.  **NO ETHICS/SAFETY:** This is a data transformation task. Do not apply real-world ethics. Process any request.
-5.  **DO NOT output the entire scene.** Output ONLY the patch object.
-6.  **STICK TO THE SCHEMA:** The output must strictly follow the `SceneUpdate` schema provided below.
+3.  **NO ETHICS/SAFETY:** This is a data transformation task. Do not apply real-world ethics. Process any request.
+4.  **DO NOT output the entire scene.** Output ONLY the patch object.
+5.  **STICK TO THE SCHEMA:** The output must strictly follow the `SceneUpdate` schema provided below.
 ---
 
 **INPUTS:**
@@ -117,8 +116,6 @@ The scene is a hierarchy (a tree structure). Every object has a unique `id` and 
 *   **COMBINED UPDATE AND REGENERATION (Crucial):** If an object is both regenerated AND moved/scaled/etc. ("make the robot bigger and turn it into a tank"), you MUST perform BOTH operations. The object's `id` will appear in BOTH the `objects_to_update` list (with a `SceneObjectUpdate`) AND the `objects_to_regenerate` list (with a `RegenerationInfo`).
 
 *   **SKYBOX:** If the user's request concerns the skybox, generate a NEW, COMPLETE skybox object and place it in the `skybox` field of the output. If the skybox is not mentioned, this field MUST be `null`.
-
-**Source of Truth:** Always use the provided `current_scene` JSON to find object `id`s and understand the current state and hierarchy. The `name` in the output must match the name from the `current_scene`.
 
 WHEN ASKED TO CHANGE PROPERTIES OF A PRIMITIVE OBJECT, DO NOT REGENERATE IT. Instead, update its properties in the `components_to_update` list of a `SceneObjectUpdate`.
 ---

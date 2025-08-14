@@ -226,10 +226,6 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
 **CRITICAL RULES:**
 
-    - JSON ONLY: Your entire output must be a single, valid JSON object. No extra text, no markdown, no explanations.
-
-    - HIERARCHY IS KEY: Structure the objects logically using the children list. For example, a lamp should be a child of the room or the desk it sits on. Use local positions for children.
-
     - STRICT SCHEMA: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above. Every SceneObject must have a components list, even if it's empty.
 
 ---
