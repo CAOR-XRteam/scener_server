@@ -5,7 +5,7 @@ from beartype import beartype
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
-from model.black_forest import generate_image
+from model.black_forest import generate
 from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
 from beartype import beartype
@@ -18,10 +18,12 @@ class AnalyzeToolInput(BaseModel):
         description="The JSON representing extracted relevant context from the current scene state."
     )
 
+
 # @tool(args_schema=AnalyzeToolInput)
 def _analyze(self, user_input: str):
     """Analyzes a user's modification request against the current scene state to extract relevant context or identify issues."""
     return self.scene_analyzer.analyze(self.get_current_scene, user_input)
+
 
 @beartype
 class SceneAnalyzer:
@@ -58,7 +60,7 @@ Correct JSON Output based on rules: `{{"objects": [{{"name": "table", "position"
             ]
         )
         self.chain = self.prompt | self.model | self.parser
-        #logger.info(f"Initialized with model: {model_name}")
+        # logger.info(f"Initialized with model: {model_name}")
 
     def analyze(self, current_scene: dict, user_input: str) -> dict:
         try:

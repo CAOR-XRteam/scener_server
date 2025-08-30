@@ -1,13 +1,14 @@
-from api import *
+from library.api import LibraryAPI
+from library.manager.database import Database
+import inspect
 import os
 
 
-def main(path):
-    library.fill(path)
-    library.read()
-    list = library.get_list()
-    print(list)
-
 if __name__ == "__main__":
-    path = "./media/asset"
-    main(path)
+    """ test the library with root media fodler """
+
+    # Read database
+    api = LibraryAPI() # create api instance
+    api.read() # print in terminal
+    list = api.get_list() # get dict list
+    print(list) # print dict list

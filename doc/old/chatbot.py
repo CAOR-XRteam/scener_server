@@ -9,21 +9,24 @@ class Chatbot:
     def __init__(self):
         # Define the template for the prompt
         self.messages = [
-            {'role': 'system', 'content': 'You are a helpful 3D engine chatbot assistant. answer briefly to the question in one or two paragraphes and do not speak outside the question scope.'},
-            {'role': 'user', 'content': ''},
+            {
+                "role": "system",
+                "content": "You are a helpful 3D engine chatbot assistant. answer briefly to the question in one or two paragraphes and do not speak outside the question scope.",
+            },
+            {"role": "user", "content": ""},
         ]
 
         # Tools
         self.model = OllamaLLM(model="gemma3:4b", streaming=True)  # Enable streaming
-        #self.llm_improver = Impover()
+        # self.llm_improver = Impover()
 
         # Agentic executor
-        #self.tools = [search]
-        #agent_executor = create_react_agent(model, tools, checkpointer=memory)
+        # self.tools = [search]
+        # agent_executor = create_react_agent(model, tools, checkpointer=memory)
 
     def chat(self, user_input):
         """Send a prompt to the LLM and receive a structured response."""
-        self.messages.append({'role': 'user', 'content': user_input})
+        self.messages.append({"role": "user", "content": user_input})
         prompt = ChatPromptTemplate.from_messages(self.messages)
         chain = prompt | self.model
 
@@ -34,7 +37,7 @@ class Chatbot:
         result = ""
         for chunk in response:
             result += chunk
-            print(chunk, end='', flush=True)  # Print each chunk in the stream
+            print(chunk, end="", flush=True)  # Print each chunk in the stream
         print("\n")
 
         return result
@@ -46,6 +49,6 @@ class Chatbot:
 
 
 # Usage
-if __name__ == '__main__':
+if __name__ == "__main__":
     chat = Chatbot()
     chat.run()
