@@ -1,28 +1,62 @@
-from library_database import Database
-from library_list import Library
-from library_asset import Asset
-from loguru import logger
-import sys
+from lib import logger
+from library import db
+from library.manager.database import Database
+from library.manager.library import Library
+from library.manager.asset import Asset
+
+# TODO: more precise error handling to propagate to the agent, tests
 
 
-#Loguru config
-logger.remove()
-logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level}</level> | {message}")
+class LibraryAPI:
+    def __init__(self):
+        self.db = db
+        self.library = Library(db)
+        self.asset = Asset(db)
 
-path = "./media/database.db"
-db = Database(path)
-library = Library(db)
-asset = Asset(db)
+    def fill(self, path):
+        """Fill the database with assets from the specified directory."""
+        try:
+            self.library.fill(path)
+        except Exception as e:
+            logger.error(f"Failed to fill the database: {e}")
+            raise
 
+    def read(self):
+        """Print out all the assets in the database."""
+        try:
+            return self.library.read()
+        except Exception as e:
+            logger.error(f"Failed to read the database: {e}")
+            raise
 
-def add_asset(name, image=None, mesh=None, description=None):
-    asset.add(name, image, mesh, description)
+    def get_list(self):
+        """Return a list of all assets as dictionaries."""
+        try:
+            return self.library.get_list()
+        except Exception as e:
+            logger.error(f"Failed to get the list of assets: {e}")
+            raise
 
-def update_asset(name, image=None, mesh=None, description=None):
-    asset.update(name, image, mesh, description)
+    def add_asset(self, name, image=None, mesh=None, description=None):
+        """Add a new asset to the database."""
+        try:
+            self.asset.add(name, image, mesh, description)
+        except Exception as e:
+            logger.error(f"Failed to add asset: {e}")
+            raise
 
-def delete_asset(name):
-    asset.delete(name)
+    def update_asset(self, name, image=None, mesh=None, description=None):
+        """Update an existing asset."""
+        try:
+            self.asset.update(name, image, mesh, description)
+        except Exception as e:
+            logger.error(f"Failed to update asset: {e}")
+            raise
 
-def list_asset():
-    return library.get_list()
+    def delete_asset(self, name):
+        """Delete an asset by its name."""
+        try:
+            self.asset.delete(name)
+        except Exception as e:
+            logger.error(f"Failed to delete asset: {e}")
+            raise

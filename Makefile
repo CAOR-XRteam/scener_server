@@ -2,10 +2,13 @@ install:
 	pip install -e .
 
 run_agent:
-	python src/agent/__main__.py
+	python -m agent
 
 run_library:
-	python src/library/__main__.py
+	python -m library
 
 run_server:
-	python src/server/__main__.py
+	python -m server
+
+run_client:
+	wscat -c ws:localhost:8765

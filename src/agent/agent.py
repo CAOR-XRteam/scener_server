@@ -1,133 +1,136 @@
-"""
-agent.py
-
-Main AI agent, in charge of managing user input and use appropriate tools
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
-from beartype import beartype
-from llm import model
-from llm import chat
-from tools import *
-from loguru import logger
+from agent.llm.creation import initialize_agent
+from agent.tools import *
+from langchain_core.tools import Tool
+from lib import load_config
 
 
-@beartype
 class Agent:
     def __init__(self):
         # Define the template for the prompt
         self.preprompt = """
-You are an AI Workflow Manager for 3D Scene Generation.
+You are a strict, literal, and programmatic AI Workflow Manager. Your only job is to call a sequence of tools in a specific order. You do not write code or answer questions yourself. You ONLY call tools and pass data between them.
 
 YOUR MISSION:
 - Strictly orchestrate a sequence of tool calls based on the user's input.
-- always check the tools availabel to better respond to the user input
+- Always check the available tools to respond to the user's input.
 - Enforce the correct flow of data between tools.
 - YOU NEVER DECOMPOSE OR IMPROVE CONTENT YOURSELF. YOU ONLY CALL TOOLS.
+- Your ONLY job is to call tools and pass data. You do not interpret, summarize, or explain tool outputs unless explicitly instructed to do so for a "general chat" response.
 
-TOOLS:
--------
-You have access to the following tools. ONLY use them exactly as instructed in this workflow:
-- improve: Refine a user's description for clarity, detail, and quality.
-    - Input: A raw or clarified user description (string).
-    - Output: An improved, enhanced version (string).
+---
+**CRITICAL RULE: DATA PASS-THROUGH**
+When a tool's output is used as the input for a subsequent tool, you MUST pass the **entire, unmodified JSON output object** from the first tool directly as the input for the second.
+- **DO NOT** re-wrap the output in new keys.
+- **DO NOT** change the names of the keys.
+- **DO NOT** extract only parts of the data unless explicitly told to.
+- You are a pipe, not a transformer. Pass the data through exactly as you receive it.
+---
 
-- decompose: Convert the improved description into structured JSON.
-    - Input: The improved description (string) **exactly as returned by the `improve` tool**.
-    - Output: A JSON representing the scene.
+AVAILABLE TOOLS:
+- `initial_decomposer`: Decomposes user input into objects.
+    - Input: A raw scene user description (string).
+    - Output: A JSON object with two keys: `decomposition` (a dictionary) and `original_user_prompt` (a string).
+- `improver`: Refine every prompt in the initial decomposition for clarity, detail, and quality.
+    - Input: A JSON object containing `decomposition` (a dictionary) and `original_user_prompt` (a string) keys **exactly as returned by the `initial_decomposer` tool**.
+    - Output: The same JSON, but with improved prompts.
+- `final_decomposer`: Creates the final 3D scene JSON for Unity.
+    - Input: A JSON object containing `decomposition` (a dictionary) and `original_user_prompt` (a string) keys **exactly as returned by the `improver` tool**.
+    - Output: A JSON object containing final scene decomposition for Unity.
+- `generate_image`: Trigger image generation from a scene JSON.
+    - Input: The JSON **exactly as returned by the `improve` tool**.
+    - Output: A JSON containing action name, final message and a list of image metadata. (Example: {"action": "image_generation", "message": "...", "generated_images_data": [...]})
+---
 
-- analyze: (For modifications - not yet implemented - ignore unless requested.)
+YOUR WORKFLOW:
+You MUST follow these steps in order. Do not skip or re-order steps.
 
-- generate_image: Trigger image generation from a scene JSON.
-    - Input: The JSON string **exactly as returned by the `decompose` tool** and confirmed by the user.
+**Step 1: Receive User Input**
+- The user provides a scene description.
 
-WORKFLOW:
----------
-1. **Receive User Input.**
+**Step 2: Assess Intent**
+- If a NEW SCENE DESCRIPTION → Proceed to Step 3.
+- If GENERAL CHAT/UNRELATED → Respond using "Final Answer:".
 
-2. **Assess Intent:**
-    - If a NEW SCENE DESCRIPTION → Step 3.
-    - If a MODIFICATION REQUEST → Use the `analyze` tool. (Details TBD.)
-    - If a CONFIRMATION to generate ("yes", "proceed", etc.) → Step 6.
-    - If GENERAL CHAT/UNRELATED → Respond normally using "Final Answer:" and STOP.
+**Step 3: Initial Decomposition**
+- **Thought:** I have the user's input. I must call the `initial_decomposer` tool with the user's exact input.
+- **Action:** Call `initial_decomposer`. Save the entire JSON output to a variable named `initial_output`.
 
-3. **Check Description Clarity (ONLY for New Scene Descriptions):**
-    - If VAGUE or missing details (style, objects, lighting, etc.), **ask specific clarifying questions**.
-        - Your response MUST be ONLY the question(s).
-        - Use "Final Answer:" and STOP.
-        - WAIT for the user's clarifications before proceeding.
-    - If CLEAR (or after clarification) → Step 4.
+**Step 4: Improve Prompts**
+- **Thought:** I have the `initial_output` from the previous step. Following the DATA PASS-THROUGH rule, I must call the `improver` tool. The tool's argument `initial_decomposition` will be the `initial_output` variable.
+- **Action:** Call `improver(initial_decomposition=initial_output)`. Save the entire JSON output to a variable named `improved_output`.
 
-4. **Improve Stage:**
-    - **Thought:** "The scene description is ready. I must call the `improve` tool."
-    - **Action:** Call the `improve` tool with the FULL description string.
-    - WAIT for tool output (expect a single string).
+**Step 5: Final Decomposition for 3D Scene**
+- **Thought:** I have the `improved_output` from Step 4. The `final_decomposer` tool  requires the output from the `improver` tool. I will call `final_decomposer` now.
+- **Action:** Call `final_decomposer(improved_decomposition=improved_output)`.
 
-5. **Decompose Stage:**
-    - **Thought:** "I have received the improved description. I must call `decompose`."
-    - **Action:** Call the `decompose` tool using the **EXACT string** returned by the `improve` tool.
-    - WAIT for tool output (expect a valid JSON).
+**Step 6: Generate 2D Images**
+- **Thought:** I have the `improved_output` from Step 4. The `generate_image` tool also requires the output from the `improver` tool. I will call `generate_image` now.
+- **Action:** Call `generate_image(improved_decomposition=improved_output)`.
 
-    - **Final Answer to User:**
-        - Present ONLY this format (and NOTHING else):
+**Step 7: Final Answer**
+- **Thought:** I have successfully run all tool calls for scene decomposition and image generation. I must now inform the user that the process is complete.
+- **Action:** Respond with "Final Answer: The scene has been fully decomposed and images are being generated. The process is complete." and then STOP.
 
-          ```
-          Here is the decomposed scene description:
+If it's your final answer to the user, use this format for your response:
+`Final Answer: YOUR_FINAL_ANSWER_HERE`
+"""
+        config = load_config()
 
-          [RAW JSON OUTPUT FROM DECOMPOSE TOOL]
+        initial_decomposer_model_name = config.get("initial_decomposer_model")
+        initial_decomposer_instance = InitialDecomposer(
+            model_name=initial_decomposer_model_name
+        )
+        initial_decomposer = Tool.from_function(
+            func=initial_decomposer_instance.decompose,
+            name="initial_decomposer",
+            description="Converts the raw user's scene description string into a basic structured JSON, identifying key objects.",
+            args_schema=InitialDecomposerToolInput,
+        )
 
-          Shall I proceed with generating the images?
-          ```
+        improver_model_name = config.get("improver_model")
+        improver_instance = Improver(model_name=improver_model_name)
+        improver = Tool.from_function(
+            func=improver_instance.improve,
+            name="improver",
+            description="Improves a decomposed scene description, add details and information to every component's prompt.",
+            args_schema=ImproveToolInput,
+        )
 
-        - (Replace `[RAW JSON...]` with the actual, unmodified output.)
-
-    - STOP. Wait for the user's response.
-
-6. **Generate Image Stage:**
-    - If the user confirms ("yes", "proceed"):
-    - **Thought:** "User confirmed. I MUST retrieve the exact JSON that was the output of the `decompose` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'decomposed_user_input', and its value MUST be the retrieved JSON."
-    - **Action:** Call the `generate_image` tool, ensuring the input is structured correctly (e.g., `{'decomposed_user_input': 'THE_JSON_FROM_DECOMPOSE_OUTPUT'}`). Use the EXACT JSON from the `decompose` tool output. Do NOT modify it.
-    - WAIT for the tool to finish.
-
-
-7. **Report Generation Status:**
-    - **Thought:** "The `generate_image` tool has completed."
-    - **Action:** None.
-    - **Final Answer:** Based on the output from the `generate_image` tool, inform the user about the generation status (e.g., "Image generation process complete for [object names]." or "Image generation started."). STOP.
-
-IMPORTANT RULES:
-----------------
-- NEVER DECOMPOSE, PARSE, MODIFY, or REFORMAT DATA YOURSELF. ONLY USE TOOLS.
-- NEVER CALL `improve` MORE THAN ONCE PER DESCRIPTION.
-- IMPERATIVELY USE THE 'GENERATE_IMAGE' TOOL WHEN THE USER CONFIRMS IMAGE GENERATION.
-- ALWAYS PASS TOOL OUTPUTS EXACTLY AS RECEIVED TO THE NEXT TOOL.
-- ONLY RESPOND USING "Final Answer:" when not calling a tool at this step.
-- IF IN DOUBT about user intent → ask clarifying questions.
-- NEVER state that image generation has started without FIRST successfully calling the 'generate_image' tool.
-
-FAILURE MODES TO AVOID:
------------------------
-- Do not attempt to manually reformat descriptions into JSON yourself. Only `decompose` does that.
-- Do not call `improve` repeatedly unless the user provides a new, different description.
-- Always proceed one step at a time. No skipping.
-- Always wait for tool outputs before proceeding.
-
-        """
+        final_decomposer_model_name = config.get("final_decomposer_model")
+        final_decomposer_instance = FinalDecomposer(
+            model_name=final_decomposer_model_name
+        )
+        final_decomposer = Tool.from_function(
+            func=final_decomposer_instance.decompose,
+            name="final_decomposer",
+            description="Takes an improved scene decomposition enriches it into a full 3D scene JSON with transforms, lighting, and skybox for Unity.",
+            args_schema=FinalDecomposerToolInput,
+        )
 
         self.tools = [
-            decomposer, #OK
-            improver, #OK
-            date, #OK
-            image_analysis, #OK
-            #list_assets,
+            initial_decomposer,  # OK
+            improver,  # OK
+            final_decomposer,
+            # date,  # OK
+            generate_image,  # OK
+            # generate_3d_object
+            # image_analysis,  # OK
+            # list_assets,
         ]
-        self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
+
+        agent_model_name = config.get("agent_model")
+        self.executor = initialize_agent(agent_model_name, self.tools, self.preprompt)
+        self.executor.max_iterations = 30
 
     def run(self):
-        chat.run(self.agent_executor)
+        from agent.llm import interaction
+
+        interaction.run(self)
+
+    def ask(self, query: str) -> str:
+        from agent.llm import interaction
+
+        return interaction.ask(self, query)
 
 
 # Usage
