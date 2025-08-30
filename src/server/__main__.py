@@ -1,16 +1,7 @@
-from api import *
+from server.api import ServerAPI
 import os
-
-
-def start():
-    global server
-    if server is None:
-        server = ws.Server()
-    server.start()
-
-def main():
-    server.start()
 
 if __name__ == "__main__":
     os.system("clear")
-    main()
+    server = ServerAPI()
+    server.start()

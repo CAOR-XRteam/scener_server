@@ -2,6 +2,6 @@ media/*
 model/*
 __pycache__/
 *.py[cod]
-*.egg-info/
 *.egg
-*.pyc
+*.egg-info/
+*.env

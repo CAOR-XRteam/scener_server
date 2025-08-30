@@ -1,21 +1,9 @@
-"""
-agent.py
-
-Main AI agent, in charge of managing user input and use appropriate tools
-
-Author: Artem
-Created: 05-05-2025
-Last Updated: 05-05-2025
-"""
-
-from beartype import beartype
-from llm import model
-from llm import chat
-from tools import *
-from loguru import logger
+from agent.llm.creation import initialize_agent
+from agent.tools import *
+from langchain_core.tools import Tool
+from lib import load_config
 
 
-@beartype
 class Agent:
     def __init__(self):
         # Define the template for the prompt
@@ -24,25 +12,27 @@ You are an AI Workflow Manager for 3D Scene Generation.
 
 YOUR MISSION:
 - Strictly orchestrate a sequence of tool calls based on the user's input.
-- always check the tools availabel to better respond to the user input
+- Always check the available tools to respond to the user's input.
 - Enforce the correct flow of data between tools.
 - YOU NEVER DECOMPOSE OR IMPROVE CONTENT YOURSELF. YOU ONLY CALL TOOLS.
 
 TOOLS:
 -------
 You have access to the following tools. ONLY use them exactly as instructed in this workflow:
-- improve: Refine a user's description for clarity, detail, and quality.
-    - Input: A raw or clarified user description (string).
-    - Output: An improved, enhanced version (string).
 
-- decompose: Convert the improved description into structured JSON.
-    - Input: The improved description (string) **exactly as returned by the `improve` tool**.
+- decomposer: Convert the initial user's description into structured JSON.
+    - Input: A raw scene user description (string).
     - Output: A JSON representing the scene.
+
+- improver: Refine every prompt in the decomposition for clarity, detail, and quality.
+    - Input: A JSON decomposition **exactly as returned by the `decompose` tool**.
+    - Output: The same JSON, but with improved prompts.
 
 - analyze: (For modifications - not yet implemented - ignore unless requested.)
 
 - generate_image: Trigger image generation from a scene JSON.
-    - Input: The JSON string **exactly as returned by the `decompose` tool** and confirmed by the user.
+    - Input: The JSON **exactly as returned by the `improve` tool**.
+    - Output: A JSON with the status of the image generation process and the generated images in binary format.
 
 WORKFLOW:
 ---------
@@ -51,58 +41,28 @@ WORKFLOW:
 2. **Assess Intent:**
     - If a NEW SCENE DESCRIPTION → Step 3.
     - If a MODIFICATION REQUEST → Use the `analyze` tool. (Details TBD.)
-    - If a CONFIRMATION to generate ("yes", "proceed", etc.) → Step 6.
     - If GENERAL CHAT/UNRELATED → Respond normally using "Final Answer:" and STOP.
 
-3. **Check Description Clarity (ONLY for New Scene Descriptions):**
-    - If VAGUE or missing details (style, objects, lighting, etc.), **ask specific clarifying questions**.
-        - Your response MUST be ONLY the question(s).
-        - Use "Final Answer:" and STOP.
-        - WAIT for the user's clarifications before proceeding.
-    - If CLEAR (or after clarification) → Step 4.
-
-4. **Improve Stage:**
-    - **Thought:** "The scene description is ready. I must call the `improve` tool."
-    - **Action:** Call the `improve` tool with the FULL description string.
-    - WAIT for tool output (expect a single string).
-
-5. **Decompose Stage:**
-    - **Thought:** "I have received the improved description. I must call `decompose`."
-    - **Action:** Call the `decompose` tool using the **EXACT string** returned by the `improve` tool.
+3. **Decompose Stage:**
+    - **Thought:** "I have received the raw scene description. I must call `decompose` tool using the **EXACT string** recieved from the user."
     - WAIT for tool output (expect a valid JSON).
 
-    - **Final Answer to User:**
-        - Present ONLY this format (and NOTHING else):
+4. **Improve Stage:**
+    - **Thought:** "I have received the scene decomposition from the 'decompose' tool. I must call `improve` tool with the FULL scene decomposition recieved from 'decompose' tool."
+    - WAIT for tool output (expect a valid JSON).
 
-          ```
-          Here is the decomposed scene description:
+5. **Generate Image Stage:**
+    - **Thought:** "I have received the improved scene decomposition from the 'improve' tool. I MUST retrieve the exact JSON that was the output of the `improve` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'improved_decomposed_input', and its value MUST be the retrieved JSON."
+    - WAIT for the tool to output (expect a valid JSON).
 
-          [RAW JSON OUTPUT FROM DECOMPOSE TOOL]
-
-          Shall I proceed with generating the images?
-          ```
-
-        - (Replace `[RAW JSON...]` with the actual, unmodified output.)
-
-    - STOP. Wait for the user's response.
-
-6. **Generate Image Stage:**
-    - If the user confirms ("yes", "proceed"):
-    - **Thought:** "User confirmed. I MUST retrieve the exact JSON that was the output of the `decompose` tool in the previous turn. I will then call the `generate_image` tool. The call MUST be formatted with one argument named 'decomposed_user_input', and its value MUST be the retrieved JSON."
-    - **Action:** Call the `generate_image` tool, ensuring the input is structured correctly (e.g., `{'decomposed_user_input': 'THE_JSON_FROM_DECOMPOSE_OUTPUT'}`). Use the EXACT JSON from the `decompose` tool output. Do NOT modify it.
-    - WAIT for the tool to finish.
-
-
-7. **Report Generation Status:**
+6. **Report Generation Status:**
     - **Thought:** "The `generate_image` tool has completed."
-    - **Action:** None.
-    - **Final Answer:** Based on the output from the `generate_image` tool, inform the user about the generation status (e.g., "Image generation process complete for [object names]." or "Image generation started."). STOP.
+    - **Final Answer:** Return the resulting JSON. STOP.
 
 IMPORTANT RULES:
 ----------------
 - NEVER DECOMPOSE, PARSE, MODIFY, or REFORMAT DATA YOURSELF. ONLY USE TOOLS.
 - NEVER CALL `improve` MORE THAN ONCE PER DESCRIPTION.
-- IMPERATIVELY USE THE 'GENERATE_IMAGE' TOOL WHEN THE USER CONFIRMS IMAGE GENERATION.
 - ALWAYS PASS TOOL OUTPUTS EXACTLY AS RECEIVED TO THE NEXT TOOL.
 - ONLY RESPOND USING "Final Answer:" when not calling a tool at this step.
 - IF IN DOUBT about user intent → ask clarifying questions.
@@ -114,20 +74,49 @@ FAILURE MODES TO AVOID:
 - Do not call `improve` repeatedly unless the user provides a new, different description.
 - Always proceed one step at a time. No skipping.
 - Always wait for tool outputs before proceeding.
-
         """
+        config = load_config()
+
+        decomposer_model_name = config.get("decomposer_model")
+        decomposer_instance = Decomposer(model_name=decomposer_model_name)
+        decomposer_tool = Tool.from_function(
+            func=decomposer_instance.decompose,
+            name="decomposer",
+            description="Decomposes a user's scene description prompt into manageable elements for 3D scene creation.",
+            args_schema=DecomposeToolInput,
+        )
+
+        improver_model_name = config.get("improver_model")
+        improver_instance = Improver(model_name=improver_model_name)
+        improver_tool = Tool.from_function(
+            func=improver_instance.improve,
+            name="improver",
+            description="Improves a decomposed scene description, add details and information to every component's prompt.",
+            args_schema=ImproveToolInput,
+        )
 
         self.tools = [
-            decomposer, #OK
-            improver, #OK
-            date, #OK
-            image_analysis, #OK
-            #list_assets,
+            decomposer_tool,  # OK
+            improver_tool,  # OK
+            date,  # OK
+            generate_image,  # OK
+            image_analysis,  # OK
+            speech_to_texte,
+            list_assets,
         ]
-        self.agent_executor = model.qwen3_8b(self.tools, self.preprompt)
+
+        agent_model_name = config.get("agent_model")
+        self.executor = initialize_agent(agent_model_name, self.tools, self.preprompt)
 
     def run(self):
-        chat.run(self.agent_executor)
+        from agent.llm import interaction
+
+        interaction.run(self)
+
+    def ask(self, query: str) -> str:
+        from agent.llm import interaction
+
+        return interaction.ask(self, query)
 
 
 # Usage
