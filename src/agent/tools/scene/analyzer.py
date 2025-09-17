@@ -1,8 +1,12 @@
+import json
 from beartype import beartype
 from langchain_core.runnables import RunnableLambda
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
-from pydantic import BaseModel
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from pydantic import BaseModel, ValidationError
 from typing import Optional
 
 from agent.llm.creation import initialize_model
@@ -33,14 +37,43 @@ class SceneUpdate(BaseModel):
     objects_to_regenerate: list[RegenerationInfo]
 
 
+class AnalysisValidationError(Exception):
+    """Custom exception for when the LLM output fails validation."""
+
+    pass
+
+
+@beartype
+def _validate_llm_output(llm_output_str: str) -> SceneUpdate:
+    try:
+        json_blob_str = extract_json_blob(llm_output_str)
+        if not json_blob_str:
+            raise ValueError("No JSON object found in the output.")
+
+        if '"graph":' in json_blob_str:
+            raise AnalysisValidationError(
+                "The output appears to be the full scene graph, which is forbidden. "
+                "You must only return the `SceneUpdate` patch object."
+            )
+
+        parsed_output = SceneUpdate.model_validate_json(json_blob_str)
+        return parsed_output
+
+    except ValidationError as e:
+        raise AnalysisValidationError(
+            f"JSON does not conform to SceneUpdate schema. Details: {e}"
+        )
+    except (json.JSONDecodeError, ValueError) as e:
+        raise AnalysisValidationError(f"Invalid JSON or missing blob. Details: {e}")
+
+
 @beartype
 def analyze(user_input: str, json_scene: Scene, temperature: int = 0) -> SceneUpdate:
     """
     Analyzes a user's request to modify a 3D scene. It identifies relevant objects
     and determines if 'dynamic' objects require regeneration based on the nature of the request.
     """
-    try:
-        system_prompt = """You are a highly specialized, technical JSON transformation engine. Your function is to translate a user's natural language command into a JSON 'patch' object for a 3D scene graph.
+    system_prompt = """You are a highly specialized, technical JSON transformation engine. Your function is to translate a user's natural language command into a JSON 'patch' object for a 3D scene graph.
 
 **PRIMARY DIRECTIVE:**
 Return a single JSON object that strictly conforms to the `SceneUpdate` schema below. This object represents only the *delta* between the current scene and the desired state described in the user’s request.
@@ -289,40 +322,78 @@ All examples below are based on this simple **Current Scene**:
       }}
     }}                           
 """
-        user_prompt = "Current Scene: {json_scene}\nUser Request: {user_input}"
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", system_prompt),
-                ("user", user_prompt),
-            ]
-        )
-        parser = JsonOutputParser(pydantic_object=SceneUpdate)
+    user_prompt = "Current Scene: {json_scene}\nUser Request: {user_input}"
+    messages = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=user_prompt),
+    ]
+    prompt = ChatPromptTemplate.from_messages(
+        [MessagesPlaceholder(variable_name="history")]
+    )
+    # prompt = ChatPromptTemplate.from_messages(
+    #     [
+    #         ("system", system_prompt),
+    #         ("user", user_prompt),
+    #     ]
+    # )
+    parser = JsonOutputParser(pydantic_object=SceneUpdate)
 
-        prompt_with_instructions = prompt.partial(
-            format_instructions=parser.get_format_instructions()
-        )
+    # prompt_with_instructions = prompt.partial(
+    #     format_instructions=parser.get_format_instructions()
+    # )
 
-        config = load_config()
-        scene_analyzer_model_name = config.get("scene_analyzer_model")
-        model = initialize_model(scene_analyzer_model_name, temperature=temperature)
+    config = load_config()
+    scene_analyzer_model_name = config.get("scene_analyzer_model")
+    model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-        chain = (
-            prompt_with_instructions
-            | model
-            | StrOutputParser()
-            | RunnableLambda(extract_json_blob)
-            | parser
-        )
-        logger.info(f"Analyzing current scene for modifications: {user_input}")
-        result: SceneUpdate = chain.invoke(
-            {"user_input": user_input, "json_scene": json_scene.model_dump_json()}
-        )
-        logger.info(f"Analysis result: {result}")
+    chain = (
+        prompt
+        | model
+        | StrOutputParser()
+        # | RunnableLambda(extract_json_blob)
+        | parser
+    )
+    logger.info(f"Analyzing current scene for modifications: {user_input}")
 
-        return SceneUpdate(**result)
-    except Exception as e:
-        logger.error(f"Failed to analyze the scene: {e}")
-        raise ValueError(f"Failed to analyze the scene: {e}")
+    for attempt in range(5):
+        logger.info(f"Scene analysis attempt {attempt + 1}/{5}...")
+        try:
+            raw_output = chain.invoke({"history": messages})
+
+            validated_result = _validate_llm_output(raw_output)
+
+            logger.info(
+                f"Analysis successful on attempt {attempt + 1}. Result: {validated_result}"
+            )
+            return validated_result
+
+        except AnalysisValidationError as e:
+            logger.warning(
+                f"Attempt {attempt + 1} failed validation. Error: {e}\n"
+                f"LLM Output was: {raw_output}"
+            )
+
+            messages.append(AIMessage(content=raw_output))
+            feedback = (
+                f"Your previous attempt failed. The error was: {e}. "
+                "Remember the CRITICAL RULES: Your entire response must be ONLY the JSON patch object. "
+                "Do not include the full scene 'graph'. Do not use markdown. Do not add any conversational text. "
+                "Please correct your output and try again."
+            )
+            messages.append(HumanMessage(content=feedback))
+
+    logger.error("Failed to analyze the scene after multiple retries.")
+    raise ValueError("Failed to produce a valid scene update after multiple attempts.")
+
+    #     result: SceneUpdate = chain.invoke(
+    #         {"user_input": user_input, "json_scene": json_scene.model_dump_json()}
+    #     )
+    #     logger.info(f"Analysis result: {result}")
+
+    #     return SceneUpdate(**result)
+    # except Exception as e:
+    #     logger.error(f"Failed to analyze the scene: {e}")
+    #     raise ValueError(f"Failed to analyze the scene: {e}")
 
 
 if __name__ == "__main__":
