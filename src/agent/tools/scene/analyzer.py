@@ -1,10 +1,9 @@
 import json
+
 from beartype import beartype
-from langchain_core.runnables import RunnableLambda
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, ValidationError
 from typing import Optional
@@ -13,6 +12,8 @@ from agent.llm.creation import initialize_model
 from lib import extract_json_blob, load_config, logger
 from sdk.patch import SceneObjectUpdate
 from sdk.scene import Scene, SceneObject, Skybox
+
+# TODO: test lol
 
 
 class RegenerationInfo(BaseModel):
@@ -36,8 +37,6 @@ class SceneUpdate(BaseModel):
 
 
 class AnalysisValidationError(Exception):
-    """Custom exception for when the LLM output fails validation."""
-
     pass
 
 

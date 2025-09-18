@@ -1,21 +1,22 @@
 import os
 import sqlite3
 import json
-from typing import Optional
 
 from beartype import beartype
 from colorama import Fore
-from library.sql.row import SQL
-from library.manager.database import Database as DB
-from loguru import logger
-from pydantic import BaseModel, Field
-
-from agent.llm.creation import initialize_model
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.documents import Document
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import SentenceTransformerEmbeddings
+from loguru import logger
+from pydantic import BaseModel, Field
+from typing import Optional
+
+from agent.llm.creation import initialize_model
+from library.sql.row import SQL
+from library.manager.database import Database as DB
+
 
 # TODO: more precise error handling to propagate to the agent
 
@@ -166,6 +167,7 @@ class Library:
             raise
 
 
+# TODO: test
 # pip install langchain-chroma langchain sentence-transformers
 @beartype
 class AssetFinder:
@@ -184,11 +186,6 @@ class AssetFinder:
         )
 
         self._populate_db(assets)
-
-        self.retriever = self.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 5},
-        )
 
         self.llm = initialize_model("gemma3:12b")
         self.rerank_chain = self._create_rerank_chain()
