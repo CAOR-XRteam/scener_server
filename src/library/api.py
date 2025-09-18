@@ -3,7 +3,7 @@ from lib import logger
 from library import db
 
 from library.manager.asset import Asset
-from library.manager.library import AppAsset
+from library.manager.library import AppAsset, AssetFinder, NullableAppAsset
 from library.manager.library import Library
 
 # TODO: more precise error handling to propagate to the agent, tests
@@ -72,6 +72,10 @@ class LibraryAPI:
             logger.error(f"Failed to get asset: {e}")
             raise
 
-    def find_asset_by_description(self, description: str) -> AppAsset | None:
+    def find_asset_by_description(self, description: str) -> NullableAppAsset:
         """Find the closest asset to a given description"""
-        return self.library.find_asset_by_description(description)
+        asset_finder = AssetFinder(self.library.get_list())
+        try:
+            return asset_finder.find_by_description(description)
+        except Exception:
+            raise

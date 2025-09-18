@@ -1,17 +1,21 @@
 import os
 import sqlite3
 import json
+from typing import Optional
 
 from beartype import beartype
 from colorama import Fore
 from library.sql.row import SQL
 from library.manager.database import Database as DB
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from agent.llm.creation import initialize_model
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.documents import Document
+from langchain_community.vectorstores import Chroma
+from langchain_community.embeddings import SentenceTransformerEmbeddings
 
 # TODO: more precise error handling to propagate to the agent
 
@@ -22,6 +26,10 @@ class AppAsset(BaseModel):
     image: str
     mesh: str
     description: str
+
+
+class NullableAppAsset(BaseModel):
+    asset: Optional[AppAsset] = Field(None)
 
 
 @beartype
@@ -157,40 +165,134 @@ class Library:
             logger.error(f"Failed to get asset from the database: {e}")
             raise
 
-    @beartype
-    def find_asset_by_description(self, description: str) -> AppAsset | None:
-        """Given a description, find the most corresponding asset in the database"""
-        try:
-            asset_list = self.get_list()
-            if not asset_list:
-                return None
-            assets = json.dumps([asset.model_dump() for asset in asset_list])
 
-            parser = JsonOutputParser(pydantic_object=AppAsset)
+# pip install langchain-chroma langchain sentence-transformers
+@beartype
+class AssetFinder:
+    def __init__(self, assets: list[AppAsset]):
+        self.threshold = 0.8
+        self.asset_map = {asset.id: asset for asset in assets}
 
-            system_prompt = """
-            You are a highly precise and logical asset-matching engine. Your task is to find the single best matching 3D asset from a list, based on a target description.
+        embedding_function = SentenceTransformerEmbeddings(
+            model_name="all-MiniLM-L6-v2"
+        )
 
-            You are given a list of assets, where each asset contains the following fields: 'id', 'name', 'image', 'mesh', and 'description'. Each asset represents a 3D object and may have attributes such as size, color, material, style, and other distinctive features described in the description field.
+        self.vector_store = Chroma(
+            collection_name="app_assets",
+            embedding_function=embedding_function,
+            persist_directory="./asset_db",
+        )
 
-            You are also given a separate text description of a target object.
+        self._populate_db(assets)
 
-            You must follow these rules strictly:
+        self.retriever = self.vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": 5},
+        )
 
-            1.  **Identify the Core Subject:** First, identify the primary object in the 'Target Description' (e.g., 'couch', 'cat', 'car', 'sword').
+        self.llm = initialize_model("gemma3:12b")
+        self.rerank_chain = self._create_rerank_chain()
 
-            2.  **Filter by Core Subject:** Compare this primary object with the primary object of each asset in the 'Available Assets' list. An asset is ONLY a potential match if its primary object is the SAME as the target's. A 'black cat' is NOT a match for a 'black couch'.
+    def _populate_db(self, assets: list[AppAsset]):
+        existing_ids = self.vector_store.get(include=[])["ids"]
+        new_assets = [asset for asset in assets if asset.id not in existing_ids]
 
-            3.  **Evaluate Secondary Attributes:** From the filtered list of potential matches (those with the same primary object), now evaluate secondary attributes like color, material, style, and size to find the single best fit.
+        if not new_assets:
+            logger.info("ChromaDB collection is already up-to-date.")
+            return
 
-            4.  **Return the Result:**
-                - If you find a single asset that is a strong match on both the core subject and its attributes, return its full JSON object.
-                - **If NO asset has the same core subject as the target description, you MUST return null.**
-                - If there are potential matches but their secondary attributes are a poor fit, it is better to return null than to return a weak match.
+        logger.info(f"Adding {len(new_assets)} new assets to ChromaDB.")
 
-            Your response must be ONLY the JSON object of the best matching asset, or the literal `null` if no sufficient match is found. Do not provide explanations or any other text."""
+        new_documents = [
+            Document(
+                page_content=asset.description,
+                metadata={"id": asset.id, "name": asset.name},
+            )
+            for asset in new_assets
+        ]
 
-            user_prompt = """
+        self.vector_store.add_documents(
+            new_documents, ids=[asset.id for asset in new_assets]
+        )
+
+    def _create_rerank_chain(self):
+        few_shot_examples = """
+    ---
+    EXAMPLE 1: A "close but not exact" match, which MUST be rejected.
+
+    [USER]
+    Target Description:
+    "a persian cat with white and orange spots"
+
+    Candidate Assets:
+    [
+        {"id": "cat-01", "name": "Siamese Cat", "description": "A siamese cat with striking blue eyes and cream-colored fur."},
+        {"id": "cat-02", "name": "White Cat", "description": "A fluffy white cat with green eyes."}
+    ]
+
+    Instructions:
+    - Analyze the target description for specific, mandatory details.
+    - Scrutinize the candidates and select ONLY the one that meets every single detail.
+    - If no candidate is a perfect match, you MUST return null.
+
+    Respond with ONLY the required JSON object.
+    [END USER]
+
+    [ASSISTANT]
+    {"asset": null}
+    [END ASSISTANT]
+
+    ---
+    EXAMPLE 2: A perfect match, which should be selected.
+
+    [USER]
+    Target Description:
+    "a common brown tabby cat with green eyes"
+
+    Candidate Assets:
+    [
+        {"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes."},
+        {"id": "dog-01", "name": "Golden Retriever", "description": "A friendly golden retriever dog."}
+    ]
+
+    Instructions:
+    - Analyze the target description for specific, mandatory details.
+    - Scrutinize the candidates and select ONLY the one that meets every single detail.
+    - If no candidate is a perfect match, you MUST return null.
+
+    Respond with ONLY the required JSON object.
+    [END USER]
+
+    [ASSISTANT]
+    {"asset": {"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes.", "image": null, "mesh": null}}
+    [END ASSISTANT]
+    ---
+    """
+
+        system_prompt = f"""
+        You are a hyper-critical and pedantic validation engine. Your ONLY job is to determine if any of the given candidate assets is an EXACT match for a target description. You MUST be extremely strict.
+
+        **PRIMARY DIRECTIVE: ZERO TOLERANCE FOR MISMATCHES.**
+
+        You will be given a 'Target Description' and a list of 'Candidate Assets'. You must follow this logic precisely:
+        
+        1.  **Deconstruct Requirements:** Break down the 'Target Description' into a checklist of non-negotiable attributes. For "a persian cat with white and orange spots", the checklist is [subject: 'cat', breed: 'persian', color: 'white', color: 'orange spots'].
+
+        2.  **Verify ALL Checklist Items:** For each candidate, you must verify that its description satisfies EVERY SINGLE item on the checklist.
+            - If a candidate's description is "a fluffy white cat", it fails the checklist because 'persian' and 'orange spots' are missing.
+            - If ANY item from the checklist is not explicitly met by the candidate's description, that candidate is an IMMEDIATE failure.
+
+        3.  **Return Decision:**
+            - If one candidate passes the 100% verification check, return its full JSON object.
+            - **If NO candidate satisfies ALL checklist items, you MUST return null.** This is the most common and expected outcome. Do not "settle" for the closest match.
+
+        Your response MUST be a JSON object with a single key "asset", which is either the full asset JSON or `null`.
+
+        Study the following examples to understand the required level of strictness:
+        {few_shot_examples}
+        """
+
+        user_prompt = """
             Target Description:
             {description}
 
@@ -202,25 +304,58 @@ class Library:
             - Return the single best matching asset.
             - If no asset matches closely enough, return null.
             - Be precise and conservative. Do not guess.
+            - Apply the zero-tolerance validation logic.
+            - Return the JSON for a perfect match or null if none exists.
 
             You must respond ONLY with the JSON object of the best matching asset, or null if no match is found. Do not include any other text, explanations, or code.
             """
-            prompt = ChatPromptTemplate.from_messages(
-                [
-                    ("system", system_prompt),
-                    ("user", user_prompt),
-                ]
+        parser = JsonOutputParser(pydantic_object=NullableAppAsset)
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", system_prompt), ("user", user_prompt)]
+        )
+        return prompt | self.llm | parser
+
+    @beartype
+    def find_by_description(self, description: str) -> AppAsset | None:
+        try:
+            logger.info(f"Starting asset search for: '{description}'")
+
+            candidate_docs = self.vector_store.similarity_search_with_relevance_scores(
+                description, k=10
             )
-            prompt_with_instructions = prompt.partial(
-                format_instructions=parser.get_format_instructions()
+
+            if not candidate_docs:
+                logger.info("Semantic search returned no results.")
+                return None
+
+            strong_candidates_docs = [
+                doc for doc, score in candidate_docs if score >= self.threshold
+            ]
+
+            if not strong_candidates_docs:
+                logger.info(f"No candidates met the threshold of {self.threshold}.")
+                return None
+
+            candidates = [
+                self.asset_map[doc.metadata["id"]]
+                for doc in strong_candidates_docs
+                if doc.metadata["id"] in self.asset_map
+            ]
+            candidates_json = json.dumps([asset.model_dump() for asset in candidates])
+
+            result: NullableAppAsset = self.rerank_chain.invoke(
+                {"description": description, "assets": candidates_json}
             )
 
-            model = initialize_model("gemma3:12b")
-            chain = prompt_with_instructions | model | parser
+            if result and result.asset:
+                logger.info(f"LLM re-ranking selected asset ID: {result.asset.id}")
+                return result.asset
+            else:
+                logger.info(
+                    "LLM re-ranking concluded no asset was a sufficiently close match."
+                )
+                return None
 
-            asset = chain.invoke({"description": description, "assets": assets})
-
-            return AppAsset.model_validate(asset) if asset else None
         except Exception as e:
             logger.error(f"Error while searching for an asset: {e}")
             return None
