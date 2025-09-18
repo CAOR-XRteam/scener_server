@@ -352,8 +352,10 @@ All examples below are based on this simple **Current Scene**:
     )
     logger.info(f"Analyzing current scene for modifications: {user_input}")
 
-    for attempt in range(5):
-        logger.info(f"Scene analysis attempt {attempt + 1}/{5}...")
+    number_of_attempts = 10
+
+    for attempt in range(number_of_attempts):
+        logger.info(f"Scene analysis attempt {attempt + 1}/{number_of_attempts}...")
         try:
             raw_output = chain.invoke({"history": messages})
 
