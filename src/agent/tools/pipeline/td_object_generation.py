@@ -8,7 +8,7 @@ from lib import logger
 from library.api import LibraryAPI
 from model import trellis
 
-# TODO: modify the tool so that it doesn't reload model on every new request; add field descriptions for pydantic models
+# TODO: modify the tool so that it doesn't reload model on every new request (do we want to do that? cuz it's heavy); add field descriptions for pydantic models
 
 
 class TDObjectMetaData(BaseModel):
