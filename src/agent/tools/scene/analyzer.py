@@ -14,8 +14,6 @@ from lib import extract_json_blob, load_config, logger
 from sdk.patch import SceneObjectUpdate
 from sdk.scene import Scene, SceneObject, Skybox
 
-# TODO: test if few-shot prompting works; field descriptions
-
 
 class RegenerationInfo(BaseModel):
     id: str
@@ -375,10 +373,16 @@ All examples below are based on this simple **Current Scene**:
 
             messages.append(AIMessage(content=raw_output))
             feedback = (
-                f"Your previous attempt failed. The error was: {e}. "
-                "Remember the CRITICAL RULES: Your entire response must be ONLY the JSON patch object. "
-                "Do not include the full scene 'graph'. Do not use markdown. Do not add any conversational text. "
-                "Please correct your output and try again."
+                "Your previous JSON output was invalid and failed schema validation. You MUST correct it.\n\n"
+                "Here are the specific validation errors that your last output produced:\n"
+                "--- START OF VALIDATION ERRORS ---\n"
+                f"{e}\n"
+                "--- END OF VALIDATION ERRORS ---\n\n"
+                "Analyze these errors carefully. They will tell you exactly which fields are wrong or missing. "
+                "Compare them to your previous output and the schema rules.\n\n"
+                "Now, generate a new, corrected JSON object that fixes these issues. "
+                "Remember the most important rules: Your entire response MUST be ONLY the JSON object. "
+                "Do NOT output the full scene 'graph'. Do not use markdown or add conversational text."
             )
             messages.append(HumanMessage(content=feedback))
 
