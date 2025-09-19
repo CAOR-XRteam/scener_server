@@ -33,24 +33,24 @@ def generate_3d_object_from_prompt(
 ) -> TDObjectMetaData:
     logger.info(f"Generating 3D object from prompt: {prompt[:10]}...")
 
+    logger.info("No existing assets found, generating 3D object.")
+    try:
+        improved_prompt = improve_prompt(prompt)
+    except Exception as e:
+        raise
+
     logger.info("Searching for already existing assets...")
 
-    asset = library_api.find_asset_by_description(prompt)
-    if asset:
-        logger.info(f"Found already existing asset: {asset}.")
+    asset = library_api.find_asset_by_description(improved_prompt)
+    if asset.data:
+        logger.info(f"Found already existing asset: {asset.data}.")
         return TDObjectMetaData(
-            id=asset.name,
-            filename=f"{asset.name}.glb",
-            path=asset.mesh,
+            id=asset.data.name,
+            filename=f"{asset.data.name}.glb",
+            path=asset.data.mesh,
             error=None,
         )
     else:
-        logger.info("No existing assets found, generating 3D object.")
-        try:
-            improved_prompt = improve_prompt(prompt)
-        except Exception as e:
-            raise
-
         try:
             image_meta_data = generate_image_from_prompt(improved_prompt, id)
 

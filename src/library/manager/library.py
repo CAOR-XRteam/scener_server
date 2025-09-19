@@ -30,7 +30,7 @@ class AppAsset(BaseModel):
 
 
 class NullableAppAsset(BaseModel):
-    asset: Optional[AppAsset] = Field(None)
+    data: Optional[AppAsset] = Field(None)
 
 
 @beartype
@@ -168,11 +168,10 @@ class Library:
 
 
 # TODO: test
-# pip install langchain-chroma langchain sentence-transformers
 @beartype
 class AssetFinder:
     def __init__(self, assets: list[AppAsset]):
-        self.threshold = 0.8
+        self.threshold = 0.95
         self.asset_map = {asset.id: asset for asset in assets}
 
         embedding_function = SentenceTransformerEmbeddings(
@@ -223,8 +222,8 @@ class AssetFinder:
 
     Candidate Assets:
     [
-        {"id": "cat-01", "name": "Siamese Cat", "description": "A siamese cat with striking blue eyes and cream-colored fur."},
-        {"id": "cat-02", "name": "White Cat", "description": "A fluffy white cat with green eyes."}
+        {{"id": "cat-01", "name": "Siamese Cat", "description": "A siamese cat with striking blue eyes and cream-colored fur."}},
+        {{"id": "cat-02", "name": "White Cat", "description": "A fluffy white cat with green eyes."}}
     ]
 
     Instructions:
@@ -236,7 +235,7 @@ class AssetFinder:
     [END USER]
 
     [ASSISTANT]
-    {"asset": null}
+    {{"asset": null}}
     [END ASSISTANT]
 
     ---
@@ -248,8 +247,8 @@ class AssetFinder:
 
     Candidate Assets:
     [
-        {"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes."},
-        {"id": "dog-01", "name": "Golden Retriever", "description": "A friendly golden retriever dog."}
+        {{"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes."}},
+        {{"id": "dog-01", "name": "Golden Retriever", "description": "A friendly golden retriever dog."}}
     ]
 
     Instructions:
@@ -261,7 +260,7 @@ class AssetFinder:
     [END USER]
 
     [ASSISTANT]
-    {"asset": {"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes.", "image": null, "mesh": null}}
+    {{"asset": {{"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes.", "image": null, "mesh": null}}}}
     [END ASSISTANT]
     ---
     """
@@ -313,7 +312,7 @@ class AssetFinder:
         return prompt | self.llm | parser
 
     @beartype
-    def find_by_description(self, description: str) -> AppAsset | None:
+    def find_by_description(self, description: str) -> NullableAppAsset:
         try:
             logger.info(f"Starting asset search for: '{description}'")
 
@@ -323,7 +322,9 @@ class AssetFinder:
 
             if not candidate_docs:
                 logger.info("Semantic search returned no results.")
-                return None
+                return NullableAppAsset(asset=None)
+
+            logger.info(f"Semantic search candidates: {candidate_docs}.")
 
             strong_candidates_docs = [
                 doc for doc, score in candidate_docs if score >= self.threshold
@@ -331,7 +332,7 @@ class AssetFinder:
 
             if not strong_candidates_docs:
                 logger.info(f"No candidates met the threshold of {self.threshold}.")
-                return None
+                return NullableAppAsset(asset=None)
 
             candidates = [
                 self.asset_map[doc.metadata["id"]]
@@ -344,15 +345,17 @@ class AssetFinder:
                 {"description": description, "assets": candidates_json}
             )
 
-            if result and result.asset:
-                logger.info(f"LLM re-ranking selected asset ID: {result.asset.id}")
-                return result.asset
+            asset = NullableAppAsset(**result)
+
+            if asset and asset.data:
+                logger.info(f"LLM re-ranking selected asset ID: {asset.asset.id}")
+                return asset.data
             else:
                 logger.info(
                     "LLM re-ranking concluded no asset was a sufficiently close match."
                 )
-                return None
+                return NullableAppAsset(asset=None)
 
         except Exception as e:
             logger.error(f"Error while searching for an asset: {e}")
-            return None
+            return NullableAppAsset(asset=None)

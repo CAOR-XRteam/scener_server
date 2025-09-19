@@ -227,7 +227,8 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 **CRITICAL RULES:**
 
     - STRICT SCHEMA: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above. Every SceneObject must have a components list, even if it's empty.
-
+    - You MUST treat the following real-world object types as dynamic: animals (cats, dogs, birds), vehicles (cars, bikes), complex furniture (chairs, sofas), and any unique or highly detailed items (ornate statues, intricate gadgets).
+    - You should use primitive only for simple, abstract geometry like planes for floors, cubes for boxes, cylinders for poles, etc.
 ---
 
 ### DETAILED EXAMPLES - USE THESE AS YOUR BLUEPRINT
