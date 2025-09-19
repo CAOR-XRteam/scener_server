@@ -1,3 +1,4 @@
+import ast
 import json
 
 from beartype import beartype
@@ -53,7 +54,7 @@ def _validate_llm_output(llm_output_str: str) -> SceneUpdate:
                 "You must only return the `SceneUpdate` patch object."
             )
 
-        parsed_output = SceneUpdate.model_validate_json(json_blob_str)
+        parsed_output = SceneUpdate.model_validate(ast.literal_eval(json_blob_str))
         return parsed_output
 
     except ValidationError as e:
@@ -359,7 +360,7 @@ All examples below are based on this simple **Current Scene**:
         try:
             raw_output = chain.invoke({"history": messages})
 
-            validated_result = _validate_llm_output(raw_output)
+            validated_result = _validate_llm_output(str(raw_output))
 
             logger.info(
                 f"Analysis successful on attempt {attempt + 1}. Result: {validated_result}"
@@ -372,7 +373,7 @@ All examples below are based on this simple **Current Scene**:
                 f"LLM Output was: {raw_output}"
             )
 
-            messages.append(AIMessage(content=raw_output))
+            messages.append(AIMessage(content=str(raw_output)))
             feedback = (
                 "Your previous JSON output was invalid and failed schema validation. You MUST correct it.\n\n"
                 "Here are the specific validation errors that your last output produced:\n"
@@ -416,6 +417,7 @@ if __name__ == "__main__":
             "graph": [
                 {
                     "id": "room_container",
+                    "name": "room_container",
                     "parent_id": None,
                     "position": {"x": 0, "y": 1.5, "z": 0},
                     "rotation": {"x": 0, "y": 0, "z": 0},
@@ -424,6 +426,7 @@ if __name__ == "__main__":
                     "children": [
                         {
                             "id": "table_1",
+                            "name": "table_1",
                             "parent_id": "room_container",
                             "position": {"x": 0, "y": -1.0, "z": 2},
                             "rotation": {"x": 0, "y": 0, "z": 0},
@@ -438,6 +441,7 @@ if __name__ == "__main__":
                             "children": [
                                 {
                                     "id": "glowing_lamp_1",
+                                    "name": "glowing_lamp_1",
                                     "parent_id": "table_1",
                                     "position": {"x": 0, "y": 0.6, "z": 0},
                                     "rotation": {"x": 0, "y": 0, "z": 0},

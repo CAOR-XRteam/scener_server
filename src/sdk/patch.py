@@ -77,4 +77,4 @@ class SceneObjectUpdate(BaseModel):
     position: Optional[Vector3] = None
     rotation: Optional[Vector3] = None
     scale: Optional[Vector3] = None
-    components_to_update: list[ComponentUpdate]
+    components_to_update: Optional[list[ComponentUpdate]] = None

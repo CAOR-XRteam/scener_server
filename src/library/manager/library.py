@@ -186,7 +186,7 @@ class AssetFinder:
 
         self._populate_db(assets)
 
-        self.llm = initialize_model("gemma3:12b")
+        self.llm = initialize_model("devstral:24b")
         self.rerank_chain = self._create_rerank_chain()
 
     def _populate_db(self, assets: list[AppAsset]):
@@ -212,82 +212,20 @@ class AssetFinder:
         )
 
     def _create_rerank_chain(self):
-        few_shot_examples = """
-    ---
-    EXAMPLE 1: A "close but not exact" match, which MUST be rejected.
-
-    [USER]
-    Target Description:
-    "a persian cat with white and orange spots"
-
-    Candidate Assets:
-    [
-        {{"id": "cat-01", "name": "Siamese Cat", "description": "A siamese cat with striking blue eyes and cream-colored fur."}},
-        {{"id": "cat-02", "name": "White Cat", "description": "A fluffy white cat with green eyes."}}
-    ]
-
-    Instructions:
-    - Analyze the target description for specific, mandatory details.
-    - Scrutinize the candidates and select ONLY the one that meets every single detail.
-    - If no candidate is a perfect match, you MUST return null.
-
-    Respond with ONLY the required JSON object.
-    [END USER]
-
-    [ASSISTANT]
-    {{"asset": null}}
-    [END ASSISTANT]
-
-    ---
-    EXAMPLE 2: A perfect match, which should be selected.
-
-    [USER]
-    Target Description:
-    "a common brown tabby cat with green eyes"
-
-    Candidate Assets:
-    [
-        {{"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes."}},
-        {{"id": "dog-01", "name": "Golden Retriever", "description": "A friendly golden retriever dog."}}
-    ]
-
-    Instructions:
-    - Analyze the target description for specific, mandatory details.
-    - Scrutinize the candidates and select ONLY the one that meets every single detail.
-    - If no candidate is a perfect match, you MUST return null.
-
-    Respond with ONLY the required JSON object.
-    [END USER]
-
-    [ASSISTANT]
-    {{"asset": {{"id": "cat-02", "name": "Tabby Cat", "description": "A common brown tabby cat with green eyes.", "image": null, "mesh": null}}}}
-    [END ASSISTANT]
-    ---
-    """
-
         system_prompt = f"""
-        You are a hyper-critical and pedantic validation engine. Your ONLY job is to determine if any of the given candidate assets is an EXACT match for a target description. You MUST be extremely strict.
+    You are an expert asset-matching engine. Your primary goal is to find the single best asset from a provided list that matches a target description.
 
-        **PRIMARY DIRECTIVE: ZERO TOLERANCE FOR MISMATCHES.**
+    Follow this exact process:
+    1.  **Analyze Target:** Identify the core object and key attributes (e.g., color, material, style) from the 'Target Description'.
+    2.  **Compare Assets:** For each asset in the 'Available Assets' list, evaluate how well its description matches the target's core object and attributes.
+    3.  **Select the Winner:** Identify the single asset that is the strongest match.
+    4.  **Final Decision Logic:**
+        - If one or more assets are a strong match for the target, you MUST select one.
+        - **If multiple assets are equally strong matches, you MUST choose the first one that appears in the list.** This is the tie-breaker rule.
+        - Only return null if **NO assets** in the list are a reasonably close match to the target description.
 
-        You will be given a 'Target Description' and a list of 'Candidate Assets'. You must follow this logic precisely:
-        
-        1.  **Deconstruct Requirements:** Break down the 'Target Description' into a checklist of non-negotiable attributes. For "a persian cat with white and orange spots", the checklist is [subject: 'cat', breed: 'persian', color: 'white', color: 'orange spots'].
-
-        2.  **Verify ALL Checklist Items:** For each candidate, you must verify that its description satisfies EVERY SINGLE item on the checklist.
-            - If a candidate's description is "a fluffy white cat", it fails the checklist because 'persian' and 'orange spots' are missing.
-            - If ANY item from the checklist is not explicitly met by the candidate's description, that candidate is an IMMEDIATE failure.
-
-        3.  **Return Decision:**
-            - If one candidate passes the 100% verification check, return its full JSON object.
-            - **If NO candidate satisfies ALL checklist items, you MUST return null.** This is the most common and expected outcome. Do not "settle" for the closest match.
-
-        Your response MUST be a JSON object with a single key "asset", which is either the full asset JSON or `null`.
-
-        Study the following examples to understand the required level of strictness:
-        {few_shot_examples}
-        """
-
+    Your output MUST be a JSON object with a single "asset" key. The value will be the full JSON of the winning asset, or `null` if no match was found.
+    """
         user_prompt = """
             Target Description:
             {description}
@@ -298,10 +236,7 @@ class AssetFinder:
             Instructions:
             - Compare the target description with the descriptions of all assets.
             - Return the single best matching asset.
-            - If no asset matches closely enough, return null.
             - Be precise and conservative. Do not guess.
-            - Apply the zero-tolerance validation logic.
-            - Return the JSON for a perfect match or null if none exists.
 
             You must respond ONLY with the JSON object of the best matching asset, or null if no match is found. Do not include any other text, explanations, or code.
             """
@@ -317,7 +252,7 @@ class AssetFinder:
             logger.info(f"Starting asset search for: '{description}'")
 
             candidate_docs = self.vector_store.similarity_search_with_relevance_scores(
-                description, k=10
+                description, k=5
             )
 
             if not candidate_docs:
@@ -341,6 +276,8 @@ class AssetFinder:
             ]
             candidates_json = json.dumps([asset.model_dump() for asset in candidates])
 
+            logger.info(f"Passing candidates to LLM for re-ranking: {candidates_json}")
+
             result: NullableAppAsset = self.rerank_chain.invoke(
                 {"description": description, "assets": candidates_json}
             )
@@ -348,7 +285,7 @@ class AssetFinder:
             asset = NullableAppAsset(**result)
 
             if asset and asset.data:
-                logger.info(f"LLM re-ranking selected asset ID: {asset.asset.id}")
+                logger.info(f"LLM re-ranking selected asset ID: {asset.data.id}")
                 return asset.data
             else:
                 logger.info(

@@ -33,7 +33,6 @@ def generate_3d_object_from_prompt(
 ) -> TDObjectMetaData:
     logger.info(f"Generating 3D object from prompt: {prompt[:10]}...")
 
-    logger.info("No existing assets found, generating 3D object.")
     try:
         improved_prompt = improve_prompt(prompt)
     except Exception as e:
@@ -51,6 +50,8 @@ def generate_3d_object_from_prompt(
             error=None,
         )
     else:
+        logger.info("No existing assets found, generating 3D object.")
+
         try:
             image_meta_data = generate_image_from_prompt(improved_prompt, id)
 
