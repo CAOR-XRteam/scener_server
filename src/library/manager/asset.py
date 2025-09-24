@@ -1,5 +1,3 @@
-# TODO: more precise error handling to propagate to the agent
-
 from beartype import beartype
 from colorama import Fore
 from library.sql.row import SQL

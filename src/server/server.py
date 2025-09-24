@@ -11,8 +11,7 @@ import websockets
 import asyncio
 import signal
 
-# TODO: cancel agent task if client disconnectss
-# TODO: send an error message to the client if the server shutdowns while the connections is still active
+# TODO: cancel agent task if client disconnects
 
 
 @beartype

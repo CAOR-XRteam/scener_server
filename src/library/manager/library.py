@@ -18,9 +18,6 @@ from library.sql.row import SQL
 from library.manager.database import Database as DB
 
 
-# TODO: more precise error handling to propagate to the agent
-
-
 class AppAsset(BaseModel):
     id: str
     name: str

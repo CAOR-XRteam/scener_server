@@ -6,8 +6,6 @@ from library.manager.asset import Asset
 from library.manager.library import AppAsset, AssetFinder, NullableAppAsset
 from library.manager.library import Library
 
-# TODO: more precise error handling to propagate to the agent, tests
-
 
 @beartype
 class LibraryAPI:
