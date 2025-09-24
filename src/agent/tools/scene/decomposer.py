@@ -168,6 +168,8 @@ CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 
     **4. Use Common Sense: Apply real-world logic. Objects rest on surfaces, not inside them. Infer reasonable sizes, positions, and colors if not specified. A floor is a large, flat plane at the bottom of a room.**
 
+    **5. Set up skybox (you must follow instructions under "skybox" in the SCHEMA REFERENCE below):**
+
 SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
     The final output is a single JSON object with three top-level keys: name, skybox, and graph.
