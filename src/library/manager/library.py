@@ -244,7 +244,6 @@ class AssetFinder:
             [("system", system_prompt), ("user", user_prompt)]
         )
         return prompt | self.llm | parser
-        # return (prompt | self.llm).with_config({"verbose": True})
 
     @beartype
     def find_by_description(self, description: str) -> NullableAppAsset:
