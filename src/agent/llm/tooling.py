@@ -101,7 +101,6 @@ class Tool_callback(BaseCallbackHandler):
                         for asset_meta_data in payload.objects_to_send
                     ],
                 )
-            # TODO: define how to communicate json scene from unity app to python server
             case "modify_3d_scene":
                 payload = Modify3DSceneOutput(**tool_output)
                 self.structured_response = OutgoingModified3DSceneMessage(

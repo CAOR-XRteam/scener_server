@@ -167,7 +167,6 @@ class Library:
             raise
 
 
-# TODO: test
 @beartype
 class AssetFinder:
     def __init__(self, assets: list[AppAsset]):
@@ -213,7 +212,7 @@ class AssetFinder:
 
     def _create_rerank_chain(self):
         system_prompt = f"""
-    You are an expert asset-matching engine. Your primary goal is to find the single best asset from a provided list that matches a target description.
+    You are an expert asset-matching engine. Your primary goal is to find the single best asset from a provided list that matches a target description. All assets provided are a close match to the target, but your task is to identify the one that aligns most closely with the target description.
 
     Follow this exact process:
     1.  **Analyze Target:** Identify the core object and key attributes (e.g., color, material, style) from the 'Target Description'.
@@ -222,9 +221,9 @@ class AssetFinder:
     4.  **Final Decision Logic:**
         - If one or more assets are a strong match for the target, you MUST select one.
         - **If multiple assets are equally strong matches, you MUST choose the first one that appears in the list.** This is the tie-breaker rule.
-        - Only return null if **NO assets** in the list are a reasonably close match to the target description.
+        - There should ALWAYS be a match.
 
-    Your output MUST be a JSON object with a single "asset" key. The value will be the full JSON of the winning asset, or `null` if no match was found.
+    Your output MUST be a JSON object with a single "data" key. The value will be the full JSON of the winning asset, or `null` if no match was found.
     """
         user_prompt = """
             Target Description:
@@ -238,13 +237,14 @@ class AssetFinder:
             - Return the single best matching asset.
             - Be precise and conservative. Do not guess.
 
-            You must respond ONLY with the JSON object of the best matching asset, or null if no match is found. Do not include any other text, explanations, or code.
+            You must respond ONLY with the JSON object of the best matching asset. Do not include any other text, explanations, or code.
             """
         parser = JsonOutputParser(pydantic_object=NullableAppAsset)
         prompt = ChatPromptTemplate.from_messages(
             [("system", system_prompt), ("user", user_prompt)]
         )
         return prompt | self.llm | parser
+        # return (prompt | self.llm).with_config({"verbose": True})
 
     @beartype
     def find_by_description(self, description: str) -> NullableAppAsset:
@@ -284,14 +284,16 @@ class AssetFinder:
 
             asset = NullableAppAsset(**result)
 
+            print(asset)
+
             if asset and asset.data:
                 logger.info(f"LLM re-ranking selected asset ID: {asset.data.id}")
-                return asset.data
+                return asset
             else:
                 logger.info(
                     "LLM re-ranking concluded no asset was a sufficiently close match."
                 )
-                return NullableAppAsset(asset=None)
+                return asset
 
         except Exception as e:
             logger.error(f"Error while searching for an asset: {e}")
