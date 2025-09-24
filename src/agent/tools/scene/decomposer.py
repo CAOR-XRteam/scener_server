@@ -40,6 +40,8 @@ YOUR CRITICAL TASK:
 - Convert the scene into a valid JSON object.
 - Focus ONLY on **key physical elements**. **Do NOT extract minor details** or interpret the scene beyond identifying these key elements.
 - **The most critical part of the output is the 'prompt' field for each object.** This field must contain the **exact, verbatim phrase** describing that specific object as it appeared in the user's input scene description. **Do NOT modify, enhance, or add ANY details (like camera angles, background information, or context) to this user-provided object description.**
+- If there are words like "on", "in", "under", "next to", "beside", "above", "below", etc., do NOT include them in the 'prompt' field. The 'prompt' must be the exact noun phrase or descriptive phrase that identifies or describes the object itself.
+- If there are words like "few", "several", "many", "couple of", etc., you must create one object entry for each individual item described. For example, "a couple of chairs" means you must create two separate objects with identical prompts.
 
 **OBJECT CLASSIFICATION RULES (`type` field):**
 You MUST classify each object into one of two types:
