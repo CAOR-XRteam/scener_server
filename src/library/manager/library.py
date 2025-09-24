@@ -272,15 +272,11 @@ class AssetFinder:
             ]
             candidates_json = json.dumps([asset.model_dump() for asset in candidates])
 
-            logger.info(f"Passing candidates to LLM for re-ranking: {candidates_json}")
-
             result: NullableAppAsset = self.rerank_chain.invoke(
                 {"description": description, "assets": candidates_json}
             )
 
             asset = NullableAppAsset(**result)
-
-            print(asset)
 
             if asset and asset.data:
                 logger.info(f"LLM re-ranking selected asset ID: {asset.data.id}")

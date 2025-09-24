@@ -44,11 +44,16 @@ YOUR CRITICAL TASK:
 **OBJECT CLASSIFICATION RULES (`type` field):**
 You MUST classify each object into one of two types:
 
-- **`"dynamic"`**: Use for complex, unique, or highly detailed objects that require an advanced AI model to generate their 3D mesh. These are typically the "hero" objects.
-    - **Examples:** "a majestic griffin", "an ornate victorian chair", "a sleek futuristic spaceship", "a detailed black cat".
+- **`"dynamic"`**: Use for any object that is visually complex, designed, detailed, or non-primitive. This includes:
+    -Any object that is not a basic geometric shape (e.g., sphere, cube, cone, cylinder, torus)
+    -Objects with crafted or intentional shapes, including all manufactured or natural items
+    -Utensils, furniture, tools, vehicles, electronics, creatures, etc.
+    -Everyday objects that require interpretation of form, curves, or construction
+    - **Examples:** "a griffin", "an ornate victorian chair", "a spaceship", "a black cat", "a couch", "a mug", "a table", "a laptop", "a knife", "a fork", "a plate", "a toothbrush", "a lamp"
 
-- **`"primitive"`**: Use for simple, generic, geometric shapes that can be created using basic 3D primitives (cubes, spheres, planes) in a game engine. This also applies to the general room/environment.
-    - **Examples:** "a large wooden table" (can be made from cubes), "a simple wall", "a flat floor", "a cozy living room".
+- **`"primitive"`**: Use **only** for pure geometric shapes like cubes, spheres, cones, cylinders, and toruses. Do **not** classify real-world objects (like mugs or plates) as primitives, even if their shape is simple.
+    - **Examples:** "a simple wall", "a flat floor", "a cozy living room", "a box".
+
 
 OUTPUT FORMAT:
 - Output **ONLY** the JSON. **NO explanations**, **NO markdown**, **NO extra formatting**.
@@ -187,7 +192,7 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
                 The component object MUST also contain:
 
-                    shape: One of "cube", "sphere", "plane", "quad", "cylinder", "capsule".
+                    shape: One of "cube", "sphere", "plane", "quad", "cylinder", "capsule". Those are the only valid values.
 
                     color: An RGBA color object.
 
@@ -227,8 +232,6 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 **CRITICAL RULES:**
 
     - STRICT SCHEMA: Adhere strictly to the fields and values listed in the SCHEMA REFERENCE above. Every SceneObject must have a components list, even if it's empty.
-    - You MUST treat the following real-world object types as dynamic: animals (cats, dogs, birds), vehicles (cars, bikes), complex furniture (chairs, sofas), and any unique or highly detailed items (ornate statues, intricate gadgets).
-    - You should use primitive only for simple, abstract geometry like planes for floors, cubes for boxes, cylinders for poles, etc.
 ---
 
 ### DETAILED EXAMPLES - USE THESE AS YOUR BLUEPRINT

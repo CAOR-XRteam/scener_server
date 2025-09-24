@@ -110,6 +110,7 @@ You MUST generate a JSON object with the following structure. Fill in the fields
 **CRITICAL HIERARCHY RULES - YOU MUST FOLLOW THESE:**
 
 The scene is a hierarchy (a tree structure). Every object has a unique `id` and a `parent_id` that points to its parent's `id`. A `parent_id` of `null` means it is a root object.
+You must retrive related IDs from the `current_scene` to ensure correct parenting and positioning.
 
 1.  **POSITION AND SCALE ARE ALWAYS RELATIVE TO THE PARENT:** An object's `position` is its local offset from its parent's origin. It is NOT a world coordinate.
     *   Example: A table is at `position: {{x: 5, y: 0, z: 2}}`. A flower on the table would have `parent_id: "table_id"` and `position: {{x: 0, y: 1.1, z: 0}}`.
@@ -152,6 +153,8 @@ WHEN ASKED TO CHANGE PROPERTIES OF A PRIMITIVE OBJECT, DO NOT REGENERATE IT. Ins
 ---
 
 **EXAMPLES OF MODIFICATION TYPES**
+
+**THESE EXAMPLES ARE FOR YOUR UNDERSTANDING ONLY. DO NOT REPEAT THEM IN YOUR OUTPUT.**
 
 All examples below are based on this simple **Current Scene**:
 
