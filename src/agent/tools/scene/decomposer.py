@@ -148,8 +148,13 @@ You are a world-class 3D scene architect AI. Your primary function is to interpr
 
 Your ONLY task is to create this JSON. Your entire response MUST be only the JSON object.
 
-### SKYBOX GENERATION - CRITICAL INSTRUCTIONS
-You MUST generate a complete `skybox` object for every scene. Analyze the user's prompt for ambiance clues ("sunny day", "night", "dusk").
+### 1. CRITICAL OUTPUT STRUCTURE (HIGHEST PRIORITY)
+Your output MUST be a single JSON object.
+The root of this JSON object MUST have exactly three keys: `name`, `skybox`, and `graph`.
+Do NOT wrap your output in a `scene` key or any other key.
+
+### 2. SKYBOX GENERATION - CRITICAL INSTRUCTIONS
+You MUST generate a complete `skybox` object if necessary. Analyze the user's prompt for ambiance clues ("sunny day", "night", "dusk").
 
 - **If the scene is outdoors or sunlit (e.g., "a sunny room"), you MUST use the `sun` type skybox.** When you use type `sun`, you are REQUIRED to include ALL of its fields: `type`, `top_color`, `top_exponent` (a real number), `horizon_color`, `bottom_color`, `bottom_exponent` (a real number), `sun_color`, `sky_intensity`, `sun_intensity`, `sun_alpha`, `sun_beta`, and especially the `sun_vector` object with `x`, `y`, `z`, and `w` fields.
 - **If the scene is a dark interior or has abstract lighting, you MUST use the `gradient` type skybox.** When you use type `gradient`, you are REQUIRED to include ALL of its fields: `type`, `color1`, `color2`, `up_vector`, `intensity`, `exponent`.
@@ -180,20 +185,9 @@ CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 
     **4. Use Common Sense: Apply real-world logic. Objects rest on surfaces, not inside them. Infer reasonable sizes, positions, and colors if not specified. A floor is a large, flat plane at the bottom of a room.**
 
-    **5. Set up skybox (you must follow instructions under "skybox" in the SCHEMA REFERENCE below):**
-
 SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
-    The final output is a single JSON object with three top-level keys: name, skybox, and graph.
-
-    **1. "skybox" (Global Scene Sky):**
-        - You MUST provide one skybox object. It MUST contain a 'type' field: `sun` or "gradient".
-
-        - **If `type` is `sun`**: You MUST include ALL of the following fields: `type`, `top_color`, `top_exponent`, `horizon_color`, `bottom_color`, `bottom_exponent`, `sun_color`, `sky_intensity`, `sun_intensity`, `sun_alpha`, `sun_beta`, `sun_vector` (which must contain `x`, `y`, `z`, `w`).
-        
-        - **If `type` is `gradient`**: You MUST include ALL of the following fields: `type`, `color1`, `color2`, `up_vector` (which must contain `x`, `y`, `z`, `w`), `intensity`, `exponent`.
-
-    **2 "graph" (The Scene Hierarchy):**
+    **1. "graph" (The Scene Hierarchy):**
 
         - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
@@ -207,11 +201,11 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
         - **CRITICAL ID RULE:** You MUST use the exact UUIDs provided to you in the `Decomposed Objects` input. Do NOT invent new IDs or use simplified numbers like "1", "2", "3". The `parent_id` of a child object MUST exactly match the `id` of its parent from the provided list.
     
-    **3. "components" (Defining what a SceneObject is):**
+    **2. "components" (Defining what a SceneObject is):**
 
         - The components list is the most important part. Every item in it MUST have a component_type field.
 
-            IMPORTANT: component_type MUST be one of "primitive", "dynamic", or "light". For the objects from the initial decomposition, you MUST use the type field from the DecomposedObject.
+            **CRITICAL RULE**: component_type MUST be one of "primitive", "dynamic", or "light". For the objects from the initial decomposition, you **MUST** use the type field from the DecomposedObject.
 
             - If component_type is "primitive":
 
@@ -351,16 +345,28 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
     }}
   ]
 }}
+
+---
+### FINAL CHECK
+Remember, your entire output must be one JSON object  `{{"name": ..., "skybox":..., "graph":...}}`. Do not add any other wrappers.
 """
     user_prompt = """
-        Original User Prompt:
-        {user_input}
+<INPUT_DATA>
+    <ORIGINAL_REQUEST>
+    {user_input}
+    </ORIGINAL_REQUEST>
 
-        Decomposed Objects with IDs, Improved Prompts and Types (You MUST preserve ID and Type (for the components) fields for these objects):
-        {improved_decomposition}
+    <OBJECT_LIST>
+    {improved_decomposition}
+    </OBJECT_LIST>
+</INPUT_DATA>
 
-        Based on ALL the above information, generate the full scene JSON.
-        """
+<YOUR_TASK>
+Using the data provided in `<INPUT_DATA>`, generate the complete 3D scene JSON.
+Your output must be a single JSON object with the root keys `name`, `skybox`, and `graph`, as specified in your system instructions.
+Do NOT copy the structure from `<OBJECT_LIST>`. That is input data only. You must keep the `id` and `type` values from `<OBJECT_LIST>` exactly as they are for each object.
+</YOUR_TASK>
+"""
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
