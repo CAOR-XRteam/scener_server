@@ -11,6 +11,7 @@ from agent.tools.pipeline.td_object_generation import Generate3DObjectOutput
 from agent.tools.pipeline.td_scene_generation import Generate3DSceneOutput
 from agent.tools.pipeline.td_scene_modification import Modify3DSceneOutput
 from sdk.messages import (
+    OutgoingUnrelatedMessage,
     OutgoingConvertedSpeechMessage,
     OutgoingGenerated3DObjectsMessage,
     OutgoingGeneratedImagesMessage,
@@ -29,12 +30,6 @@ from model.trellis import read_glb
 class Tool_callback(BaseCallbackHandler):
     def __init__(self):
         self.used_tools = []
-        self.final_answer_tools = (
-            "generate_image",
-            "generate_3d_object",
-            "generate_3d_scene",
-            "modify_3d_scene",
-        )
         self.structured_response: (
             OutgoingConvertedSpeechMessage
             | OutgoingGenerated3DObjectsMessage
@@ -42,6 +37,7 @@ class Tool_callback(BaseCallbackHandler):
             | OutgoingGenerated3DSceneMessage
             | OutgoingModified3DSceneMessage
             | OutgoingErrorMessage
+            | OutgoingUnrelatedMessage
         ) = None
 
     def on_tool_start(self, serialized: dict, input_str: str, **kwargs) -> None:
@@ -60,6 +56,18 @@ class Tool_callback(BaseCallbackHandler):
     def on_tool_end(self, output: ToolMessage, **kwargs) -> None:
         """Starts when a tool finishes, puts the result in the queue for further processing."""
         tool_name = kwargs.get("name")
+
+        if tool_name == "clear_database":
+            self.structured_response = OutgoingUnrelatedMessage(
+                text="Database cleared successfully."
+            )
+            return
+        if tool_name == "delete_asset":
+            self.structured_response = OutgoingUnrelatedMessage(
+                text="Asset deleted successfully."
+            )
+            return
+
         tool_output = json.loads(output.content)
 
         match tool_name:

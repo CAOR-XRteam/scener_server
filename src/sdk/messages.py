@@ -100,12 +100,12 @@ class OutgoingSessionStartMessage(IOutgoingMessage):
 
 @dataclass(frozen=True)
 class OutgoingUnrelatedMessage(IOutgoingMessage):
-    token: str
+    text: str
 
     def to_proto(self) -> message_pb2.Content:
         return message_pb2.Content(
             type=OutgoingMessageType.UNRELATED_RESPONSE.value,
-            text=self.token,
+            text=self.text,
             status=200,
         )
 

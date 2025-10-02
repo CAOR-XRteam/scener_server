@@ -119,7 +119,7 @@ async def aask(agent: Agent, query: str, thread_id: str = 0):
             ai_messages = [msg for msg in messages if isinstance(msg, AIMessage)]
 
             if ai_messages:
-                yield OutgoingUnrelatedMessage(token=ai_messages[-1].content)
+                yield OutgoingUnrelatedMessage(text=ai_messages[-1].content)
             else:
                 print("No AIMessage found.")
     except Exception as e:

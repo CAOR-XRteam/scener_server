@@ -2,6 +2,7 @@ import asyncio
 from functools import partial
 
 from agent.llm.creation import initialize_agent
+from agent.tools.asset.library import clear_database, delete_asset
 from agent.tools.pipeline.image_generation import generate_image
 from agent.tools.pipeline.td_object_generation import generate_3d_object
 from agent.tools.pipeline.td_scene_generation import generate_3d_scene
@@ -30,7 +31,7 @@ YOUR MISSION:
 4.  If the user's request is a general question, a greeting, or does not fit any tool, you must respond directly as a helpful assistant without using any tools.
 
 ---
-**AVAILABLE TOOLS AND WHEN TO USE THEM:**
+**AVAILABLE PIPELINE TOOLS AND WHEN TO USE THEM:**
 
 - `generate_image`:
     - **Use For:** Creating 2D images, pictures, photos, art, or illustrations.
@@ -44,6 +45,14 @@ YOUR MISSION:
 - `modify_3d_scene`:
     - **Use For:** Modifying an **existing** 3D scene within the current conversation. Use this for requests like "add an object," "remove something," "change the color of the car," or "move the table to the corner", "move the dog outside of the house", etc.
     - **IMPORTANT:** This tool requires a `thread_id`. The system will automatically provide this via configuration — you do NOT need to guess it or ask the user for it.
+
+Database Management Tools (Use these tools only when the user explicitly asks for database operations):
+- `clear_database`:
+    - **Use For:** Completely clearing the asset database by removing all assets. Use this tool only when the user explicitly requests to clear or reset the database.
+    - **Example User Requests:** "Clear the asset database", "Reset all assets in the database", "I want to remove all entries from the asset database".
+- `delete_asset`:
+    - **Use For:** Deleting a specific asset by its id. Use this tool only when the user explicitly requests to delete an asset.
+ 
 ---
 **YOUR DECISION PROCESS:**
 
@@ -70,7 +79,23 @@ YOUR MISSION:
         4.  **Execute:**
             - **Thought:** The user wants to modify an existing scene. I should use the `modify_3d_scene` tool and pass the user's full request to it and the thread ID of the current session.
             - **Action:** `modify_3d_scene(user_input="I want to add a tree to my existing 3D scene.", thread_id=THREAD_ID_OF_THE_CURRENT_SESSION)`
-
+    
+    **Example 4: Database Management - Clearing the Database**
+        1.  **Read User Input:** "Please clear the asset database."
+        2.  **Analyze Intent:** The user wants to remove all assets from the database
+        3.  **Select Tool:** The best tool is `clear_database`.
+        4.  **Execute:**
+            - **Thought:** The user wants to clear the asset database. I should use the `clear_database` tool.
+            - **Action:** `clear_database()`
+    
+    **Example 5: Database Management - Deleting a Specific Asset**
+        1.  **Read User Input:** "Delete the asset with the name 'uuid_of_the_specific_asset'."
+        2.  **Analyze Intent:** The user wants to delete a specific asset by its name.
+        3.  **Select Tool:** The best tool is `delete_asset`.
+        4.  **Execute:**
+            - **Thought:** The user wants to delete a specific asset. I should use the `delete_asset` tool and pass the asset name to it.
+            - **Action:** `delete_asset(name=uuid_of_the_specific_asset)`
+            
 **If no tool is appropriate:**
 
 1.  **Read User Input:** "Hello, who are you?"
@@ -100,14 +125,18 @@ You have analyzed the user's request and the available workflows. Now, you must 
         bound_generate_3d_scene_tool.func = partial(
             generate_3d_scene.func, self.library_api
         )
+        bound_clear_database_tool = clear_database.model_copy()
+        bound_clear_database_tool.func = partial(clear_database.func, self.library_api)
+        bound_delete_asset_tool = delete_asset.model_copy()
+        bound_delete_asset_tool.func = partial(delete_asset.func, self.library_api)
 
         self.tools = [
             generate_image,
             bound_generate_3d_object_tool,
             bound_generate_3d_scene_tool,
             bound_modify_3d_scene_tool,
-            # image_analysis,
-            # list_assets,
+            bound_clear_database_tool,
+            bound_delete_asset_tool,
         ]
 
         agent_model_name = config.get("agent_model")
