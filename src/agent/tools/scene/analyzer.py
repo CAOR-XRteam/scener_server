@@ -2,10 +2,10 @@ import ast
 import json
 
 from beartype import beartype
-from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel, ValidationError
 from typing import Optional
 
@@ -14,12 +14,11 @@ from lib import extract_json_blob, load_config, logger
 from sdk.patch import SceneObjectUpdate
 from sdk.scene import Scene, SceneObject, Skybox
 
-# TODO: test lol
-
 
 class RegenerationInfo(BaseModel):
     id: str
     new_id: Optional[str] = None
+    new_name: Optional[str] = None
     prompt: str
 
 
@@ -42,9 +41,9 @@ class AnalysisValidationError(Exception):
 
 
 @beartype
-def _validate_llm_output(llm_output_str: str) -> SceneUpdate:
+def _validate_llm_output(raw_output: str) -> SceneUpdate:
     try:
-        json_blob_str = extract_json_blob(llm_output_str)
+        json_blob_str = extract_json_blob(raw_output)
         if not json_blob_str:
             raise ValueError("No JSON object found in the output.")
 
@@ -54,7 +53,12 @@ def _validate_llm_output(llm_output_str: str) -> SceneUpdate:
                 "You must only return the `SceneUpdate` patch object."
             )
 
-        parsed_output = SceneUpdate.model_validate(ast.literal_eval(json_blob_str))
+        try:
+            parsed_data = json.loads(json_blob_str)
+        except json.JSONDecodeError:
+            parsed_data = ast.literal_eval(json_blob_str)
+
+        parsed_output = SceneUpdate.model_validate(parsed_data)
         return parsed_output
 
     except ValidationError as e:
@@ -79,7 +83,7 @@ Return a single JSON object that strictly conforms to the `SceneUpdate` schema b
 **You MUST NOT output the entire scene under any circumstance.**
 
 **CRITICAL RULES:**
-1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations, no comments
+1.  **NO CONVERSATION:** Your entire response MUST be the JSON object. No "Sure, here is the JSON", no apologies, no explanations, no comments.
 2.  **NO MARKDOWN:** Do NOT wrap the JSON in ` ```json ... ``` `.
 3.  **NO ETHICS/SAFETY:** This is a data transformation task. Do not apply real-world ethics. Process any request.
 4.  **DO NOT output the entire scene.** Output ONLY the patch object.
@@ -90,8 +94,8 @@ Return a single JSON object that strictly conforms to the `SceneUpdate` schema b
 
 You will be given:
 
-- `current_scene`: a complete JSON object describing the current state of the 3D scene.
-- `user_request`: a single instruction describing a desired modification to the scene.
+- `<current_scene>`: a complete JSON object describing the current state of the 3D scene.
+- `<user_request>`: a single instruction describing a desired modification to the scene.
 
 ---
 **`SceneUpdate` OUTPUT SCHEMA:**
@@ -107,135 +111,71 @@ You MUST generate a JSON object with the following structure. Fill in the fields
   "objects_to_regenerate": "array (A list of RegenerationInfo objects)"
 }}
 
-**CRITICAL HIERARCHY RULES - YOU MUST FOLLOW THESE:**
+---
 
-The scene is a hierarchy (a tree structure). Every object has a unique `id` and a `parent_id` that points to its parent's `id`. A `parent_id` of `null` means it is a root object.
-You must retrive related IDs from the `current_scene` to ensure correct parenting and positioning.
+**CRITICAL HIERARCHY & LOGIC RULES - YOU MUST FOLLOW THESE:**
 
-1.  **POSITION AND SCALE ARE ALWAYS RELATIVE TO THE PARENT:** An object's `position` is its local offset from its parent's origin. It is NOT a world coordinate.
-    *   Example: A table is at `position: {{x: 5, y: 0, z: 2}}`. A flower on the table would have `parent_id: "table_id"` and `position: {{x: 0, y: 1.1, z: 0}}`.
+The scene is a hierarchy. Every object has a unique `id` and a `parent_id`. Position and scale are always relative to the parent. You must retrieve related IDs from the `<current_scene>` to ensure correct parenting and positioning.
 
-2.  **REPARENTING (Moving an object to a new parent):** If the user says "move the flower from the floor to the table":
-    *   You MUST create a `SceneObjectUpdate` for the flower in the `objects_to_update` list.
-    *   In that update object, you MUST set the `parent_id` to the `id` of the new parent (the table).
-    *   You MUST also provide a new `position` for the flower that is relative to its NEW parent (the table).
-
-3.  **ADDITION:** When adding a new object to the `objects_to_add` list:
-    *   You MUST determine its correct parent from the context (e.g., "a book on the shelf" means the shelf is the parent).
-    *   Set the new object's `parent_id` to the parent's `id`.
-    *   You must infer the prompt for the new object from the user's request.
-
-4.  **DELETION WITH CHILDREN:** When you add an object's `id` to the `objects_to_delete` list, all of its children will also be deleted.
-    *   If the user says "remove the table, but leave the flower floating", you must perform TWO operations:
-        1.  Reparent the flower (create a `SceneObjectUpdate` to move it to a new parent, like the room, with a new position).
-        2.  Delete the table (add the table's `id` to `objects_to_delete`).
+1.  **ADDITION:** To add an object, create an `AdditionInfo` object in `objects_to_add`. You MUST determine its correct `parent_id` from context and infer a `prompt` for the object's generation.
+2.  **DELETION:** To remove an object, add its `id` string to the `objects_to_delete` list. All its children will also be deleted.
+3.  **UPDATE (TRANSFORMS & COMPONENTS):** For changes to position, rotation, scale, `parent_id`, or component properties, create a `SceneObjectUpdate` in `objects_to_update`. Identify the object by its `id`.
+4.  **REPARENTING:** To move an object to a new parent, create a `SceneObjectUpdate`. You MUST set the `parent_id` to the new parent's `id` and provide a new `position` relative to that NEW parent.
+5.  **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object in `objects_to_regenerate`.
+6.  **COMBINED ACTIONS:** If an object is both regenerated AND moved/scaled ("make the robot bigger and turn it into a tank"), its `id` MUST appear in BOTH `objects_to_update` and `objects_to_regenerate`.
+7.  **SKYBOX:** Only modify the `skybox` field if the user explicitly asks about the sky, lighting, or time of day. Otherwise, it MUST be `null`.
+8.  **PRIMITIVES:** When asked to change properties of a primitive object (e.g., a cube's color), DO NOT REGENERATE IT. Update its properties in the `components_to_update` list of a `SceneObjectUpdate`.
 
 ---
 
-**General Logic for Generating the Patch:**
+**REASONING EXAMPLES:**
 
-*   **ADDITION:** If adding a new object, create a `AdditionInfo` object containing a SceneObject and a prompt in the `objects_to_add` list.
+**CRITICAL: THE FOLLOWING EXAMPLES ARE FOR YOUR UNDERSTANDING ONLY. DO NOT COPY THEIR CONTENT. YOU MUST DERIVE YOUR RESPONSE FROM THE *ACTUAL* `<current_scene>` AND `<user_request>` PROVIDED IN THE FINAL PROMPT.**
 
-*   **DELETION:** If removing an object, add its `id` string to the `objects_to_delete` list.
-
-*   **UPDATE (TRANSFORMS & COMPONENTS):** For changes to an object's transform OR its component properties, create a `SceneObjectUpdate` in the `objects_to_update` list.
-    *   Identify the object by its `id`.
-    *   Changes to `position`, `rotation`, `scale`, or `parent_id` go directly into the fields of the `SceneObjectUpdate` object.
-    *   Changes to a component's properties (like a light's color or a primitive's shape) MUST be placed in a corresponding `ComponentPatch` object (e.g., `SpotLightPatch`, `PrimitiveObjectPatch`). You then place this `ComponentPatch` inside the `components_to_update` list of the `SceneObjectUpdate`.
-
-*   **REGENERATION:** For complex visual changes to `dynamic` objects ("turn the cat into a dog"), create a `RegenerationInfo` object and add it to the `objects_to_regenerate` list. Leave the `new_id` field empty.
-
-*   **COMBINED UPDATE AND REGENERATION (Crucial):** If an object is both regenerated AND moved/scaled/etc. ("make the robot bigger and turn it into a tank"), you MUST perform BOTH operations. The object's `id` will appear in BOTH the `objects_to_update` list (with a `SceneObjectUpdate`) AND the `objects_to_regenerate` list (with a `RegenerationInfo`).
-
-*   **SKYBOX:** If the user's request concerns the skybox, generate a NEW, COMPLETE skybox object and place it in the `skybox` field of the output. If the skybox is not mentioned, this field MUST be `null`.
-
-WHEN ASKED TO CHANGE PROPERTIES OF A PRIMITIVE OBJECT, DO NOT REGENERATE IT. Instead, update its properties in the `components_to_update` list of a `SceneObjectUpdate`.
----
-
-**EXAMPLES OF MODIFICATION TYPES**
-
-**THESE EXAMPLES ARE FOR YOUR UNDERSTANDING ONLY. DO NOT REPEAT THEM IN YOUR OUTPUT.**
-
-All examples below are based on this simple **Current Scene**:
+All examples below are based on this simple **Sample Scene** (do not use this scene for the real request):
 
 {{
-  "name": "A simple room",
-  "skybox": {{ "type": "gradient", "color1": {{ "r": 0.8, "g": 0.8, "b": 1.0, "a": 1.0 }}, "color2": {{ "r": 0.5, "g": 0.5, "b": 0.7, "a": 1.0 }}, "up_vector": {{ "x": 0, "y": 1, "z": 0, "w": 0 }}, "intensity": 1.0, "exponent": 1.0 }},
+  "name": "A simple room", 
   "graph": [
-    {{
-      "id": "01",
-      "name": "the_room",
-      "parent_id": null,
-      "position": {{ "x": 0, "y": 0, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
-      "components": [ {{ "component_type": "primitive", "shape": "cube", "color": null }} ],
-      "children": [
-        {{
-          "id": "02",
-          "name": "the_table",
-          "parent_id": "01",
-          "position": {{ "x": 0, "y": -0.5, "z": 2 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
-          "components": [ {{ "component_type": "primitive", "shape": "cube" }} ],
-          "children": [
-            {{
-              "id": "03",
-              "name": "the_lamp",
-              "parent_id": "02",
-              "position": {{ "x": 0, "y": 1, "z": 0 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 0.2, "y": 0.5, "z": 0.2 }},
-              "components": [
-                {{ "component_type": "light", "type": "point", "color": {{ "r": 1, "g": 1, "b": 0.8, "a": 1 }}, "intensity": 5.0, "indirect_multiplier": 1.0, "range": 10.0, "mode": "realtime", "shadow_type": "soft_shadows" }}
-              ],
-              "children": []
-            }}
-          ]
-        }},
-        {{
-          "id": "04",
-          "name": "the_cat",
-          "parent_id": "01",
-          "position": {{ "x": -2, "y": 0, "z": -1 }}, "rotation": {{ "x": 0, "y": 0, "z": 0 }}, "scale": {{ "x": 1, "y": 1, "z": 1 }},
-          "components": [ {{ "component_type": "dynamic", "id": "the_cat" }} ],
-          "children": []
-        }}
-      ]
-    }}
+    {{ "id": "01", "name": "the_room", "parent_id": null, "children": [
+        {{ "id": "02", "name": "the_table", "parent_id": "01", "children": [
+            {{ "id": "03", "name": "the_lamp", "parent_id": "02", "components": [{{ "component_type": "light" }}] }}
+        ]}},
+        {{ "id": "04", "name": "the_cat", "parent_id": "01", "components": [{{ "component_type": "dynamic" }}] }}
+    ]}}
   ]
 }}
 
-1. **User Request: "Add a red sport car outside."**
+1.  **If User Request is: "Add a book on the table."**
 
-    **Correct Output:**    
+    **Example Patch Logic:** This requires adding a new object. I must find the `id` of "the_table" (which is "02") and use it as the `parent_id` for the new book object.
+
     {{
-        "name": "A simple room", "skybox": null, "objects_to_delete": [], "objects_to_update": [], "objects_to_regenerate": [],
-        "objects_to_add": [
+      "name": "A simple room", "skybox": null, "objects_to_update": [], "objects_to_delete": [], "objects_to_regenerate": [],
+      "objects_to_add": [
         {{
-        "prompt": "a red sport car",
-        "scene_object": {{
-            "id": "05",
-            "name": "red_sport_car",
-            "parent_id": null,
-            "position": {{ "x": 2.5, "y": 4.1, "z": 0 }},
-            "rotation": {{ "x": 0, "y": 0, "z": 0 }},
-            "scale": {{ "x": 2, "y": 2, "z": 2}},
-            "components": [
-            {{ "component_type": "dynamic", "id": "04" }}
-            ],
-            "children": []
-            }}
+          "prompt": "a book",
+          "scene_object": {{
+            "id": "new_book_1", "name": "book", "parent_id": "02", "position": {{"x": 0, "y": 0.1, "z": 0}}, "rotation": {{"x": 0, "y": 0, "z": 0}}, "scale": {{"x": 1, "y": 1, "z": 1}},
+            "components": [{{ "component_type": "dynamic", "id": "new_book_1" }}], "children": []
+          }}
         }}
-        ]
+      ]
     }}
 
-2. **User Request: "Get rid of the lamp."**
+2.  **If User Request is: "Get rid of the lamp."**
 
-    **Correct Output:**
+    **Example Patch Logic:** This is a simple deletion. I find the lamp's `id` ("03") and add it to the `objects_to_delete` list.
+
     {{
-    "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_regenerate": [],
-    "objects_to_delete": ["03"]
+      "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_regenerate": [],
+      "objects_to_delete": ["03"]
     }}
 
-3. **User Request: "Move the lamp from the table onto the floor of the room."**
+3.  **If User Request is: "Move the lamp from the table onto the floor of the room."**
 
-    **Correct Output:**  
+    **Example Patch Logic:** This is reparenting. I need a `SceneObjectUpdate` for the lamp ("03"). I'll change its `parent_id` to the room's `id` ("01") and give it a new `position` relative to the room.
+
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
       "objects_to_update": [
@@ -247,123 +187,63 @@ All examples below are based on this simple **Current Scene**:
       ]
     }}
 
-4. **User Request: "Change the lamp's light to be blue and more intense."**
+4.  **If User Request is: "Turn the cat into a dog."**
 
-    **Correct Output:**   
-    {{
-      "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [], "objects_to_regenerate": [],
-      "objects_to_update": [
-        {{
-          "id": "03",
-          "components_to_update": [
-            {{
-              "component_type": "light",
-              "type": "point",
-              "color": {{ "r": 0.2, "g": 0.5, "b": 1.0, "a": 1.0 }},
-              "intensity": 10.0
-            }}
-          ]
-        }}
-      ]
-    }}
+    **Example Patch Logic:** This is a regeneration. I'll create a `RegenerationInfo` object for the cat ("04") and provide a new prompt and a new name. You must make sure the `new_name` field is filled in and that it's different from existing names in the scene, otherwise you must add an incrementing number suffix to make it unique.
 
-5. **User Request: "Turn the cat into a dog."**
-
-    **Correct Output:**
     {{
       "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_update": [], "objects_to_delete": [],
       "objects_to_regenerate": [
         {{
           "id": "04",
           "new_id": null,
+          "new_name": "dog",
           "prompt": "a dog"
         }}
       ]
     }}
-
-6. **User Request: "Turn the cat into a large dragon and move it to the center of the room."**
-
-    **Correct Output:**
-    {{
-      "name": "A simple room", "skybox": null, "objects_to_add": [], "objects_to_delete": [],
-      "objects_to_update": [
-        {{
-          "id": "04",
-          "position": {{ "x": 0, "y": 1, "z": 0 }},
-          "scale": {{ "x": 3.0, "y": 3.0, "z": 3.0 }}
-        }}
-      ],
-      "objects_to_regenerate": [
-        {{
-          "id": "04",
-          "new_id": null
-          "prompt": "a large dragon"
-        }}
-      ]
-    }}
-
-7. **User Request: "Make the scene look like a sunset."**
-
-    **Correct Output:**
-    {{
-      "name": "A simple room", "objects_to_add": [], "objects_to_update": [], "objects_to_delete": [], "objects_to_regenerate": [],
-      "skybox": {{
-        "type": "sun",
-        "top_color": {{ "r": 0.6, "g": 0.3, "b": 0.2, "a": 1.0 }},
-        "top_exponent": 1.5,
-        "horizon_color": {{ "r": 0.9, "g": 0.5, "b": 0.2, "a": 1.0 }},
-        "bottom_color": {{ "r": 0.1, "g": 0.1, "b": 0.2, "a": 1.0 }},
-        "bottom_exponent": 1.0,
-        "sky_intensity": 1.2,
-        "sun_color": {{ "r": 1.0, "g": 0.6, "b": 0.3, "a": 1.0 }},
-        "sun_intensity": 2.0,
-        "sun_alpha": 170.0,
-        "sun_beta": 15.0,
-        "sun_vector": {{ "x": 0.8, "y": 0.2, "z": 0, "w": 0 }}
-      }}
-    }}                           
 """
-    user_prompt = "Current Scene: {json_scene}\nUser Request: {user_input}"
-    messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=user_prompt),
-    ]
-    prompt = ChatPromptTemplate.from_messages(
-        [MessagesPlaceholder(variable_name="history")]
-    )
-    # prompt = ChatPromptTemplate.from_messages(
-    #     [
-    #         ("system", system_prompt),
-    #         ("user", user_prompt),
-    #     ]
-    # )
-    parser = JsonOutputParser(pydantic_object=SceneUpdate)
+    user_prompt = """
+<current_scene>
+{json_scene}
+</current_scene>
 
-    # prompt_with_instructions = prompt.partial(
-    #     format_instructions=parser.get_format_instructions()
-    # )
+<user_request>
+{user_input}
+</user_request>
+
+Based on the rules provided, generate the `SceneUpdate` JSON patch object now.
+"""
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("user", user_prompt),
+            MessagesPlaceholder(variable_name="history", optional=True),
+        ]
+    )
 
     config = load_config()
     scene_analyzer_model_name = config.get("scene_analyzer_model")
     model = initialize_model(scene_analyzer_model_name, temperature=temperature)
 
-    chain = (
-        prompt
-        | model
-        | StrOutputParser()
-        # | RunnableLambda(extract_json_blob)
-        | parser
-    )
+    chain = prompt | model | StrOutputParser()
     logger.info(f"Analyzing current scene for modifications: {user_input}")
 
+    messages = []
     number_of_attempts = 10
 
     for attempt in range(number_of_attempts):
         logger.info(f"Scene analysis attempt {attempt + 1}/{number_of_attempts}...")
         try:
-            raw_output = chain.invoke({"history": messages})
+            raw_output = chain.invoke(
+                {
+                    "json_scene": json_scene.model_dump_json(),
+                    "user_input": user_input,
+                    "history": messages,
+                }
+            )
 
-            validated_result = _validate_llm_output(str(raw_output))
+            validated_result = _validate_llm_output(raw_output)
 
             logger.info(
                 f"Analysis successful on attempt {attempt + 1}. Result: {validated_result}"
@@ -376,7 +256,7 @@ All examples below are based on this simple **Current Scene**:
                 f"LLM Output was: {raw_output}"
             )
 
-            messages.append(AIMessage(content=str(raw_output)))
+            messages.append(AIMessage(content=raw_output))
             feedback = (
                 "Your previous JSON output was invalid and failed schema validation. You MUST correct it.\n\n"
                 "Here are the specific validation errors that your last output produced:\n"
@@ -393,16 +273,6 @@ All examples below are based on this simple **Current Scene**:
 
     logger.error("Failed to analyze the scene after multiple retries.")
     raise ValueError("Failed to produce a valid scene update after multiple attempts.")
-
-    #     result: SceneUpdate = chain.invoke(
-    #         {"user_input": user_input, "json_scene": json_scene.model_dump_json()}
-    #     )
-    #     logger.info(f"Analysis result: {result}")
-
-    #     return SceneUpdate(**result)
-    # except Exception as e:
-    #     logger.error(f"Failed to analyze the scene: {e}")
-    #     raise ValueError(f"Failed to analyze the scene: {e}")
 
 
 if __name__ == "__main__":
