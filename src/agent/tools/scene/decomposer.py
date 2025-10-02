@@ -43,19 +43,22 @@ YOUR CRITICAL TASK:
 - If there are words like "on", "in", "under", "next to", "beside", "above", "below", etc., do NOT include them in the 'prompt' field. The 'prompt' must be the exact noun phrase or descriptive phrase that identifies or describes the object itself.
 - If there are words like "few", "several", "many", "couple of", etc., you must create one object entry for each individual item described. For example, "a couple of chairs" means you must create two separate objects with identical prompts.
 
-**OBJECT CLASSIFICATION RULES (`type` field):**
-You MUST classify each object into one of two types:
+### OBJECT CLASSIFICATION: THE CORE TASK
+  **STEP 1: Identify the Environment/Container Object (Highest Priority Rule).**
+  - First, find the object that defines the scene's main space. This could be "a room", "a hall", "a cave", "an outdoor area", etc.
+  - These large-scale container objects, which represent the overall environment, are **ALWAYS `primitive`**.
+  - **This rule is an exception and overrides all others.** Even though "a room" is a named concept, for our purposes, it is the primitive cube that holds all other objects.
+  - **Examples:** `"a sunny room"`, `"a cozy living room"`, `"a dark cave"`, `"a large hall"`. All of these container objects must be classified as **`primitive`**.
 
-- **`"dynamic"`**: Use for any object that is visually complex, designed, detailed, or non-primitive. This includes:
-    -Any object that is not a basic geometric shape (e.g., sphere, cube, cone, cylinder, torus)
-    -Objects with crafted or intentional shapes, including all manufactured or natural items
-    -Utensils, furniture, tools, vehicles, electronics, creatures, etc.
-    -Everyday objects that require interpretation of form, curves, or construction
-    - **Examples:** "a griffin", "an ornate victorian chair", "a spaceship", "a black cat", "a couch", "a mug", "a table", "a laptop", "a knife", "a fork", "a plate", "a toothbrush", "a lamp"
+  **STEP 2: Classify All Other Objects (Props and Furniture).**
+  - For every other object that exists *inside* the container, apply the following test:
+    > "Is this a specific, named, real-world object (like a 'chair', 'lamp', or 'cat') OR is it just a generic geometric building block (like 'a cube' or 'a plane')?"
 
-- **`"primitive"`**: Use **only** for pure geometric shapes like cubes, spheres, cones, cylinders, and toruses. Do **not** classify real-world objects (like mugs or plates) as primitives, even if their shape is simple.
-    - **Examples:** "a simple wall", "a flat floor", "a cozy living room", "a box".
+  - **Use `"dynamic"` for ANY named prop or furniture.** This applies even if its shape seems simple. If it has a common name and function, it is dynamic.
+    - **Examples:** "a table", "a chair", "a chandelier", "a chimney", "a lamp", "a cat", "a sword", "a coffee mug". All of these are **`dynamic`**.
 
+  - **Use `"primitive"` ONLY for basic, unnamed geometric shapes** that are NOT the main room container.
+    - **Examples:** "a large cube used as a pedestal", "a sphere on the floor", "a flat plane".
 
 OUTPUT FORMAT:
 - Output **ONLY** the JSON. **NO explanations**, **NO markdown**, **NO extra formatting**.
@@ -112,7 +115,9 @@ STRICT ADHERENCE TO THIS FORMAT AND OBJECT INCLUSION IS ESSENTIAL FOR SUCCESSFUL
 
     model = initialize_model(initial_decomposer_model_name, temperature=temperature)
 
-    chain = prompt | model.with_structured_output(schema=DecompositionOutput)
+    chain = prompt_with_instructions | model.with_structured_output(
+        schema=DecompositionOutput
+    )
 
     try:
         logger.info(f"Decomposing input: {user_input}")
@@ -142,6 +147,13 @@ def final_decomposition(
 You are a world-class 3D scene architect AI. Your primary function is to interpret a user's description and translate it into a highly structured, hierarchical 3D scene in a strict JSON format. Your ability to correctly infer relationships between objects (like containment and relative scale) is paramount.
 
 Your ONLY task is to create this JSON. Your entire response MUST be only the JSON object.
+
+### SKYBOX GENERATION - CRITICAL INSTRUCTIONS
+You MUST generate a complete `skybox` object for every scene. Analyze the user's prompt for ambiance clues ("sunny day", "night", "dusk").
+
+- **If the scene is outdoors or sunlit (e.g., "a sunny room"), you MUST use the `sun` type skybox.** When you use type `sun`, you are REQUIRED to include ALL of its fields: `type`, `top_color`, `top_exponent` (a real number), `horizon_color`, `bottom_color`, `bottom_exponent` (a real number), `sun_color`, `sky_intensity`, `sun_intensity`, `sun_alpha`, `sun_beta`, and especially the `sun_vector` object with `x`, `y`, `z`, and `w` fields.
+- **If the scene is a dark interior or has abstract lighting, you MUST use the `gradient` type skybox.** When you use type `gradient`, you are REQUIRED to include ALL of its fields: `type`, `color1`, `color2`, `up_vector`, `intensity`, `exponent`.
+- You MUST also add a `directional` light to the scene graph to act as the sun when using a `sun` skybox.
 
 CORE SCENE-BUILDING LOGIC - YOU MUST FOLLOW THIS PROCESS:
 
@@ -174,7 +186,14 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
     The final output is a single JSON object with three top-level keys: name, skybox, and graph.
 
-    **1. "graph" (The Scene Hierarchy):**
+    **1. "skybox" (Global Scene Sky):**
+        - You MUST provide one skybox object. It MUST contain a 'type' field: `sun` or "gradient".
+
+        - **If `type` is `sun`**: You MUST include ALL of the following fields: `type`, `top_color`, `top_exponent`, `horizon_color`, `bottom_color`, `bottom_exponent`, `sun_color`, `sky_intensity`, `sun_intensity`, `sun_alpha`, `sun_beta`, `sun_vector` (which must contain `x`, `y`, `z`, `w`).
+        
+        - **If `type` is `gradient`**: You MUST include ALL of the following fields: `type`, `color1`, `color2`, `up_vector` (which must contain `x`, `y`, `z`, `w`), `intensity`, `exponent`.
+
+    **2 "graph" (The Scene Hierarchy):**
 
         - The graph is a list of SceneObject nodes, which are the top-level objects in the scene.
 
@@ -185,8 +204,10 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
         - You must infer the relationships between objects based on the scene description. For example, if a lamp is inside a box, the lamp must be a child of the box.
 
         - If a SceneObject1 is a children of SceneObject2, parent_id of SceneObject1 must be id of SceneObject2. Always keep this coherence between parent and child ids.
+
+        - **CRITICAL ID RULE:** You MUST use the exact UUIDs provided to you in the `Decomposed Objects` input. Do NOT invent new IDs or use simplified numbers like "1", "2", "3". The `parent_id` of a child object MUST exactly match the `id` of its parent from the provided list.
     
-    **2. "components" (Defining what a SceneObject is):**
+    **3. "components" (Defining what a SceneObject is):**
 
         - The components list is the most important part. Every item in it MUST have a component_type field.
 
@@ -220,16 +241,6 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 
                 For an Area Light, you MUST also include: range, shape ("rectangle" or "disk"), and width/height (for rectangle) or radius (for disk).
 
-    **3. "skybox" (Global Scene Sky):**
-
-        You MUST provide one skybox object. It MUST contain a 'type' field: "sun", "gradient" or "cubed".
-
-        - If type is "sun", you MUST include all its fields: type, top_color, top_exponent, horizon_color, bottom_color, bottom_exponent, sun_color, sky_intensity, sun_intensity, sun_alpha, sun_beta, sun_vector (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields).
-
-        - If type is "gradient", you MUST include all its fields: color1, color2, up_vector (Unity Vector4 format with 'x', 'y', 'z' and 'w' fields), intensity, exponent.
-
-        - If type is "cubed", you MUST include all its fields: tint_color, exposure, rotation, cube_map.
-
 **IMPORTANT: Vectors (position, rotation, scale) have x, y, z fields.**
 **IMPORTANT: Colors (color, top_color, etc.) are RGBA format (include 'r', 'g', 'b', and 'a' components).**
 
@@ -245,67 +256,45 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
   "name": "A red car parked on a street on a sunny day.",
   "skybox": {{
     "type": "sun",
-    "top_color": {{"r": 0.3, "g": 0.5, "b": 0.8, "a": 1}},
-    "top_exponent": 1.5,
-    "horizon_color": {{"r": 0.7, "g": 0.6, "b": 0.5, "a": 1}},
-    "bottom_color": {{"r": 0.2, "g": 0.2, "b": 0.2, "a": 1}},
-    "bottom_exponent": 1.0,
-    "sun_color": {{"r": 1.0, "g": 0.95, "b": 0.8, "a": 1}},
-    "sky_intensity": 1.0,
-    "sun_intensity": 1.5,
-    "sun_alpha": 120.0,
-    "sun_beta": 45.0,
-    "sun_vector": {{"x": 0.5, "y": 0.5, "z": 0.0, "w": 0.0}}
+    "top_color": {{"r": 0.3, "g": 0.5, "b": 0.8, "a": 1}}, 
+    "top_exponent": 1.5, 
+    "horizon_color": {{"r": 0.7, "g": 0.6, "b": 0.5, "a": 1}}, 
+    "bottom_color": {{"r": 0.2, "g": 0.2, "b": 0.2, "a": 1}}, 
+    "bottom_exponent": 1.0, 
+    "sun_color": {{"r": 1.0, "g": 0.95, "b": 0.8, "a": 1}}, 
+    "sky_intensity": 1.0, 
+    "sun_intensity": 1.5, 
+    "sun_alpha": 120.0, 
+    "sun_beta": 45.0, 
+    "sun_vector": {{"x": 0.5, "y": 0.5, "z": 0.0, "w": 0.0
+    }}
   }},
   "graph": [
     {{
-      "id": "1",
-      "name": "the_sun"
-      "parent_id": null,
-      "position": {{"x": 0, "y": 100, "z": 0}},
-      "rotation": {{"x": 45, "y": 30, "z": 0}},
+      "id": "f4f4a2b0-sun-light",
+      "name": "the_sun", 
+      "parent_id": null, 
+      "position": {{"x": 0, "y": 100, "z": 0}}, 
+      "rotation": {{"x": 45, "y": 30, "z": 0}}, 
       "scale": {{"x": 1, "y": 1, "z": 1}},
-      "components": [
-        {{
-          "component_type": "light",
-          "type": "directional",
-          "color": {{"r": 1.0, "g": 0.95, "b": 0.8, "a": 1}},
-          "intensity": 1.5,
-          "indirect_multiplier": 1.0,
-          "mode": "realtime",
-          "shadow_type": "soft_shadows"
-        }}
-      ],
+      "components": [ {{ "component_type": "light", "type": "directional", "color": {{"r": 1.0, "g": 0.95, "b": 0.8, "a": 1}}, "intensity": 1.5, "indirect_multiplier": 1.0, "mode": "realtime", "shadow_type": "soft_shadows" }} ],
       "children": []
     }},
     {{
-      "id": "2",
-      "name": "street_plane",
-      "parent_id": null,
-      "position": {{"x": 0, "y": 0, "z": 0}},
-      "rotation": {{"x": 0, "y": 0, "z": 0}},
+      "id": "a1b2c3d4-street-plane",
+      "name": "street_plane", 
+      "parent_id": null, 
+      "position": {{"x": 0, "y": 0, "z": 0}}, 
+      "rotation": {{"x": 0, "y": 0, "z": 0}}, 
       "scale": {{"x": 50, "y": 0.1, "z": 50}},
-      "components": [
-        {{
-          "component_type": "primitive",
-          "shape": "plane",
-          "color": {{"r": 0.3, "g": 0.3, "b": 0.3, "a": 1}}
-        }}
-      ],
+      "components": [ {{ "component_type": "primitive", "shape": "plane", "color": {{"r": 0.3, "g": 0.3, "b": 0.3, "a": 1}} }} ],
       "children": [
         {{
-          "id": "3",
+          "id": "e5f6g7h8-red-car",
           "name": "red_car",
-          "parent_id": "2",
-          "position": {{"x": 2, "y": 0.5, "z": 5}},
-          "rotation": {{"x": 0, "y": 15, "z": 0}},
-          "scale": {{"x": 2, "y": 1, "z": 4}},
-          "components": [
-            {{
-              "component_type": "dynamic",
-              "id": "3"
-            }}
-          ],
+          "parent_id": "a1b2c3d4-street-plane",
+          "position": {{"x": 2, "y": 0.5, "z": 5}}, "rotation": {{"x": 0, "y": 15, "z": 0}}, "scale": {{"x": 2, "y": 1, "z": 4}},
+          "components": [ {{ "component_type": "dynamic", "id": "e5f6g7h8-red-car" }} ],
           "children": []
         }}
       ]
@@ -317,61 +306,42 @@ SCHEMA REFERENCE - YOU MUST FOLLOW THIS STRICTLY
 {{
   "name": "A dark room with a glowing lamp on a table.",
   "skybox": {{
-    "type": "gradient",
-    "color1": {{"r": 0.1, "g": 0.1, "b": 0.2, "a": 1}},
-    "color2": {{"r": 0.05, "g": 0.05, "b": 0.1, "a": 1}},
-    "up_vector": {{"x": 0, "y": 1, "z": 0, "w": 0}},
-    "intensity": 0.2,
+    "type": "gradient", 
+    "color1": {{"r": 0.1, "g": 0.1, "b": 0.2, "a": 1}}, 
+    "color2": {{"r": 0.05, "g": 0.05, "b": 0.1, "a": 1}}, 
+    "up_vector": {{"x": 0, "y": 1, "z": 0, "w": 0}}, 
+    "intensity": 0.2, 
     "exponent": 1.0
   }},
   "graph": [
     {{
-      "id": "1",
-      "name": "room_container",
-      "parent_id": null,
-      "position": {{"x": 0, "y": 1.5, "z": 0}},
-      "rotation": {{"x": 0, "y": 0, "z": 0}},
+      "id": "uuid-for-room-container",
+      "name": "room_container", 
+      "parent_id": null, 
+      "position": {{"x": 0, "y": 1.5, "z": 0}}, 
+      "rotation": {{"x": 0, "y": 0, "z": 0}}, 
       "scale": {{"x": 10, "y": 3, "z": 10}},
       "components": [],
       "children": [
         {{
-          "id": "2",
+          "id": "uuid-for-wooden-table",
           "name": "wooden_table",
-          "parent_id": "1",
-          "position": {{"x": 0, "y": -1.0, "z": 2}},
-          "rotation": {{"x": 0, "y": 0, "z": 0}},
+          "parent_id": "uuid-for-room-container",
+          "position": {{"x": 0, "y": -1.0, "z": 2}}, 
+          "rotation": {{"x": 0, "y": 0, "z": 0}}, 
           "scale": {{"x": 3, "y": 0.8, "z": 1.5}},
-          "components": [
-            {{
-              "component_type": "primitive",
-              "shape": "cube",
-              "color": {{"r": 0.4, "g": 0.2, "b": 0.1, "a": 1}}
-            }}
-          ],
+          "components": [ {{ "component_type": "primitive", "shape": "cube", "color": {{"r": 0.4, "g": 0.2, "b": 0.1, "a": 1}} }} ],
           "children": [
             {{
-              "id": "3",
+              "id": "uuid-for-glowing-lamp",
               "name": "glowing_lamp",
-              "parent_id": "2",
-              "position": {{"x": 0, "y": 0.6, "z": 0}},
-              "rotation": {{"x": 0, "y": 0, "z": 0}},
+              "parent_id": "uuid-for-wooden-table",
+              "position": {{"x": 0, "y": 0.6, "z": 0}}, 
+              "rotation": {{"x": 0, "y": 0, "z": 0}}, 
               "scale": {{"x": 0.2, "y": 0.4, "z": 0.2}},
               "components": [
-                {{
-                  "component_type": "primitive",
-                  "shape": "cylinder",
-                  "color": {{"r": 0.8, "g": 0.8, "b": 0.8, "a": 1}}
-                }},
-                {{
-                  "component_type": "light",
-                  "type": "point",
-                  "color": {{"r": 1.0, "g": 0.8, "b": 0.4, "a": 1}},
-                  "intensity": 5.0,
-                  "indirect_multiplier": 1.0,
-                  "range": 5.0,
-                  "mode": "realtime",
-                  "shadow_type": "soft_shadows"
-                }}
+                {{ "component_type": "primitive", "shape": "cylinder", "color": {{"r": 0.8, "g": 0.8, "b": 0.8, "a": 1}} }},
+                {{ "component_type": "light", "type": "point", "color": {{"r": 1.0, "g": 0.8, "b": 0.4, "a": 1}}, "intensity": 5.0, "indirect_multiplier": 1.0, "range": 5.0, "mode": "realtime", "shadow_type": "soft_shadows" }}
               ],
               "children": []
             }}
