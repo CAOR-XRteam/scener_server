@@ -207,6 +207,43 @@ class AssetFinder:
             new_documents, ids=[asset.id for asset in new_assets]
         )
 
+    def delete_asset(self, asset_id: str):
+        logger.info(f"Attempting to delete asset with ID: {asset_id}")
+        try:
+            if asset_id in self.asset_map:
+                del self.asset_map[asset_id]
+                logger.info(f"Removed asset '{asset_id}' from internal map.")
+            else:
+                logger.warning(f"Asset ID '{asset_id}' not found in internal map.")
+
+            self.vector_store.delete(ids=[asset_id])
+            logger.info(f"Successfully deleted asset '{asset_id}' from ChromaDB.")
+
+        except Exception as e:
+            logger.error(f"Failed to delete asset '{asset_id}': {e}")
+            raise
+
+    @beartype
+    def clear_database(self):
+        try:
+            existing_ids = self.vector_store.get(include=[])["ids"]
+
+            if not existing_ids:
+                logger.info("Database is already empty. No action taken.")
+                return
+
+            self.vector_store.delete(ids=existing_ids)
+            logger.info(
+                f"Successfully deleted {len(existing_ids)} assets from ChromaDB."
+            )
+
+            self.asset_map.clear()
+            logger.info("Cleared internal asset map.")
+
+        except Exception as e:
+            logger.error(f"An error occurred while clearing all assets: {e}")
+            raise
+
     def _create_rerank_chain(self):
         system_prompt = f"""
     You are an expert asset-matching engine. Your primary goal is to find the single best asset from a provided list that matches a target description. All assets provided are a close match to the target, but your task is to identify the one that aligns most closely with the target description.

@@ -3,8 +3,10 @@ from lib import logger
 from library import db
 
 from library.manager.asset import Asset
-from library.manager.library import AppAsset, AssetFinder, NullableAppAsset
+from library.manager.library import AssetFinder, NullableAppAsset
 from library.manager.library import Library
+from library.sql.table import SQL as SQL_table
+from library.sql.connection import SQL as SQL_conn
 
 
 @beartype
@@ -13,6 +15,7 @@ class LibraryAPI:
         self.db = db
         self.library = Library(db)
         self.asset = Asset(db)
+        self.asset_finder = AssetFinder(self.library.get_list())
 
     def fill(self, path):
         """Fill the database with assets from the specified directory."""
@@ -58,6 +61,7 @@ class LibraryAPI:
         """Delete an asset by its name."""
         try:
             self.asset.delete(name)
+            self.asset_finder.delete_asset(name)
         except Exception as e:
             logger.error(f"Failed to delete asset: {e}")
             raise
@@ -72,8 +76,18 @@ class LibraryAPI:
 
     def find_asset_by_description(self, description: str) -> NullableAppAsset:
         """Find the closest asset to a given description"""
-        asset_finder = AssetFinder(self.library.get_list())
         try:
-            return asset_finder.find_by_description(description)
+            return self.asset_finder.find_by_description(description)
         except Exception:
+            raise
+
+    def clear_database(self):
+        """Clear the entire asset database."""
+        try:
+            SQL_table.clear_asset_table(
+                self.db._conn, SQL_conn.get_cursor(self.db._conn)
+            )
+            self.asset_finder.clear_database()
+        except Exception as e:
+            logger.error(f"Failed to clear the database: {e}")
             raise
