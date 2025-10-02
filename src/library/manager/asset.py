@@ -1,3 +1,4 @@
+from pathlib import Path
 from beartype import beartype
 from colorama import Fore
 from library.sql.row import SQL
@@ -51,6 +52,28 @@ class Asset:
             logger.error(f"Failed to add the asset '{name}': {e}")
             raise
 
+    def _delete_local_asset_files(self, name: str):
+        """
+        Deletes the .glb and .png files associated with an asset name
+        """
+        media_path = Path("src/media/temp")
+        if not media_path.is_dir():
+            logger.warning(
+                f"Media directory '{media_path}' not found. Skipping file deletion."
+            )
+            return
+
+        extensions_to_delete = [".glb", ".png"]
+
+        for ext in extensions_to_delete:
+            file_path = media_path / f"{name}{ext}"
+            try:
+                if file_path.is_file():
+                    file_path.unlink()
+                    logger.info(f"Deleted local file: {file_path}")
+            except OSError as e:
+                logger.error(f"Error deleting file {file_path}: {e}")
+
     def delete(self, name: str):
         """Delete an asset by its name."""
         if not name:
@@ -72,6 +95,7 @@ class Asset:
             logger.success(
                 f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
             )
+            self._delete_local_asset_files(name)
         except ValueError as ve:
             raise
         except Exception as e:
