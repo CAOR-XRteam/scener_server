@@ -1,14 +1,33 @@
+import os
+import sqlite3
+
 from beartype import beartype
 from colorama import Fore
 from library.sql.connection import SQL as SQL_conn
 from library.sql.table import SQL as SQL_table
-from loguru import logger
-import os
-import sqlite3
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+    after_log,
+)
+
+from lib import logger
 
 
 @beartype
 class Database:
+    retry_on_db_lock = retry(
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
+        retry=retry_if_exception_type(sqlite3.OperationalError),
+        before_sleep=before_sleep_log(logger, "ERROR"),
+        after=after_log(logger, "INFO"),
+        reraise=True,
+    )
+
     def __init__(self, path: str):
         self.path = path
         self._conn = None
@@ -89,3 +108,24 @@ class Database:
                 raise
         else:
             logger.warning("No connection to close.")
+
+    @retry_on_db_lock
+    def clear_asset_table(self):
+        """
+        Delete all records from the 'asset' table.
+        """
+        cursor = self._get_cursor()
+        conn = self.get_connection()
+        try:
+            cursor.execute("DELETE FROM asset")
+            conn.commit()
+            logger.info("Successfully cleared all records from the 'asset' table.")
+
+        except sqlite3.Error as e:
+            logger.error(f"Failed to clear the 'asset' table: {e}")
+            try:
+                conn.rollback()
+            except sqlite3.Error as e:
+                logger.critical(f"Failed to rollback after clear attempt: {e}")
+                raise
+            raise

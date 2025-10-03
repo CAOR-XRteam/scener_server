@@ -1,7 +1,7 @@
-from library.manager.database import Database
 import inspect
 import os
 
+from library.manager.database import Database
 
 # Path definition
 path_current = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))

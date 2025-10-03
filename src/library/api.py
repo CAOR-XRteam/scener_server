@@ -62,6 +62,7 @@ class LibraryAPI:
         try:
             self.asset.delete(name)
             self.asset_finder.delete_asset(name)
+            return f"Asset '{name}' deleted successfully."
         except Exception as e:
             logger.error(f"Failed to delete asset: {e}")
             raise
@@ -84,10 +85,8 @@ class LibraryAPI:
     def clear_database(self):
         """Clear the entire asset database."""
         try:
-            SQL_table.clear_asset_table(
-                self.db._conn, SQL_conn.get_cursor(self.db._conn)
-            )
-            self.asset_finder.clear_database()
-        except Exception as e:
-            logger.error(f"Failed to clear the database: {e}")
+            self.db.clear_asset_table()
+            self.asset.delete_all_local_assets()
+            return "Successfully cleared all records from the 'asset' table."
+        except Exception:
             raise

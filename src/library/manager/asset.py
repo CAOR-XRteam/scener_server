@@ -1,13 +1,33 @@
-from pathlib import Path
+import sqlite3
+
 from beartype import beartype
 from colorama import Fore
-from library.sql.row import SQL
+from pathlib import Path
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+    after_log,
+)
+
+from lib import logger
 from library.manager.database import Database as DB
-from loguru import logger
+from library.sql.row import SQL
 
 
 @beartype
 class Asset:
+    retry_on_db_lock = retry(
+        stop=stop_after_attempt(4),
+        wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
+        retry=retry_if_exception_type(sqlite3.OperationalError),
+        before_sleep=before_sleep_log(logger, "ERROR"),
+        after=after_log(logger, "INFO"),
+        reraise=True,
+    )
+
     def __init__(self, db: DB):
         self.db = db
 
@@ -21,6 +41,7 @@ class Asset:
         library = Library(db)
         library.fill(path_asset)
 
+    @retry_on_db_lock
     def add(
         self, name: str, image: str = None, mesh: str = None, description: str = None
     ):
@@ -52,15 +73,14 @@ class Asset:
             logger.error(f"Failed to add the asset '{name}': {e}")
             raise
 
-    def _delete_local_asset_files(self, name: str):
+    @retry_on_db_lock
+    def _delete_local_asset(self, name: str):
         """
-        Deletes the .glb and .png files associated with an asset name
+        Deletes an asset stored locally
         """
         media_path = Path("src/media/temp")
         if not media_path.is_dir():
-            logger.warning(
-                f"Media directory '{media_path}' not found. Skipping file deletion."
-            )
+            logger.warning(f"Media directory '{media_path}' not found.")
             return
 
         extensions_to_delete = [".glb", ".png"]
@@ -74,6 +94,26 @@ class Asset:
             except OSError as e:
                 logger.error(f"Error deleting file {file_path}: {e}")
 
+    def delete_all_local_assets(self):
+        """
+        Deletes all assets stored locally
+        """
+        media_path = Path("src/media/temp")
+        if not media_path.is_dir():
+            logger.warning(f"Media directory '{media_path}' not found.")
+            return
+
+        logger.info(f"Clearing all assets from directory: {media_path}")
+
+        for item in media_path.iterdir():
+            try:
+                if item.is_file():
+                    item.unlink()
+                    logger.info(f"Deleted file: {item}")
+            except OSError as e:
+                logger.error(f"Error deleting file {item}: {e}")
+
+    @retry_on_db_lock
     def delete(self, name: str):
         """Delete an asset by its name."""
         if not name:
@@ -88,14 +128,12 @@ class Asset:
             asset = SQL.query_asset_by_name(cursor, name)
             if not asset:
                 logger.warning(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
-                raise ValueError(f"Asset {Fore.RED}'{name}'{Fore.RESET} not found.")
+                raise ValueError(f"Asset {name}not found.")
 
             # Delete the asset
             SQL.delete_asset(self.db._conn, cursor, name)
-            logger.success(
-                f"Asset {Fore.GREEN}'{name}'{Fore.RESET} deleted successfully."
-            )
-            self._delete_local_asset_files(name)
+            logger.success(f"Asset {name} deleted successfully.")
+            self._delete_local_asset(name)
         except ValueError as ve:
             raise
         except Exception as e:

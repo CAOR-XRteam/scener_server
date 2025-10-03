@@ -57,15 +57,9 @@ class Tool_callback(BaseCallbackHandler):
         """Starts when a tool finishes, puts the result in the queue for further processing."""
         tool_name = kwargs.get("name")
 
-        if tool_name == "clear_database":
-            self.structured_response = OutgoingUnrelatedMessage(
-                text="Database cleared successfully."
-            )
-            return
-        if tool_name == "delete_asset":
-            self.structured_response = OutgoingUnrelatedMessage(
-                text="Asset deleted successfully."
-            )
+        if tool_name == "clear_database" or tool_name == "delete_asset":
+            logger.info(f"Tool '{tool_name}' completed with output: {output.content}")
+            self.structured_response = OutgoingUnrelatedMessage(text=output.content)
             return
 
         tool_output = json.loads(output.content)

@@ -1,7 +1,6 @@
 import sqlite3
 
 from beartype import beartype
-from lib import logger
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -10,6 +9,8 @@ from tenacity import (
     before_sleep_log,
     after_log,
 )
+
+from lib import logger
 
 
 @beartype
@@ -47,24 +48,5 @@ class SQL:
                 conn.rollback()
             except sqlite3.Error as e:
                 logger.critical(f"Failed to rollback: {e}")
-                raise
-            raise
-
-    @staticmethod
-    @retry_on_db_lock
-    def clear_asset_table(conn: sqlite3.Connection, cursor: sqlite3.Cursor):
-        """
-        Delete all records from the 'asset' table.
-        """
-        try:
-            cursor.execute("DELETE FROM asset")
-            conn.commit()
-            logger.info("Successfully cleared all records from the 'asset' table.")
-        except sqlite3.Error as e:
-            logger.error(f"Failed to clear the 'asset' table: {e}")
-            try:
-                conn.rollback()
-            except sqlite3.Error as e:
-                logger.critical(f"Failed to rollback after clear attempt: {e}")
                 raise
             raise

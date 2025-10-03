@@ -42,4 +42,4 @@ def clear_database(api: LibraryAPI) -> str:
         api.clear_database()
         return "Database cleared successfully."
     except Exception as e:
-        return f"Failed to clear the database: {e}"
+        raise
