@@ -6,10 +6,11 @@ description = "3D scene generation interface"
 requires-python = "==3.10.*"
 
 dependencies = [
+    "accelerate",
     "beartype==0.22.2",
     "colorama==0.4.6",
-    "chromadb"
-    "diffusers==0.35.1",
+    "chromadb",
+    "diffusers==0.32.2",
     "easydict==1.13",
     "huggingface_hub==0.35.3",
     "imageio==2.37.0",
@@ -21,7 +22,7 @@ dependencies = [
     "langgraph==0.6.8",
     "loguru==0.7.3",
     "matplotlib==3.10.6",
-    "numpy==2.2.3",
+    "numpy==2.2.6",
     "objaverse==0.1.7",
     "open3d",
     "pandas==2.3.3",
@@ -35,11 +36,12 @@ dependencies = [
     "rembg==2.0.67",
     "requests==2.32.5",
     "safetensors==0.6.2",
-    "sentence-transformers"
+    "sentencepiece",
+    "sentence-transformers",
     "scipy==1.15.2",
     "tenacity==9.1.2",
     "tqdm==4.67.1",
-    "transformers==4.57.0",
+    "transformers==4.49",
     "trimesh==4.8.3",
     "websockets==15.0.1",
     "redis"
