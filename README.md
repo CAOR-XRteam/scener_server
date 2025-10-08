@@ -147,7 +147,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 **2.2. Run the Ollama Service**
 
-Open a new terminal or a `tmux` session and run the following command to start the Ollama server.
+Run the following command to start the Ollama server.
 
 ```bash
 ollama serve
@@ -155,7 +155,7 @@ ollama serve
 
 **2.3. Pull Required LLM Models**
 
-You must download the specific models required by the project, which are defined in `config.json` under variables with a `_model` suffix. Check the file for the model names. For example, if the config requires `llama3.1`, run:
+You must download the specific models required by the project, which are defined in `config.json` under variables with the `_model` suffix. Check the file for the model names. For example, if the config requires `llama3.1`, run:
 
 ```bash
 ollama pull llama3.1
@@ -176,7 +176,7 @@ The server requires API keys and network configuration, which are managed via an
 2.  **Edit the `.env` file:**
     Open the `.env` file and fill in thhttps://huggingface.co/stabilityai/stable-diffusion-3.5-mediume values for each variable:
     *   `HF_API_KEY`: Your Hugging Face API key (used for text-to-image AI models).
-           You must also ask to be granted access to the stable difussion model, [see](https://huggingface.co/stabilityai/stable-diffusion-3.5-medium).
+           You must also ask to be granted access to the stable difussion model, see [the related stabilityai page](https://huggingface.co/stabilityai/stable-diffusion-3.5-medium).
     *   `WEBSOCKET_HOST`: The host address for the server (e.g., `0.0.0.0`).
     *   `WEBSOCKET_PORT`: The port for the server (e.g., `8080`).
     *   `REDIS_HOST`: The IP address of your Redis server (e.g., `0.0.0.0`).
@@ -201,7 +201,7 @@ The server should now be running and ready to accept WebSocket and Redis connect
 
 ## Troubleshooting
 
-If you receive an error related to gcc compiler while running TRELLIS, run 
+If you receive an error related to gcc compiler while running TRELLIS, run
 
 ```bash
 conda install -c conda-forge gxx_linux-64=11
