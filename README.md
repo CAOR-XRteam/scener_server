@@ -27,7 +27,7 @@ Before proceeding, ensure your system meets the following requirements.
 
 ## Installation
 
-Two installation paths are provided: a pre-configured Conda environment file or a full manual installation of all python dependencies. We strongly recommend users with NVIDIA RTX 5090 GPUs use the provided Conda environment, since the manual package installation is complicated due to incompatible PyTorch/CUDA version required by the TRELLIS library.
+Two installation paths are provided: a pre-configured Conda environment file or a full manual installation of all python dependencies. We strongly recommend users with NVIDIA RTX 50-series GPUs use the provided Conda environment, since the manual package installation is complicated due to incompatible PyTorch/CUDA version required by the TRELLIS library.
 
 ---
 
@@ -76,7 +76,9 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     
     **Take note of the Conda environment you create during their setup process, as you will need to install this project's dependencies into that same environment.**
 
-3.  **Install Project Dependencies:**
+    If you have NVIDIA RTX 50-series GPU, you will have to build all PyTorch related libraries from source so that they are compatible with your PyTorch and CUDA versions. See [this GitHub issue](https://github.com/microsoft/TRELLIS/issues/243) for detailed explanation.
+    
+4.  **Install Project Dependencies:**
     After successfully installing TRELLIS, activate its Conda environment. Then, from the root of this project's directory (`Scener`), run the following command to install the remaining packages:
     ```bash
     pip install -e . -c constraints.txt
