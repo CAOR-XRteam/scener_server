@@ -1,5 +1,4 @@
 from beartype import beartype
-from colorama import Fore
 from langchain_core.tools import tool
 from pathlib import Path
 from pydantic import BaseModel, Field

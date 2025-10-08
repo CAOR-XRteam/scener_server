@@ -2,9 +2,12 @@ import redis.asyncio as redis
 import os
 
 from beartype import beartype
+from dotenv import load_dotenv
 
 from lib import logger
 from colorama import Fore
+
+load_dotenv()
 
 
 @beartype

@@ -1,15 +1,30 @@
+import os
 import torch
 
 from beartype import beartype
-from diffusers import StableDiffusion3Pipeline, EulerDiscreteScheduler
+from diffusers import StableDiffusion3Pipeline
+from dotenv import load_dotenv
+from huggingface_hub import login
+
+load_dotenv()
+
+hf_token = os.getenv("HF_API_KEY")
+
+if hf_token is None:
+    raise RuntimeError(
+        "HF_API_KEY not set. Please export it or put it in your .env file."
+    )
+
+login(token=hf_token)
 
 
 @beartype
 def generate(prompt: str, filename: str):
     model_id = "stabilityai/stable-diffusion-3.5-medium"
 
-    # scheduler = EulerDiscreteScheduler.from_pretrained(model_id, subfolder="scheduler")
-    pipe = StableDiffusion3Pipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+    pipe = StableDiffusion3Pipeline.from_pretrained(
+        model_id, use_auth_token=True, torch_dtype=torch.float16
+    )
     pipe = pipe.to("cuda")
 
     image = pipe(prompt).images[0]

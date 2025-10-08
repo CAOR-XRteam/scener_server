@@ -1,6 +1,10 @@
-from server.api import ServerAPI
 import os
 
+from dotenv import load_dotenv
+
+from server.api import ServerAPI
+
+load_dotenv()
 
 if __name__ == "__main__":
     os.system("clear")
