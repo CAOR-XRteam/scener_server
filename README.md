@@ -94,10 +94,10 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
 
 1.1.  **Install Redis:**
 
-     ```bash
-     sudo apt update
-     sudo apt install redis-server
-     ```
+    ```bash
+    sudo apt update
+    sudo apt install redis-server
+    ```
 
 1.2.  **Configure Redis for Network Access:**
     You must edit the configuration file to allow the server to connect from non-local addresses.
@@ -106,10 +106,10 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
     ```
     Make the following two changes inside the file:
     
-        *   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
-        *   Find the line `protected-mode yes` and change it to `protected-mode no`.
+    *   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
+    *   Find the line `protected-mode yes` and change it to `protected-mode no`.
 
-        > Disabling protected mode without a password is not recommended for production environments.
+    > Disabling protected mode without a password is not recommended for production environments.
 
 1.3.  **Apply Changes and Enable Service:**
     Restart the Redis service to apply the new configuration and enable it to start on boot.
