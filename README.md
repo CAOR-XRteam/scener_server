@@ -31,7 +31,7 @@ Two installation paths are provided: a pre-configured Conda environment file or 
 
 ---
 
-### Method A: Automatic Installation (TODO)
+### Method A: Automatic Installation
 
 1.  **Clone the Repository:**
     ```bash
