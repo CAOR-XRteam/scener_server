@@ -152,7 +152,7 @@ The server requires API keys and network configuration, which are managed via an
 
 2.  **Edit the `.env` file:**
     Open the `.env` file and fill in the values for each variable:
-    *   `HF_API_KEY`: Your Hugging Face API key.
+    *   `HF_API_KEY`: Your Hugging Face API key (used for text-to-image AI models).
     *   `HOST`: The host address for the server (e.g., `0.0.0.0`).
     *   `PORT`: The port for the server (e.g., `8080`).
     *   `REDIS_HOST`: The IP address of your Redis server (e.g., `0.0.0.0`).
