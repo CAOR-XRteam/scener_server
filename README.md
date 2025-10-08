@@ -47,7 +47,7 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     conda env create -f environment-5090.yml
     ```
 
-    For lower generations graphic cards:
+    For lower generations GPUs:
    
     ```bash
     conda env create -f environment-rest.yml
