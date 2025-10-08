@@ -94,10 +94,8 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
 
 1.1.  **Install Redis:**
 
-        ```bash
         sudo apt update
         sudo apt install redis-server
-        ```
 
 1.2.  **Configure Redis for Network Access:**
     You must edit the configuration file to allow the server to connect from non-local addresses.
