@@ -22,9 +22,7 @@ login(token=hf_token)
 def generate(prompt: str, filename: str):
     model_id = "stabilityai/stable-diffusion-3.5-medium"
 
-    pipe = StableDiffusion3Pipeline.from_pretrained(
-        model_id, use_auth_token=True, torch_dtype=torch.float16
-    )
+    pipe = StableDiffusion3Pipeline.from_pretrained(model_id, torch_dtype=torch.float16)
     pipe = pipe.to("cuda")
 
     image = pipe(prompt).images[0]

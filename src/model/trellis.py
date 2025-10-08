@@ -10,11 +10,10 @@ os.environ["SPCONV_ALGO"] = "native"  # Can be 'native' or 'auto', default is 'a
 # 'auto' is faster but will do benchmarking at the beginning.
 # Recommended to set to 'native' if run only once.
 
-import imageio
 from PIL import Image
 
 from TRELLIS.trellis.pipelines import TrellisImageTo3DPipeline
-from TRELLIS.trellis.utils import render_utils, postprocessing_utils
+from TRELLIS.trellis.utils import postprocessing_utils
 
 
 @beartype
@@ -46,20 +45,6 @@ def generate(image_path: Path, image_id: str):
             "cfg_strength": 3,
         },
     )
-    # outputs is a dictionary containing generated 3D assets in different formats:
-    # - outputs['gaussian']: a list of 3D Gaussians
-    # - outputs['radiance_field']: a list of radiance fields
-    # - outputs['mesh']: a list of meshes
-
-    # # Render the outputs
-    # video = render_utils.render_video(outputs["gaussian"][0])["color"]
-    # imageio.mimsave(f"{os.path.dirname(image_path) + object_id}_gs.mp4", video, fps=30)
-    # video = render_utils.render_video(outputs["radiance_field"][0])["color"]
-    # imageio.mimsave(f"{os.path.dirname(image_path) + object_id}_rf.mp4", video, fps=30)
-    # video = render_utils.render_video(outputs["mesh"][0])["normal"]
-    # imageio.mimsave(
-    #     f"{os.path.dirname(image_path) + object_id}_mesh.mp4", video, fps=30
-    # )
 
     # GLB files can be extracted from the outputs
     glb = postprocessing_utils.to_glb(
@@ -67,13 +52,10 @@ def generate(image_path: Path, image_id: str):
         outputs["mesh"][0],
         # Optional parameters
         simplify=0.95,  # Ratio of triangles to remove in the simplification process
-        texture_size=1024,  # Size of the texture used for the GLB
+        texture_size=256,  # Size of the texture used for the GLB
     )
     glb.export(image_path.parent / f"{image_id}.glb")
 
-    # Save Gaussians as PLY files
-    # outputs["gaussian"][0].save_ply(f"{os.path.dirname(image_path) + object_id}.ply")
-
 
 if __name__ == "__main__":
-    generate("steampunk_boat.png", "1")
+    generate(Path("steampunk_boat.png"), "1")
