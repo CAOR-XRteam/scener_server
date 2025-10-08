@@ -87,13 +87,13 @@ After setting up the Python environment, you must install and configure Redis an
 
 Redis is an in-memory data structure store ([learn more](https://redis.io/)) utilized to store serialized scene JSON data.
 
-1.  **Install Redis:**
+1.1  **Install Redis:**
     ```bash
     sudo apt update
     sudo apt install redis-server
     ```
 
-2.  **Configure Redis for Network Access:**
+1.2  **Configure Redis for Network Access:**
     You must edit the configuration file to allow the server to connect from non-local addresses.
     ```bash
     sudo nano /etc/redis/redis.conf
@@ -105,14 +105,14 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
     
     > Disabling protected mode without a password is not recommended for production environments.
 
-3.  **Apply Changes and Enable Service:**
+1.3  **Apply Changes and Enable Service:**
     Restart the Redis service to apply the new configuration and enable it to start on boot.
     ```bash
     sudo systemctl restart redis-server
     sudo systemctl enable redis-server
     ```
 
-4.  **Verify Redis is Running:**
+1.4  **Verify Redis is Running:**
     Check that Redis is listening on port `6379` for all interfaces.
     ```bash
     sudo ss -tuln | grep 6379
@@ -123,18 +123,18 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
 
 Ollama serves the Large Language Models (LLMs).
 
-1.  **Install Ollama:**
+2.1  **Install Ollama:**
     ```bash
     curl -fsSL https://ollama.com/install.sh | sh
     ```
 
-2.  **Run the Ollama Service:**
+2.2  **Run the Ollama Service:**
     Open a new terminal or a `tmux` session and run the following command to start the Ollama server.
     ```bash
     ollama serve
     ```
 
-3.  **Pull Required LLM Models:**
+2.3  **Pull Required LLM Models:**
     You must download the specific models required by the project, which are defined in `config.json` under variables with `_model` suffix. Check the file for the model names. For example, if the config requires `llama3.1`, run:
     ```bash
     ollama pull llama3.1
