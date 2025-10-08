@@ -91,10 +91,11 @@ After setting up the Python environment, you must install and configure Redis an
 Redis is an in-memory data structure store ([learn more](https://redis.io/)) utilized to store serialized scene JSON data.
 
 1.1.  **Install Redis:**
-    ```bash
-    sudo apt update
-    sudo apt install redis-server
-    ```
+
+     ```bash
+     sudo apt update
+     sudo apt install redis-server
+     ```
 
 1.2.  **Configure Redis for Network Access:**
     You must edit the configuration file to allow the server to connect from non-local addresses.
@@ -102,6 +103,7 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
     sudo nano /etc/redis/redis.conf
     ```
     Make the following two changes inside the file:
+    
         *   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
         *   Find the line `protected-mode yes` and change it to `protected-mode no`.
 
