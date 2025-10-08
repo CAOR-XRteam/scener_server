@@ -84,6 +84,8 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     *   `-e .`: Installs the project in "editable" mode.
     *   `-c constraints.txt`: Ensures that package versions adhere to the specified constraints, preventing conflicts.
 
+---
+
 ## Dependency Configuration
 
 After setting up the Python environment, you must install and configure Redis and Ollama.
@@ -92,74 +94,72 @@ After setting up the Python environment, you must install and configure Redis an
 
 Redis is an in-memory data structure store ([learn more](https://redis.io/)) utilized to store serialized scene JSON data.
 
-1.1.  **Install Redis:**
+**1.1. Install Redis**
 
-    ```bash
-    sudo apt update
-    sudo apt install redis-server
-    ```
+```bash
+sudo apt update
+sudo apt install redis-server
+```
 
-1.2.  **Configure Redis for Network Access:**
+**1.2. Configure Redis for Network Access**
 
-    You must edit the configuration file to allow the server to connect from non-local addresses.
+You must edit the configuration file to allow the server to connect from non-local addresses.
 
-    ```bash
-    sudo nano /etc/redis/redis.conf
-    ```
+```bash
+sudo nano /etc/redis/redis.conf
+```
 
-    Make the following two changes inside the file:
+Make the following two changes inside the file:
     
-    *   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
-    *   Find the line `protected-mode yes` and change it to `protected-mode no`.
+*   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
+*   Find the line `protected-mode yes` and change it to `protected-mode no`.
 
-    > Disabling protected mode without a password is not recommended for production environments.
+> **Note:** Disabling protected mode without a password is not recommended for production environments.
 
-1.3.  **Apply Changes and Enable Service:**
+**1.3. Apply Changes and Enable Service**
 
-    Restart the Redis service to apply the new configuration and enable it to start on boot.
+Restart the Redis service to apply the new configuration and enable it to start on boot.
 
-    ```bash
-    sudo systemctl restart redis-server
-    sudo systemctl enable redis-server
-    ```
+```bash
+sudo systemctl restart redis-server
+sudo systemctl enable redis-server
+```
 
-1.4.  **Verify Redis is Running:**
+**1.4. Verify Redis is Running**
 
-    Check that Redis is listening on port `6379` for all interfaces.
+Check that Redis is listening on port `6379` for all interfaces. The expected output should contain `LISTEN` and `0.0.0.0:6379`.
 
-    ```bash
-    sudo ss -tuln | grep 6379
-    ```
-    
-    The expected output should contain `LISTEN` and `0.0.0.0:6379`.
+```bash
+sudo ss -tuln | grep 6379
+```
 
 ### 2. Ollama
 
 Ollama serves the Large Language Models (LLMs).
 
-2.1.  **Install Ollama:**
+**2.1. Install Ollama**
 
-    ```bash
-    curl -fsSL https://ollama.com/install.sh | sh
-    ```
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
 
-2.2.  **Run the Ollama Service:**
+**2.2. Run the Ollama Service**
 
-    Open a new terminal or a `tmux` session and run the following command to start the Ollama server.
+Open a new terminal or a `tmux` session and run the following command to start the Ollama server.
 
-    ```bash
-    ollama serve
-    ```
+```bash
+ollama serve
+```
 
-2.3.  **Pull Required LLM Models:**
+**2.3. Pull Required LLM Models**
 
-    You must download the specific models required by the project, which are defined in `config.json` under variables with `_model` suffix. Check the file for the model names. For example, if the config requires `llama3.1`, run:
+You must download the specific models required by the project, which are defined in `config.json` under variables with a `_model` suffix. Check the file for the model names. For example, if the config requires `llama3.1`, run:
 
-    ```bash
-    ollama pull llama3.1
-    ```
+```bash
+ollama pull llama3.1
+```
 
-    Repeat this for every model listed in the configuration.
+Repeat this for every model listed in the configuration.
 
 ## Environment Variables
 
