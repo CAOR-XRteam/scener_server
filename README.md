@@ -2,16 +2,15 @@
 
 ## Overview
 
-This document outlines the server-side component of the [3D Scene Generation Platform](https://github.com/arteume/Scener), a system designed to enable users to interactively create and modify 3D environments. This server, built on Python, provides an interface to manage WebSocket connections, receive requests from the client-side, forward requests to AI pipelines, structure responses and send data back.
-
-
-We provide detailed instructions for the setup and operation of the server as well as its techincal overview.
+This document outlines the server-side component of the [3D Scene Generation Platform](https://github.com/arteume/Scener), a system designed to enable users to interactively create and modify 3D environments.
 
 The server is a Python-based application responsible for:
 *   Managing persistent WebSocket connections with clients.
 *   Receiving and interpreting requests for 3D scene generation/modification.
 *   Orchestrating and dispatching tasks to various AI generation pipelines.
 *   Structuring and transmitting responses back to the client.
+
+We provide detailed instructions for the setup and operation of the server as well as its techincal overview.
 
 ## Prerequisites
 
