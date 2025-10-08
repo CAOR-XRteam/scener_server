@@ -10,7 +10,7 @@ from colorama import Fore
 @beartype
 class Redis:
     def __init__(self):
-        self.host = os.getenv("HOST", "localhost")
+        self.host = os.getenv("REDIS_HOST", "localhost")
         self.port = int(os.getenv("REDIS_PORT", 6379))
         self.client: redis.Redis | None = None
         logger.info(f"Redis initialized for {self.host}:{self.port}")

@@ -1,6 +1,5 @@
 import os
 from lib import speech_to_text
-from model.black_forest import convert_image_to_bytes
 from server.client import Client
 from lib import logger
 from beartype import beartype

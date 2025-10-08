@@ -6,7 +6,6 @@ from agent.tools.pipeline.td_scene_modification import modify_3d_scene
 from beartype import beartype
 from colorama import Fore
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from model.black_forest import convert_image_to_bytes
 from lib import logger
 from sdk.messages import *
 from agent.tools.pipeline.image_generation import GenerateImageOutput

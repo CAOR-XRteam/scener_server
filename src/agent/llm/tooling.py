@@ -20,7 +20,6 @@ from sdk.messages import (
     OutgoingErrorMessage,
     AppMediaAsset,
 )
-from model.black_forest import convert_image_to_bytes
 from model.trellis import read_glb
 
 
