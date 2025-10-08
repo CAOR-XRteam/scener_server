@@ -197,5 +197,15 @@ Once all previous steps are complete, you can launch the server.
 
 The server should now be running and ready to accept WebSocket and Redis connections.
 
+## Troubleshooting
+
+If you receive an error related to gcc compiler while running TRELLIS, run 
+
+```bash
+conda install -c conda-forge gxx_linux-64=11
+rm -rf ~/.cache/torch_extensions/nvdiffrast_plugin
+```
+in your Conda environment.
+
 ## Technical Architecture
 
