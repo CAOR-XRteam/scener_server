@@ -1,6 +1,6 @@
 # Server (3D Scene Generation Platform)
 
-## 1. Overview
+## Overview
 
 This document provides detailed instructions for the setup and operation of the server component for the [3D Scene Generation Platform](https://github.com/arteume/Scener).
 
@@ -10,7 +10,7 @@ The server is a Python-based application responsible for:
 *   Orchestrating and dispatching tasks to various AI generation pipelines.
 *   Structuring and transmitting responses back to the client.
 
-## 2. Prerequisites
+## Prerequisites
 
 Before proceeding, ensure your system meets the following requirements.
 
@@ -23,7 +23,7 @@ Before proceeding, ensure your system meets the following requirements.
 *   **Conda / Miniconda:** For Python environment management.
 *   **Sudo/root access:** Required for installing system-level dependencies.
 
-## 3. Installation
+## Installation
 
 Two installation paths are provided: a pre-configured Conda environment file or a full manual installation of all python dependencies. We strongly recommend users with NVIDIA RTX 5090 GPUs use the provided Conda environment, since the manual package installation is complicated due to incompatible PyTorch/CUDA version required by the TRELLIS library.
 
@@ -79,11 +79,11 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     *   `-e .`: Installs the project in "editable" mode.
     *   `-c constraints.txt`: Ensures that package versions adhere to the specified constraints, preventing conflicts.
 
-## 4. Dependency Configuration
+## Dependency Configuration
 
 After setting up the Python environment, you must install and configure Redis and Ollama.
 
-### 4.1. Redis Server
+### 1. Redis Server
 
 Redis is an in-memory data structure store ([learn more](https://redis.io/)) utilized to store serialized scene JSON data.
 
@@ -119,7 +119,7 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
     ```
     The expected output should contain `LISTEN` and `0.0.0.0:6379`.
 
-### 4.2. Ollama
+### 2. Ollama
 
 Ollama serves the Large Language Models (LLMs).
 
@@ -141,7 +141,7 @@ Ollama serves the Large Language Models (LLMs).
     ```
     Repeat this for every model listed in the configuration.
 
-## 5. Environment Variables
+## Environment Variables
 
 The server requires API keys and network configuration, which are managed via an `.env` file.
 
@@ -159,7 +159,7 @@ The server requires API keys and network configuration, which are managed via an
     *   `REDIS_HOST`: The IP address of your Redis server (e.g., `0.0.0.0`).
     *   `REDIS_PORT`: The port for your Redis server (default is `6379`).
 
-## 6. Running the Server
+## Running the Server
 
 Once all previous steps are complete, you can launch the server.
 
@@ -175,4 +175,6 @@ Once all previous steps are complete, you can launch the server.
     ```
 
 The server should now be running and ready to accept WebSocket and Redis connections.
+
+## Technical Architecture
 
