@@ -38,12 +38,15 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     ```
 
 2.  **Create the Conda Environment:**
+   
     For NVIDIA RTX 5090 GPUs:
+    
     ```bash
     conda env create -f environment-5090.yml
     ```
 
    For lower generations graphic cards:
+   
     ```bash
     conda env create -f environment-rest.yml
     ```
