@@ -101,6 +101,7 @@ Redis is an in-memory data structure store ([learn more](https://redis.io/)) uti
     Make the following two changes inside the file:
     *   Find the line `bind 127.0.0.1 ::1` and change it to `bind 0.0.0.0`. This makes Redis listen on all available network interfaces.
     *   Find the line `protected-mode yes` and change it to `protected-mode no`.
+
     
     > Disabling protected mode without a password is not recommended for production environments.
 
