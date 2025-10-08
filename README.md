@@ -155,8 +155,8 @@ The server requires API keys and network configuration, which are managed via an
     Open the `.env` file and fill in thhttps://huggingface.co/stabilityai/stable-diffusion-3.5-mediume values for each variable:
     *   `HF_API_KEY`: Your Hugging Face API key (used for text-to-image AI models).
            You must also ask to be granted access to the stable difussion model, [see](https://huggingface.co/stabilityai/stable-diffusion-3.5-medium).
-    *   `HOST`: The host address for the server (e.g., `0.0.0.0`).
-    *   `PORT`: The port for the server (e.g., `8080`).
+    *   `WEBSOCKET_HOST`: The host address for the server (e.g., `0.0.0.0`).
+    *   `WEBSOCKET_PORT`: The port for the server (e.g., `8080`).
     *   `REDIS_HOST`: The IP address of your Redis server (e.g., `0.0.0.0`).
     *   `REDIS_PORT`: The port for your Redis server (default is `6379`).
 
