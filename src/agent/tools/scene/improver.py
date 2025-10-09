@@ -69,6 +69,6 @@ def improve_prompt(user_input: str, temperature: int = 0) -> str:
 
 
 if __name__ == "__main__":
-    user_input = "a cat on a couch in a living room"
+    user_input = "a cat"
     superprompt = improve_prompt(user_input)
     print(superprompt)

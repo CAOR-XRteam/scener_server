@@ -64,18 +64,6 @@ class Tool_callback(BaseCallbackHandler):
         tool_output = json.loads(output.content)
 
         match tool_name:
-            case "generate_image":
-                payload = GenerateImageOutput(**tool_output)
-                self.structured_response = OutgoingGeneratedImagesMessage(
-                    text=payload.text,
-                    assets=[
-                        AppMediaAsset(
-                            id=payload.data.id,
-                            filename=payload.data.path,
-                            data=convert_image_to_bytes(payload.data.path),
-                        )
-                    ],
-                )
             case "generate_3d_object":
                 payload = Generate3DObjectOutput(**tool_output)
                 self.structured_response = OutgoingGenerated3DObjectsMessage(

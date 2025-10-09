@@ -5,8 +5,6 @@ from library import db
 from library.manager.asset import Asset
 from library.manager.library import AssetFinder, NullableAppAsset
 from library.manager.library import Library
-from library.sql.table import SQL as SQL_table
-from library.sql.connection import SQL as SQL_conn
 
 
 @beartype
