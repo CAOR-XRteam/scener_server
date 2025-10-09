@@ -241,7 +241,7 @@ A reconstruction model that generates a 3D mesh asset from a single 2D source im
 The core functionalities are encapsulated within dedicated pipelines, which orchestrate the interactions between the AI models and other system components.
 
 #### `generate_image` Pipeline
-This pipeline handles the direct generation of a 2D image from a text prompt.
+This pipeline handles the direct generation of a 2D image from a text prompt. The workflow:
 
 1.  Accepts a user-provided text prompt.
 2.  Applies the **Prompt Improvement** process to enhance the prompt's detail and clarity for the diffusion model.
@@ -249,7 +249,7 @@ This pipeline handles the direct generation of a 2D image from a text prompt.
 4.  Returns the resulting image binary and associated metadata.
 
 #### `generate_3d_object` Pipeline
-This pipeline manages the creation of a single 3D object, including a library-check optimization.
+This pipeline manages the creation of a single 3D object, including a library-check optimization. The workflow:
 
 1.  Accepts a user-provided text prompt.
 2.  Applies the **Prompt Improvement** process.
@@ -263,7 +263,7 @@ This pipeline manages the creation of a single 3D object, including a library-ch
     e. The final binary (`.glb`) and its metadata (including asset IDs) are returned.
 
 #### `generate_3d_scene` Pipeline
-This pipeline constructs a complete 3D scene by decomposing the prompt and assembling the required assets.
+This pipeline constructs a complete 3D scene by decomposing the prompt and assembling the required assets. The workflow:
 
 1.  Accepts a high-level text prompt describing a scene.
 2.  Performs an **Initial Scene Decomposition** to identify the required objects and their properties.
@@ -273,7 +273,7 @@ This pipeline constructs a complete 3D scene by decomposing the prompt and assem
 6.  Returns all required asset binaries (`.glb` files) and a comprehensive scene description in JSON format.
 
 #### `modify_3d_scene` Pipeline
-This pipeline applies incremental changes to an existing scene based on a user's modification request.
+This pipeline applies incremental changes to an existing scene based on a user's modification request. The workflow:
 
 1.  Receives a modification request and fetches the current scene state from the Unity client.
 2.  The **Scene Modification** parser analyzes the request to determine the intended changes (e.g., add, remove, or alter objects).
