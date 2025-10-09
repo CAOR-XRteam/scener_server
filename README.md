@@ -441,8 +441,128 @@ The module also exposes a set of endpoints for maintaining the integrity and lif
 
 ### Redis
 
-### SDK
+This module integrates a Redis in-memory database to serve as a high-throughput, low-latency, real-time data store. Its primary responsibility is to maintain the canonical state of the current scene graph, acting as a shared memory bridge between the Unity client and the Python backend. By using Redis, both systems can efficiently read and update the scene state.
+
+
+-   Redis is employed as a key-value store, where each key corresponds to a unique user session.
+-   The state of an entire scene is serialized into a single JSON string. This JSON object is stored as the value associated with a user's session key.
+-   The database is indexed by `user_id`. This design provides natural namespacing, allowing for multiple concurrent user sessions to store and retrieve their independent scene graphs without data collision or interference.
+
+#### Operational Workflows
+
+The interaction between Unity, Python, and Redis follows a precise workflow to ensure state consistency.
+
+##### 1. Unity → Python: State Synchronization
+This guarantees that the backend always has an up-to-date snapshot of the scene as it exists on the client.
+
+-   **Trigger:** Any modification to the active scene within the Unity client (e.g., an object is moved, a material is changed, an asset is deleted).
+-   **Serialization:** The Unity client traverses its internal scene hierarchy and serializes the complete graph into a standardized JSON format.
+-   **Write Operation:** The client issues an asynchronous write command to the Redis instance. The key is the active `user_id`, and the value is the newly generated JSON payload. This operation overwrites the previous state for that user.
+
+This ensures that the Python backend's `modify_3d_scene` pipeline has access to the most recent, canonical representation of the scene when calculating subsequent modifications.
+
+##### 2. Python → Unity: Modification Pipeline Context
+This enables the backend to perform stateful modifications based on the client's current reality.
+
+-   **Trigger:** A user submits a request to modify the scene (e.g., "add a tree next to the house").
+-   **Read Operation:** The `modify_3d_scene` pipeline retrieves the current scene graph by issuing an asynchronous read command to Redis, using the `user_id` from the request context.
+-   **Contextualization:** This retrieved JSON snapshot serves as the foundational "current scene" input.
+
+All generated JSON Patches are calculated against the most recent version of the scene, preventing race conditions and ensuring that modifications are applied correctly and predictably.
+
+The module is implemented asynchronously using the `redis.asyncio` library. This allows for non-blocking read and write operations, ensuring that the main application event loop is not halted while waiting for database I/O. This is critical for building a responsive and scalable backend capable of handling numerous concurrent requests.
 
 ### Websocket
 
+This module implements an asynchronous WebSocket server responsible for orchestrating the entire backend, including hosting the AI agent and the Redis database connection pool. Its primary function is to manage persistent, bidirectional communication channels with multiple concurrent clients and to interface with an internal message queuing system for robust data handling.
+
+Built upon Python's `asyncio` and `websockets` libraries.
+
+#### Architecture
+
+##### 1. Client Session Encapsulation
+The central architectural unit is the `Client` class. This object-oriented design encapsulates the entire state and context of an individual client session. Each `Client` instance manages:
+-   **WebSocket Connection:** The active network connection object for the client.
+-   **Unique Session Identifier:** A universally unique identifier (UUID) assigned upon connection to uniquely track the session across the system.
+-   **Dedicated I/O Queues:** Two dedicated `asyncio.Queue` instances (one for input, one for output) that decouple network I/O from the application's business logic.
+
+##### 2. Decoupled Message Queuing
+The system uses dedicated input and output queues per client.
+-   **Input Queue:** The listener receives raw data and places the resulting message object onto this queue. The messsage then deserialized and sent to the AI agent's processing loop from this queue independently.
+-   **Output Queue:** When the AI agent generates a response, it places the message object onto this queue. A separate network writer task consumes from the queue, serializes the message, and sends it over to the client.
+
+##### 3. Data Serialization with Protocol Buffers (Protobuf)
+All messages exchanged between the server and clients are serialized using Protocol Buffers. This choice provides significant advantages over text-based formats like JSON:
+-   **Performance:** Protobuf's binary format results in smaller message payloads and faster serialization/deserialization, reducing network latency and CPU overhead.
+-   **Type Safety:** The use of a predefined schema ensures that both the client and server adhere to a strict message structure, eliminating a common class of runtime errors.
+-   **Flexibility:** Protobuf allows to evolve data schemas over time without breaking existing clients or servers.
+
+#### Operational Workflow
+
+The server operates on a model of cooperative multitasking, running independent, concurrent loops for each client's I/O operations.
+
+##### Inbound Message Flow (Client to Server)
+1.  An asynchronous listener task continuously awaits incoming data on the client's WebSocket stream.
+2.  Upon receiving a binary frame, the data is placed into the client's dedicated input queue.
+3.  The data then parsed and deserialized from the Protobuf format into a structured Python object.
+
+##### Outbound Message Flow (Server to Client)
+1.  A response message, generated by the AI agent or another backend service, is placed into the target client's output queue.
+2.  An independent, asynchronous sender task, which continuously monitors the output queue, retrieves the message.
+3.  The message object is serialized into a Protobuf binary payload.
+4.  The binary payload is transmitted over the client's WebSocket connection.
+
+#### Connection Lifecycle Management
+
+The module implements handling for the client connection lifecycle to ensure graceful operation and prevent resource leaks. This is managed by a `closing` procedure that is triggered upon client disconnection or server shutdown.
+
+-   **Task Termination:** It gracefully cancels the independent inbound and outbound `asyncio` tasks associated with the client.
+-   **WebSocket Closure:** It properly closes the underlying WebSocket connection, sending the appropriate close frames.
+-   **Queue Flushing:** It clears any pending messages remaining in the input or output queues to free up memory.
+-   **Deconnection:** It signals a central connection manager to remove the client's session from the active pool, formally ending the session.
+
+### SDK
+
+Of course. Here is the translated and technically expanded description of the data models and serialization module, formatted in the same rigorous style for your documentation.
+
+***
+
+### Data Models & Serialization Protocol
+
+This module defines the data structures that facilitate all communication between the Python backend and the Unity client using **Protocol Buffers (Protobuf)** as the serialization protocol.
+
+The module provides two primary categories of data structures:
+
+#### 1. Communication Message Structures
+
+These structures represent the high-level message payloads that are exchanged over the WebSocket connection. They are designed to encapsulate specific commands and responses within the Python-Unity communication protocol.
+
+Each message type is implemented as a class that includes dedicated serialization and deserialization methods (`to_proto()` and `from_proto()`). These methods act as a translation layer, converting the application's rich Python objects into their Protobuf-generated counterparts for network transport, and vice-versa.
+
+The incoming message types include:
+-   **`TEXT`:** Textual incoming message.
+-   **`AUDIO`:** Vocal incoming message.
+-   **`ERROR`:** invoked in case of Unity-side error.
+
+The outgoing message types include:
+-   **`SESSION_START`:** Textual incoming message.
+-   **`UNRELATED_RESPONSE`:** Vocal incoming message.
+-   **`GENERATE_3D_OBJECT`** = "generate_3d_object"
+-   **`GENERATE_3D_SCENE`** = "generate_3d_scene"
+-   **`MODIFY_3D_SCENE`** = "modify_3d_scene"
+-   **`CONVERT_SPEECH`** = "convert_speech"
+-   **`ERROR`** = "error"
+
+#### 2. Scene Graph Data Structures
+
+This category of structures provides a detailed, hierarchical model of all objects and elements that constitute a 3D scene. These models are meticulously designed to mirror the structure of Unity's runtime scene graph, enabling a direct deserialization within the Unity client.
+
+These structures encapsulate all necessary spatial and semantic information, including:
+
+-   **`SceneNode`:** 
+-   **`Light`:** Represents a light source in the scene, defining its type (e.g., Point, Directional, Spot), color, and intensity.
+-   **`Skybox`:** Contains configuration data for the scene's skybox, typically referencing a specific skybox material.
+
 ### LLMs and AI models choice
+
+### Project Code Organization
