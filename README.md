@@ -211,3 +211,155 @@ in your Conda environment.
 
 ## Technical Architecture
 
+### AI Model Components
+
+The system is composed of a modular stack of specialized AI models, each responsible for a distinct stage of the generation process.
+
+#### 1. Voice-to-Text
+A deep learning model for Automatic Speech Recognition (ASR) that transcribes audio input into text.
+
+-   **Current Implementation:** [OpenAI Whisper](https://github.com/openai/whisper)
+-   **Input:** Raw audio data (byte stream).
+-   **Output:** A textual transcript of the audio input.
+
+#### 2. Text-to-Image
+A latent diffusion model that synthesizes a 2D image based on a descriptive text prompt.
+
+-   **Current Implementation:** [Stabilityai Stable-Diffusers-3.5-Medium](https://huggingface.co/stabilityai/stable-diffusion-3-medium)
+-   **Input:** A string of text (the prompt).
+-   **Output:** A 2D raster image (byte stream).
+
+#### 3. Image-to-3D
+A reconstruction model that generates a 3D mesh asset from a single 2D source image.
+
+-   **Current Implementation:** [Microsoft TRELLIS](https://github.com/microsoft/TRELLIS)
+-   **Input:** A 2D image (byte stream).
+-   **Output:** A 3D model asset (byte stream, typically in a format like `glb` before conversion).
+
+### Generative Pipelines
+
+The core functionalities are encapsulated within dedicated pipelines, which orchestrate the interactions between the AI models and other system components.
+
+#### `generate_image` Pipeline
+This pipeline handles the direct generation of a 2D image from a text prompt.
+
+1.  Accepts a user-provided text prompt.
+2.  Applies the **Prompt Improvement** process to enhance the prompt's detail and clarity for the diffusion model.
+3.  Invokes the **Text-to-Image model** to generate the 2D image.
+4.  Returns the resulting image binary and associated metadata.
+
+#### `generate_3d_object` Pipeline
+This pipeline manages the creation of a single 3D object, including a library-check optimization.
+
+1.  Accepts a user-provided text prompt.
+2.  Applies the **Prompt Improvement** process.
+3.  Queries the asset library (database) for a pre-existing asset that semantically matches the prompt.
+4.  **Cache Hit:** If a matching asset is found, it is retrieved and returned directly.
+5.  **Cache Miss:** If no suitable asset exists:
+    a. The pipeline invokes the **Text-to-Image** model to generate a 2D concept image.
+    b. The generated image is passed to the **Image-to-3D** model to create the 3D asset.
+    c. The raw 3D output is post-processed and converted into the GLB file format (`.glb`).
+    d. The final binary (`.glb`) and its metadata (including asset IDs) are returned.
+
+#### `generate_3d_scene` Pipeline
+This pipeline constructs a complete 3D scene by decomposing the prompt and assembling the required assets.
+
+1.  Accepts a high-level text prompt describing a scene.
+2.  Performs an **Initial Scene Decomposition** to identify the required objects and their properties.
+3.  Queries the asset library to retrieve existing 3D models for the identified objects.
+4.  For any missing objects, the `generate_3d_object` pipeline is invoked to create them.
+5.  Executes a **Final Scene Decomposition** process, arranging all assets according to the decomposed scene graph (defining positions, rotations, and scales).
+6.  Returns all required asset binaries (`.glb` files) and a comprehensive scene description in JSON format.
+
+#### `modify_3d_scene` Pipeline
+This pipeline applies incremental changes to an existing scene based on a user's modification request.
+
+1.  Receives a modification request and fetches the current scene state from the Unity client.
+2.  The **Scene Modification** parser analyzes the request to determine the intended changes (e.g., add, remove, or alter objects).
+3.  Regenerates or fetches new 3D assets via the `generate_3d_object` pipeline if required by the modification.
+4.  Returns any new asset binaries and a JSON patch object describing the scene modifications.
+
+#### Core Sub-Modules
+
+##### Prompt Improvement
+
+This module is responsible for the programmatic refinement and augmentation of user-provided text prompts to optimize them for downstream generative models.
+
+-   **Current Implementation:** A large language model fine-tuned for instruction-following and detail expansion (currently llama 3.1).
+
+###### Core Functions
+
+1.  **Semantic Enrichment:** The module enriches sparse or ambiguous user inputs with additional descriptive details, stylistic keywords and structural context. This enhances the conceptual understanding for the generation models, leading to more accurate and coherent outputs.
+
+2.  **Constraint Injection for Image-to-3D Pipeline:** The module systematically injects specific directives into the prompt to ensure the generated 2D image adheres to the strict input requirements of the Image-to-3D model. This is critical for maximizing the quality of the 3D reconstruction. The enforced constraints include:
+    -   **Isolated Subject:** The object must be rendered on a plain, empty, or transparent background, completely detached from any surrounding environment.
+    -   **Standard Object Perspective:** For non-architectural objects, a direct, front-facing camera perspective is enforced.
+    -   **Architectural/Room Perspective:** For room-like structures, a distant 3/4 top-down exterior perspective is enforced to capture the overall layout effectively.
+
+##### Initial Scene Decomposition
+
+This module performs the initial lexical and semantic analysis of a user's scene description, parsing it into a structured, intermediate representation.
+
+-   **Current Implementation:** A large language model with strong reasoning and code-generation capabilities (currently deepseek-r1:32B).
+
+The model analyzes the natural language prompt to perform entity extraction, identifying all discrete objects and elements within the scene. Each extracted component is then annotated with a type classification:
+
+-   **`dynamic`:** Represents complex objects that require generation via the full Text-to-Image and Image-to-3D pipeline.
+-   **`primitive`:** Represents simple geometric shapes (e.g., cube, sphere, plane) that can be instantiated directly using Unity's built-in primitive objects, bypassing the need for a generative model.
+
+##### Final Scene Decomposition
+
+This module is responsible for serializing the intermediate list of components from the initial decomposition into a complete, hierarchical scene graph formatted in JSON.
+
+-   **Current Implementation:** A large language model with strong reasoning and code-generation capabilities, currently (currently deepseek-r1:32B).
+
+The model converts the decomposed elements into a structured JSON object that is directly ingestible by the Unity client for scene reconstruction. This JSON file meticulously defines all aspects of the scene, including:
+
+-   **Global Settings:** Skybox configuration and ambient lighting parameters.
+-   **Object Hierarchy:** Parent-child relationships between all scene objects.
+-   **Object Transforms:** Precise position, rotation, and scale data for each object.
+-   **Asset Mapping:** Links between scene objects and their corresponding 3D asset IDs.
+
+##### Scene Modification
+
+This module enables stateful, incremental updates to an existing 3D scene by computing a differential patch based on a user's modification request.
+
+-   **Current Implementation:** A large language model with strong reasoning and code-generation capabilities, currently (currently deepseek-r1:32B).
+
+The module takes two inputs: the user's raw modification prompt (e.g., "make the car red" or "add a tree next to the house") and the current scene state as a complete JSON object. It then performs a comparative analysis to generate a **JSON Patch** object. This patch describes the minimal set of atomic operations (add, remove, replace) required to transform the current scene state into the desired new state. This approach ensures efficient state synchronization by minimizing data transfer between the server and the Unity client and efficient deserialization.
+
+### Agent
+
+#### ReAct Agent (LangChain + devstral)
+The system's control logic is managed by an intelligent agent built on the **ReAct (Reasoning and Acting)** architecture. This module utilizes the **devstral:24b** Large Language Model, orchestrated via the LangChain framework. The agent is engineered with a specialized system prompt to function as a high-level orchestrator, interpreting user requests and delegating them to the appropriate generative pipelines or database management tools.
+
+#### Supported Tasks
+The agent is exposed to a set of predefined tools that correspond to described pipelines, enabling it to perform a range of actions.
+
+**Generative and Editing Tools:**
+-   `generate_3d_asset`: Invokes the pipeline to create a single 3D object.
+-   `generate_3d_scene`: Invokes the pipeline to construct a full 3D scene.
+-   `modify_3d_scene`: Invokes the pipeline to apply changes to the current scene.
+
+Agent also disposes several database manipulation tools.
+
+**Database Management Tools:**
+-   `delete_asset_by_id`: Removes a specific asset from the library.
+-   `clear_database`: Wipes all assets from the library.
+
+#### ReAct Execution Loop
+The agent operates on a continuous **Thought-Action-Observation** cycle to fulfill user requests:
+
+1.  **Thought:** The LLM analyzes the user input and its internal state to comprehend the underlying intent. It reasons about the necessary steps and formulates a plan of action, deciding which tool to use.
+2.  **Action:** The agent selects the most appropriate tool (e.g., `generate_3d_scene`) and determines its input parameters based on its reasoning.
+3.  **Observation:** The selected tool executes its task and returns a result (e.g., a success message with asset IDs, an error, or data). This observation is fed back to the LLM, closing the loop. The agent then uses this new information to assess the outcome and plan its next thought or generate a final response to the user.
+
+### Asset Finder
+
+### Library
+
+### Redis
+
+### Websocket
+
+### LLMs and AI models choice
