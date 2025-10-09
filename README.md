@@ -384,7 +384,7 @@ This is the lowest-level component, acting as a lightweight wrapper around the s
     -   **Connection Management:** Manages the lifecycle of the database connection, ensuring it is opened on application startup and closed gracefully on shutdown.
     -   **Schema Initialization:** On initialization, it programmatically executes the `CREATE TABLE IF NOT EXISTS` statement to ensure the database schema is present and correctly configured.
     -   **Transactional Integrity:** All write operations (INSERT, UPDATE, DELETE) are executed within atomic transactions (`BEGIN`, `COMMIT`, `ROLLBACK`). This guarantees that the database remains in a consistent state, even in the event of an error (ACID compliance).
-    -   **Query Execution:** Provides a set of generic, parameterized methods for executing raw SQL queries and fetching results (`execute_query`, `fetch_one`, `fetch_all`), preventing SQL injection vulnerabilities.
+    -   **Query Execution:** Provides a set of generic, parameterized methods for executing raw SQL queries.
 
 ##### 2. Asset Management
 This layer is wrapped around the database module and encapsulates the logic for asset manipulation. It translates high-level application concepts into specific database operations.
