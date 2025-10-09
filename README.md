@@ -414,20 +414,20 @@ The Asset Finder module serves as a retrieval and caching layer for the 3D asset
 
 The process of finding an asset by its description follows a systematic, multi-stage pipeline:
 
-1.  **Stage 1: Semantic Retrieval (Coarse-Grained Search):**
+1.  **Semantic Retrieval (Coarse-Grained Search):**
     -   The input text description is first converted into a vector embedding using the sentence-transformer model.
     -   The ChromaDB vector store is queried to retrieve the top-k (e.g., 5) most semantically similar assets from the entire library. This initial step rapidly narrows the search space from thousands of potential assets to a handful of relevant candidates.
 
-2.  **Stage 2: Relevance Filtering:**
+2.  **Relevance Filtering:**
     -   The candidates returned by the vector search are evaluated against a strict relevance score threshold (currently configured at `0.95`).
     -   Any candidate whose similarity score falls below this threshold is immediately discarded. This step ensures that only high-confidence matches proceed to the next, more computationally intensive stage.
 
-3.  **Stage 3: LLM Re-Ranking (Fine-Grained Verification):**
+3.  **LLM Re-Ranking (Fine-Grained Verification):**
     -   If one or more candidates pass the relevance filter, their full metadata is retrieved from the in-memory map.
     -   These high-confidence candidates are then presented to the LLM Re-Ranking Engine.
     -   The LLM performs a final, nuanced comparison, effectively "cross-examining" the candidates against the original query to select the single best match based on a deep understanding of attributes, context, and intent.
 
-4.  **Stage 4: Final Decision:**
+4.  **Final Decision:**
     -   If the LLM identifies a definitive match, that asset is returned, and the generation pipeline is bypassed.
     -   If the LLM concludes that none of the candidates are a sufficiently close match, it returns a null result, signaling the system to proceed with generating a new asset.
 
