@@ -258,8 +258,9 @@ This pipeline manages the creation of a single 3D object, including a library-ch
 5.  **Cache Miss:** If no suitable asset exists:
     a. The pipeline invokes the **Text-to-Image** model to generate a 2D concept image.
     b. The generated image is passed to the **Image-to-3D** model to create the 3D asset.
-    c. The raw 3D output is post-processed and converted into the GLB file format (`.glb`).
-    d. The final binary (`.glb`) and its metadata (including asset IDs) are returned.
+    c. The generated asset is added in the asset database.
+    d. The raw 3D output is post-processed and converted into the GLB file format (`.glb`).
+    e. The final binary (`.glb`) and its metadata (including asset IDs) are returned.
 
 #### `generate_3d_scene` Pipeline
 This pipeline constructs a complete 3D scene by decomposing the prompt and assembling the required assets.
@@ -352,13 +353,95 @@ The agent operates on a continuous **Thought-Action-Observation** cycle to fulfi
 
 1.  **Thought:** The LLM analyzes the user input and its internal state to comprehend the underlying intent. It reasons about the necessary steps and formulates a plan of action, deciding which tool to use.
 2.  **Action:** The agent selects the most appropriate tool (e.g., `generate_3d_scene`) and determines its input parameters based on its reasoning.
-3.  **Observation:** The selected tool executes its task and returns a result (e.g., a success message with asset IDs, an error, or data). This observation is fed back to the LLM, closing the loop. The agent then uses this new information to assess the outcome and plan its next thought or generate a final response to the user.
+3.  **Observation:** The selected tool executes its task and returns a result. This observation is fed back to the LLM, closing the loop. The agent then uses this new information to assess the outcome and plan its next thought or generate a final response to the user.
 
-### Asset Finder
+### Asset Library
 
-### Library
+This module is an asset management subsystem backed by a local SQLite database. Its purpose is to serve as a durable, queryable repository for the metadata associated with all 2D and 3D assets.
+
+This subsystem provides a data store that enables the **Asset Finder** to perform its caching and retrieval functions, thereby preventing the redundant generation of assets.
+
+#### Database Schema
+
+The subsystem utilizes a single, well-defined table named `assets` within the SQLite database. The schema is designed for simplicity and query performance, storing all essential metadata required for asset identification, retrieval, and reconstruction.
+
+| Column | Data Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | PRIMARY KEY, NOT NULL | A unique identifier for the asset within the database. |
+| `name` | TEXT | NOT NULL | A human-readable name or title for the asset. |
+| `description` | TEXT | NULL | A detailed textual description used for semantic search. |
+| `image` | TEXT | NULL | The absolute or relative file path to the source 2D image. |
+| `mesh` | TEXT | NULL | The file path to the generated 3D model (`.glb`).
+
+#### Components
+
+The subsystem is implemented using a clean, multi-layered architecture to separate concerns, enhance maintainability, and ensure robustness.
+
+##### 1. Database Abstraction
+This is the lowest-level component, acting as a lightweight wrapper around the standard `sqlite3` Python library. It abstracts away all raw SQL queries and direct database interactions.
+
+-   **Functions:**
+    -   **Connection Management:** Manages the lifecycle of the database connection, ensuring it is opened on application startup and closed gracefully on shutdown.
+    -   **Schema Initialization:** On initialization, it programmatically executes the `CREATE TABLE IF NOT EXISTS` statement to ensure the database schema is present and correctly configured.
+    -   **Transactional Integrity:** All write operations (INSERT, UPDATE, DELETE) are executed within atomic transactions (`BEGIN`, `COMMIT`, `ROLLBACK`). This guarantees that the database remains in a consistent state, even in the event of an error (ACID compliance).
+    -   **Query Execution:** Provides a set of generic, parameterized methods for executing raw SQL queries and fetching results (`execute_query`, `fetch_one`, `fetch_all`), preventing SQL injection vulnerabilities.
+
+##### 2. Asset Management
+This layer is wrapped around the database module and encapsulates the logic for asset manipulation. It translates high-level application concepts into specific database operations.
+
+-   **Functions:**
+    -   **CRUD Operations:** Provides different functions for performing Create, Read, Update, and Delete operations on asset records. Methods include, for example, `add_asset()`, `get_asset_by_id()`, `delete_asset()`.
+    -   **Utility Operations:** Provides different high-level functions for comprehensive retrieval and database population.
+
+### Asset Finder & Library Cache
+
+The Asset Finder module serves as a retrieval and caching layer for the 3D asset library. Its primary function is to query the existing asset database to find a suitable match for a given text prompt, thereby preventing the computationally expensive process of redundant asset generation. This is achieved through a multi-stage search and verification process that combines high-speed vector search with LLM-based re-ranking.
+
+#### Components
+
+1.  **Persistent Vector Database (ChromaDB):**
+    -   This component stores the semantic vector representations (embeddings) of all asset descriptions. It enables extremely fast and scalable similarity searches, allowing the system to quickly identify a list of potential candidates based on their semantic proximity to a user's query. 
+    -   The system utilizes a sentence-transformer model (currently `all-MiniLM-L6-v2`) to generate dense vector embeddings from the text descriptions of the assets. This model is optimized for high-quality semantic representation and computational efficiency.
+
+2.  **LLM Re-Ranking Engine:**
+    -   A large language model engineered for advanced reasoning and instruction-following (currently devstral).
+    -   The LLM acts as a final, high-precision arbiter. Unlike the vector search, which compares embeddings in a mathematical space, the LLM performs a deep contextual analysis. It receives a small, pre-filtered list of the most promising candidates and is tasked with making the definitive selection of the single best match by cross-examining the nuances of the target prompt against each candidate's description. The engine is guided by a highly specific system prompt.
+
+3.  **In-Memory Asset Map:**
+    -  This component is a key-value hash map that holds the complete metadata for every asset in the library, indexed by its unique ID. It provides instantaneous lookups for full asset data once a candidate's ID has been identified by the search pipeline.
+
+#### Asset Retrieval Workflow
+
+The process of finding an asset by its description follows a systematic, multi-stage pipeline:
+
+1.  **Stage 1: Semantic Retrieval (Coarse-Grained Search):**
+    -   The input text description is first converted into a vector embedding using the sentence-transformer model.
+    -   The ChromaDB vector store is queried to retrieve the top-k (e.g., 5) most semantically similar assets from the entire library. This initial step rapidly narrows the search space from thousands of potential assets to a handful of relevant candidates.
+
+2.  **Stage 2: Relevance Filtering:**
+    -   The candidates returned by the vector search are evaluated against a strict relevance score threshold (currently configured at `0.95`).
+    -   Any candidate whose similarity score falls below this threshold is immediately discarded. This step ensures that only high-confidence matches proceed to the next, more computationally intensive stage.
+
+3.  **Stage 3: LLM Re-Ranking (Fine-Grained Verification):**
+    -   If one or more candidates pass the relevance filter, their full metadata is retrieved from the in-memory map.
+    -   These high-confidence candidates are then presented to the LLM Re-Ranking Engine.
+    -   The LLM performs a final, nuanced comparison, effectively "cross-examining" the candidates against the original query to select the single best match based on a deep understanding of attributes, context, and intent.
+
+4.  **Stage 4: Final Decision:**
+    -   If the LLM identifies a definitive match, that asset is returned, and the generation pipeline is bypassed.
+    -   If the LLM concludes that none of the candidates are a sufficiently close match, it returns a null result, signaling the system to proceed with generating a new asset.
+
+#### Database Management API
+
+The module also exposes a set of endpoints for maintaining the integrity and lifecycle of the ChromaDB database:
+
+-   **Asset Deletion:** Provides a function to remove a specific asset by its ID. This operation ensures the asset is purged from both the persistent vector store (ChromaDB) and the in-memory asset map..
+-   **Database Purge:** Provides a utility to completely clear all assets from the database, useful for system resets or maintenance tasks.
+
 
 ### Redis
+
+### SDK
 
 ### Websocket
 
