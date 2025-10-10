@@ -582,6 +582,9 @@ A polymorphic data structure representing a component attached to a `SceneObject
 -   **`Light`**: Represents a light source in the scene. Identical to Unity's light definitions.
 
 ### General Workflow Illustration
+
+We illustrate general workflow with `generate_3d_scene` pipeline example.
+
 ```mermaid
 sequenceDiagram
     actor User
