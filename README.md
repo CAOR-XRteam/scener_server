@@ -664,7 +664,7 @@ sequenceDiagram
     note over Scene: After rendering, client updates its state in Redis.
     Scene->>SDK: Serialize current scene
     SDK-->>Redis: Write current scene JSON under session_id key
-
+```
 
 ### LLMs and AI models choice
 
