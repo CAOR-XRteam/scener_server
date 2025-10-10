@@ -581,6 +581,91 @@ A polymorphic data structure representing a component attached to a `SceneObject
     -   **`id`** (`string`): A foreign key identifier that links this component to a specific 3D asset sent in a `GENERATE_3D_OBJECT` message. The Unity client uses this ID to retrieve the correct mesh and annotate generated objects.
 -   **`Light`**: Represents a light source in the scene. Identical to Unity's light definitions.
 
+### General Workflow Illustration
+```mermaid
+sequenceDiagram
+    actor User
+    
+    box Client (Unity)
+        participant UI as User Interface
+        participant SDK as Client SDK
+        participant Scene as Unity Scene Logic
+        participant Redis as Redis Database
+    end
+
+    box Server (Python)
+        participant WS as WebSocket Server
+        participant Agent as ReAct Agent
+        participant Pipelines as Core Pipelines
+        participant Models as AI Models
+        participant AssetFinder as Asset Finder
+        participant Library as Asset Library (SQLite)
+    end
+    
+    participant Redis as Redis DB
+
+    %% 1. User Input and ASR
+    User->>UI: Speaks "Create a room with a cat"
+    UI->>SDK: Records voice and converts to bytes
+    SDK->>WS: Sends [AUDIO] Protobuf message
+    WS->>Models: New Request (Audio) -- Transcribe
+    Models-->>WS: Transcription complete
+    Models->>Agent: "Create a room with a cat"
+    
+    %% 2. Echo Transcription to User
+    WS->>SDK: Sends [CONVERT_SPEECH] Protobuf message
+    SDK->>UI: display text("Create a room with a cat")
+    UI->>User: Shows transcribed text
+
+    %% 3. Agent Executes Scene Generation
+    note over Agent: Thought: User wants to generate a scene. Action: Run generate_3d_scene pipeline.
+    Agent->>Pipelines: generate_3d_scene("Create a room with a cat")
+
+    %% 4. Inside the Pipeline - Decomposition and Asset Finding
+    Pipelines->>Models: Initial Decomposition (LLM)
+    Models-->>Pipelines: Required Assets: ["cat"]
+        
+        %% 5. Asset Generation Sub-Workflow
+        note over Pipelines: Triggering generate_3d_object sub-pipeline
+        Pipelines->>Models: Prompt Improver (LLM)
+        Models-->>Pipelines: "Big fluffy persian can with orange spots and blue eyes, medium size, big nose. Placed on a white and empty background. Completely detached from surroundings. "
+        Pipelines->>AssetFinder: find_by_description("...")
+    alt Asset Cache HIT
+        AssetFinder-->>Pipelines: Found Asset ID: "asset-cat"
+    else Asset Cache MISS
+        AssetFinder-->>Pipelines: No suitable asset found
+        Pipelines->>Models: text_to_image("...")
+        Models-->>Pipelines: 2D Image Bytes
+        Pipelines->>Models: image_to_3d(image_bytes)
+        Models-->>Pipelines: 3D Mesh Bytes (.glb)
+        
+        %% 6. Storing the New Asset
+        Pipelines->>Library: add_asset(metadata, paths)
+        Library-->>Pipelines: New Asset ID: "asset-cat"
+        Pipelines->>AssetFinder: update_vector_db("prompt", "asset-cat")
+        AssetFinder-->>Pipelines: Vector DB updated
+    end
+
+    %% 7. Final Scene Assembly
+    Pipelines->>Models: Final Decomposition (LLM)
+    Models-->>Pipelines: Final Scene JSON
+
+    Pipelines-->>Agent: Observation: Scene Generation Complete (JSON + Binaries)
+
+    %% 8. Sending Scene to Client
+    Agent->>WS: Prepare [GENERATE_3D_SCENE] message
+    WS->>SDK: Sends [GENERATE_3D_SCENE] (JSON + Binaries)
+
+    %% 9. Client Renders Scene and Updates State
+    SDK->>Scene: Reconstruct Scene from JSON & Assets
+    Scene-->>UI: Renders the new 3D scene
+    UI->>User: Displays the room with the cat
+    
+    note over Scene: After rendering, client updates its state in Redis.
+    Scene->>SDK: Serialize current scene
+    SDK-->>Redis: Write current scene JSON under session_id key
+
+
 ### LLMs and AI models choice
 
-### Project Code Organization
+123
