@@ -12,6 +12,8 @@ The server is a Python-based application responsible for:
 
 We provide detailed instructions for the setup and operation of the server as well as its techincal overview.
 
+---
+
 <details>
 <summary><strong>Table of Contents</strong> (click to expand)</summary>
 
