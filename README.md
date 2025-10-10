@@ -521,13 +521,7 @@ The module implements handling for the client connection lifecycle to ensure gra
 -   **Queue Flushing:** It clears any pending messages remaining in the input or output queues to free up memory.
 -   **Deconnection:** It signals a central connection manager to remove the client's session from the active pool, formally ending the session.
 
-### SDK
-
-Of course. Here is the translated and technically expanded description of the data models and serialization module, formatted in the same rigorous style for your documentation.
-
-***
-
-### Data Models & Serialization Protocol
+### Data Models & Serialization Protocol (SDK)
 
 This module defines the data structures that facilitate all communication between the Python backend and the Unity client using **Protocol Buffers (Protobuf)** as the serialization protocol.
 
