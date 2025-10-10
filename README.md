@@ -573,11 +573,11 @@ The incoming message types include:
 The outgoing message types include:
 -   **`SESSION_START`:** Contains the newly generated unique session ID (UUID) communicated to the client upon its initial connection. The ID is used for all subsequent communications and state management (e.g., in Redis).
 -   **`UNRELATED_RESPONSE`:** Contains a general conversational response from the ReAct agent. This is used for interactions that do not trigger a generative pipeline, such as answering questions or handling greetings.
--   **`GENERATE_3D_OBJECT`** = Contains the payload for a single generated 3D asset. This includes the binary .glb mesh data and the asset's unique ID.
--   **`GENERATE_3D_SCENE`** = Contains the complete data required to construct a 3D scene. This includes a list of all required asset binaries (.glb files) and the master JSON scene graph defining object placements, lighting, and hierarchy.
--   **`MODIFY_3D_SCENE`** = Contains a JSON Patch object that describes changes to be applied to the current scene. May also include any new asset binaries required by the patch.
--   **`CONVERT_SPEECH`** = Echoes the text transcription from the Voice-to-Text model back to the Unity client to provide immediate user feedback, to confirm that their speech was received and understood correctly and to display the transcribed message.
--   **`ERROR`** = Contains a specific error that occurred on the backend during processing. The payload typically includes an error code and a human-readable message for display to the user.
+-   **`GENERATE_3D_OBJECT`:** Contains the payload for a single generated 3D asset. This includes the binary .glb mesh data and the asset's unique ID.
+-   **`GENERATE_3D_SCENE`:** Contains the complete data required to construct a 3D scene. This includes a list of all required asset binaries (.glb files) and the master JSON scene graph defining object placements, lighting, and hierarchy.
+-   **`MODIFY_3D_SCENE`:** Contains a JSON Patch object that describes changes to be applied to the current scene. May also include any new asset binaries required by the patch.
+-   **`CONVERT_SPEECH`:** Echoes the text transcription from the Voice-to-Text model back to the Unity client to provide immediate user feedback, to confirm that their speech was received and understood correctly and to display the transcribed message.
+-   **`ERROR`:** Contains a specific error that occurred on the backend during processing. The payload typically includes an error code and a human-readable message for display to the user.
 
 #### 2. Scene Graph Data Structures
 
