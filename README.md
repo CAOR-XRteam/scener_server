@@ -12,6 +12,38 @@ The server is a Python-based application responsible for:
 
 We provide detailed instructions for the setup and operation of the server as well as its techincal overview.
 
+<details>
+<summary><strong>Table of Contents</strong> (click to expand)</summary>
+
+- [Prerequisites](#prerequisites)
+  - [Hardware](#hardware)
+  - [Software](#software)
+- [Installation](#installation)
+  - [Method A: Automatic Installation](#method-a-automatic-installation)
+  - [Method B: Manual Installation](#method-b-manual-installation)
+- [Dependency Configuration](#dependency-configuration)
+  - [1. Redis Server](#1-redis-server)
+  - [2. Ollama](#2-ollama)
+- [Environment Variables](#environment-variables)
+- [Running the Server](#running-the-server)
+- [Troubleshooting](#troubleshooting)
+- [Technical Architecture](#technical-architecture)
+  - [AI Model Components](#ai-model-components)
+  - [Generative Pipelines](#generative-pipelines)
+  - [Core Sub-Modules](#core-sub-modules)
+  - [Agent](#agent)
+  - [Asset Library](#asset-library)
+  - [Asset Finder & Library Cache](#asset-finder--library-cache)
+  - [Redis](#redis)
+  - [Websocket](#websocket)
+  - [Data Models & Serialization Protocol (SDK)](#data-models--serialization-protocol-sdk)
+  - [General Workflow Illustration](#general-workflow-illustration)
+  - [LLMs and AI models choice](#llms-and-ai-models-choice)
+
+</details>
+
+---
+
 ## Prerequisites
 
 Before proceeding, ensure your system meets the following requirements.
