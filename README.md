@@ -625,7 +625,8 @@ sequenceDiagram
         participant UI as User Interface
         participant SDK as Client SDK
         participant Scene as Unity Scene Logic
-        participant Redis as Redis Database
+        participant RedisClient as Redis Database Client
+        participant WSClient as WebSocket Client
     end
 
     box Server (Python)
@@ -634,22 +635,21 @@ sequenceDiagram
         participant Pipelines as Core Pipelines
         participant Models as AI Models
         participant AssetFinder as Asset Finder
-        participant Library as Asset Library (SQLite)
+        participant Library as Asset Library
     end
-    
-    participant Redis as Redis DB
 
     %% 1. User Input and ASR
     User->>UI: Speaks "Create a room with a cat"
     UI->>SDK: Records voice and converts to bytes
-    SDK->>WS: Sends [AUDIO] Protobuf message
+    SDK->>WSClient: Prepares [AUDIO] Protobuf message
+    WSClient->>WS: Sends [AUDIO] Protobuf message
     WS->>Models: New Request (Audio) -- Transcribe
     Models-->>WS: Transcription complete
     Models->>Agent: "Create a room with a cat"
     
     %% 2. Echo Transcription to User
-    WS->>SDK: Sends [CONVERT_SPEECH] Protobuf message
-    SDK->>UI: display text("Create a room with a cat")
+    WS->>WSClient: Sends [CONVERT_SPEECH] Protobuf message
+    WSClient->>UI: display text("Create a room with a cat")
     UI->>User: Shows transcribed text
 
     %% 3. Agent Executes Scene Generation
@@ -698,7 +698,7 @@ sequenceDiagram
     
     note over Scene: After rendering, client updates its state in Redis.
     Scene->>SDK: Serialize current scene
-    SDK-->>Redis: Write current scene JSON under session_id key
+    SDK-->>RedisClient: Write current scene JSON under session_id key
 ```
 
 ### LLMs and AI models choice
