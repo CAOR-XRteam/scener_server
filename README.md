@@ -540,28 +540,52 @@ These structures represent the high-level message payloads that are exchanged ov
 Each message type is implemented as a class that includes dedicated serialization and deserialization methods (`to_proto()` and `from_proto()`). These methods act as a translation layer, converting the application's rich Python objects into their Protobuf-generated counterparts for network transport, and vice-versa.
 
 The incoming message types include:
--   **`TEXT`:** Textual incoming message.
--   **`AUDIO`:** Vocal incoming message.
--   **`ERROR`:** invoked in case of Unity-side error.
+-   **`TEXT`:** Contains raw text prompt from the user, intended as input for one of the generative pipelines or the conversational agent.
+-   **`AUDIO`:** Contains raw audio data (as a byte stream) captured from the user's microphone, intented for the Voice-to-Text (ASR) model for transcription.
+-   **`ERROR`:** Contains notification from the Unity client that an unrecoverable error has occurred on its end.
 
 The outgoing message types include:
--   **`SESSION_START`:** Textual incoming message.
--   **`UNRELATED_RESPONSE`:** Vocal incoming message.
--   **`GENERATE_3D_OBJECT`** = "generate_3d_object"
--   **`GENERATE_3D_SCENE`** = "generate_3d_scene"
--   **`MODIFY_3D_SCENE`** = "modify_3d_scene"
--   **`CONVERT_SPEECH`** = "convert_speech"
--   **`ERROR`** = "error"
+-   **`SESSION_START`:** Contains the newly generated unique session ID (UUID) communicated to the client upon its initial connection. The ID is used for all subsequent communications and state management (e.g., in Redis).
+-   **`UNRELATED_RESPONSE`:** Contains a general conversational response from the ReAct agent. This is used for interactions that do not trigger a generative pipeline, such as answering questions or handling greetings.
+-   **`GENERATE_3D_OBJECT`** = Contains the payload for a single generated 3D asset. This includes the binary .glb mesh data and the asset's unique ID.
+-   **`GENERATE_3D_SCENE`** = Contains the complete data required to construct a 3D scene. This includes a list of all required asset binaries (.glb files) and the master JSON scene graph defining object placements, lighting, and hierarchy.
+-   **`MODIFY_3D_SCENE`** = Contains a JSON Patch object that describes changes to be applied to the current scene. May also include any new asset binaries required by the patch.
+-   **`CONVERT_SPEECH`** = Echoes the text transcription from the Voice-to-Text model back to the Unity client to provide immediate user feedback, to confirm that their speech was received and understood correctly and to display the transcribed message.
+-   **`ERROR`** = Contains a specific error that occurred on the backend during processing. The payload typically includes an error code and a human-readable message for display to the user.
 
 #### 2. Scene Graph Data Structures
 
-This category of structures provides a detailed, hierarchical model of all objects and elements that constitute a 3D scene. These models are meticulously designed to mirror the structure of Unity's runtime scene graph, enabling a direct deserialization within the Unity client.
+This category of structures provides a detailed, hierarchical model of all objects and elements that constitute a 3D scene. These models are designed to mirror the structure of Unity's runtime scene graph, enabling a direct deserialization within the Unity client.
 
-These structures encapsulate all necessary spatial and semantic information, including:
+These structures encapsulate all necessary spatial and semantic information. The highest-level encapsulation contains:
 
--   **`SceneNode`:** 
--   **`Light`:** Represents a light source in the scene, defining its type (e.g., Point, Directional, Spot), color, and intensity.
--   **`Skybox`:** Contains configuration data for the scene's skybox, typically referencing a specific skybox material.
+-   **`name`:** Scene name.
+-   **`skybox`:** Configuration data for the scene's skybox.
+-   **`graph`:** Scene graph.
+
+The top-level scene graph is defined as a flat list of scene objects. The parent-child hierarchy is not represented by deep nesting in the serialized format but is instead encoded relationally using id and parent_id fields. This approach simplifies serialization and parsing while allowing the Unity client to efficiently reconstruct the full hierarchy.
+
+Scene graph is defined as a `list<SceneObject>`.
+
+##### SceneObject
+
+-   **`id`** (`string`): A unique identifier for this node.
+-   **`name`** (`string`): The human-readable name of the object.
+-   **`parent_id`** (`string`, nullable): The `id` of the parent scene object. A `null` or empty value signifies that this is a root node in the scene.
+-   **`transform`** (`Transform`): An object encapsulating the object's spatial properties (position, rotation, scale).
+-   **`components`** (`list<Component>`): A list of components that define appearance and behavior of this object.
+-   **`children`** (`list<SceneObject>`): A list of children of this object.
+
+##### Component
+
+A polymorphic data structure representing a component attached to a `SceneObject`, analogous to Unity's `Component` class. The specific data it contains is determined by its type.
+
+-   **`Primitive`**: Represents a simple, built-in Unity geometric shape.
+    -   **`shape`** (`enum`): The type of primitive (e.g., `CUBE`, `SPHERE`, `CAPSULE`, `PLANE`, `CYLINDER`).
+    -   **`color`** (`Color`): The RGBA color of the primitive's material.
+-   **`Dynamic`**: Represents a complex mesh generated by the AI pipeline.
+    -   **`id`** (`string`): A foreign key identifier that links this component to a specific 3D asset sent in a `GENERATE_3D_OBJECT` message. The Unity client uses this ID to retrieve the correct mesh and annotate generated objects.
+-   **`Light`**: Represents a light source in the scene. Identical to Unity's light definitions.
 
 ### LLMs and AI models choice
 
