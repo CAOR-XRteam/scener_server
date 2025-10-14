@@ -703,6 +703,28 @@ sequenceDiagram
     SDK-->>RedisClient: Write current scene JSON under session_id key
 ```
 
-### LLMs and AI models choice
+### LLMs and AI Models Choice
 
-TODO
+The selection of all AI models for this project was guided by two primary constraints: a commitment to using only **open-source models** and the necessity of operating within a **limited compute environment** (a single NVIDIA RTX 5090 GPU). Consequently, all chosen models have open-access licenses and do not exceed 32 billion parameters, ensuring they can run concurrently on the specified hardware.
+
+#### LLMs for Scene Composition and Modification
+A significant challenge during development was the ability of LLMs to reliably follow the complex instructions required to compose structured JSON scene descriptions and generate precise JSON Patches for scene modification. Many models were tested, but most showed a lack of consistency in adhering to the required output format.
+
+-   **Chosen Model:** After extensive evaluation, DeepSeek's `deepseek-r1:32B` demonstrated the most robust performance and the highest capability to respect the rigid output schema.
+-   **Mitigation Strategy:** To handle cases where it deviates from the format, we have implemented a **post-verification layer**. This system automatically checks the LLM's output for schema compliance. If any incoherence is detected, the output is sent back to the LLM along with feedback on the errors, prompting it to self-correct in a subsequent attempt.
+
+#### Text-to-Image (2D) Generation Model
+The primary consideration for this component was balancing image quality with memory footprint and inference speed.
+
+-   **Chosen Model:** We opted for `stabilityai/stable-diffusion-3-medium`, which provided the best performance-to-resource ratio for our target hardware.
+-   **Alternatives Considered:** While larger models like the latest from Flux can produce superior results, they proved too resource-intensive to run concurrently with the agent, LLMs, and other modules on a single GPU.
+
+#### Image-to-3D (3D) Generation Model
+For this task, efficiency and generation speed were paramount.
+
+-   **Chosen Model:** `Microsoft TRELLIS` remains a highly competitive option in the 3D generation space. It offers a compelling balance of quality, speed, and a lower computational footprint compared to newer, heavier state-of-the-art alternatives like Hunyuan3D.
+
+### Current Limitations and Future Work
+The most significant limitation of the current framework lies in the **spatial reasoning capabilities** of the open-source LLMs. The models used in this project struggle to consistently deduce physically plausible and coherent 3D coordinates from abstract textual prompts (e.g., placing an object "on top of" another in a realistic way).
+
+This is an active area of research for the project. Future work will focus on exploring and implementing techniques to improve the spatial awareness and physical reasoning of the scene generation pipeline.
