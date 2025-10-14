@@ -728,3 +728,18 @@ For this task, efficiency and generation speed were paramount.
 The most significant limitation of the current framework lies in the **spatial reasoning capabilities** of the open-source LLMs. The models used in this project struggle to consistently deduce physically plausible and coherent 3D coordinates from abstract textual prompts (e.g., placing an object "on top of" another in a realistic way).
 
 This is an active area of research for the project. Future work will focus on exploring and implementing techniques to improve the spatial awareness and physical reasoning of the scene generation pipeline.
+
+---
+
+<div align="center">
+  <p>
+    Developed at the <a href="https://www.caor.minesparis.psl.eu/">Center for Robotics (CAOR), Mines Paris, PSL University</a></strong>
+  </p>
+  <p>
+    <a href="https://creativecommons.org/licenses/by-sa/4.0/">
+      <img src="https://mirrors.creativecommons.org/presskit/buttons/88x31/png/by-sa.png" alt="CC BY-SA 4.0" width="88" height="31">
+    </a>
+    <br>
+    This project is licensed under the <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
+  </p>
+</div>
