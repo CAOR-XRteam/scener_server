@@ -3,6 +3,8 @@ import os
 from beartype import beartype
 from pathlib import Path
 
+import torch
+
 os.environ["ATTN_BACKEND"] = (
     "xformers"  # Can be 'flash-attn' or 'xformers', default is 'flash-attn'
 )
@@ -55,6 +57,9 @@ def generate(image_path: Path, image_id: str):
         texture_size=256,  # Size of the texture used for the GLB
     )
     glb.export(image_path.parent / f"{image_id}.glb")
+
+    del pipeline
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
