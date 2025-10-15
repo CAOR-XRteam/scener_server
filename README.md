@@ -51,7 +51,7 @@ We provide detailed instructions for the setup and operation of the server as we
 Before proceeding, ensure your system meets the following requirements.
 
 ### Hardware
-*   **GPU:** A GPU with a minimum of **CALCULATE** is required to run all AI pipelines simultaneously.
+*   **GPU:** A GPU with a minimum of **24Gb** is required to run all AI pipelines simultaneously.
 *   **System:** A Linux-based operating system (Ubuntu 20.04+ is recommended).
 
 ### Software
