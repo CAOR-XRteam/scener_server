@@ -119,6 +119,8 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     ```
     *   `-e .`: Installs the project in "editable" mode.
     *   `-c constraints.txt`: Ensures that package versions adhere to the specified constraints, preventing conflicts.
+  
+    **IMPORTANT:** Make sure that you use 11.8 version of `CUDA Toolkit`, otherwise you will have incompatible `pytorch` builds.
 
 ---
 
