@@ -61,41 +61,10 @@ Before proceeding, ensure your system meets the following requirements.
 
 ## Installation
 
-Two installation paths are provided: a pre-configured Conda environment file or a full manual installation of all python dependencies. We strongly recommend users with NVIDIA RTX 50-series GPUs use the provided Conda environment, since the manual package installation is complicated due to incompatible PyTorch/CUDA version required by the TRELLIS library.
+We provide an installation guide of all python dependencies.
 
 ---
 
-### Method A: Automatic Installation
-
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/CAOR-XRteam/scener_server
-    cd Scener
-    ```
-
-2.  **Create the Conda Environment:**
-   
-    For NVIDIA RTX 50-series GPUs:
-    
-    ```bash
-    conda env create -f environment-5090.yml
-    ```
-
-    For lower generations GPUs:
-   
-    ```bash
-    conda env create -f environment-rest.yml
-    ```
-    
-3.  **Activate the Environment:**
-    You must activate this environment in any new terminal session before running the server.
-    ```bash
-    conda activate scener
-    ```
-
----
-
-### Method B: Manual Installation
 
 1.  **Clone this Repository:**
     ```bash
@@ -120,7 +89,7 @@ Two installation paths are provided: a pre-configured Conda environment file or 
     *   `-e .`: Installs the project in "editable" mode.
     *   `-c constraints.txt`: Ensures that package versions adhere to the specified constraints, preventing conflicts.
   
-    **IMPORTANT:** Make sure that you use 11.8 version of `CUDA Toolkit`, otherwise you will have incompatible `pytorch` builds.
+    **IMPORTANT:** Make sure that you use 11.8 or 12.2 version of `CUDA Toolkit`, otherwise you will have incompatible `pytorch` builds.
 
 ---
 
