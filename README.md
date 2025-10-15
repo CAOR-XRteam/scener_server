@@ -51,7 +51,7 @@ We provide detailed instructions for the setup and operation of the server as we
 Before proceeding, ensure your system meets the following requirements.
 
 ### Hardware
-*   **GPU:** A GPU with a minimum of **24Gb** is required to run all AI pipelines simultaneously.
+*   **GPU:** A GPU with a minimum of **25 Gb** is required to run all AI pipelines simultaneously. You can lower comsumed memory by changing models in `config.json` file, but it might affect the performance.
 *   **System:** A Linux-based operating system (Ubuntu 20.04+ is recommended).
 
 ### Software
@@ -677,6 +677,8 @@ sequenceDiagram
 ### LLMs and AI Models Choice
 
 The selection of all AI models for this project was guided by two primary constraints: a commitment to using only open-source models and the necessity of operating within a **limited compute environment** (a single NVIDIA RTX 5090 GPU). Consequently, all chosen models have open-access licenses and do not exceed 32 billion parameters, ensuring they can run concurrently on the specified hardware.
+
+To maximize the utility of the limited VRAM, we implemented a "load-on-demand" memory management protocol for the diffusion-based image generation models and 3D generation models. This protocol involves dynamically loading the model weights into VRAM prior to each inference call and subsequently purging them upon completion. While this introduces a marginal latency overhead per generation, this strategic trade-off creates the necessary memory headroom for operating significantly larger and more capable LLMs, which would not otherwise be possible within this single-GPU architecture.
 
 #### LLMs for Scene Composition and Modification
 A significant challenge during development was the ability of LLMs to reliably follow the complex instructions required to compose structured JSON scene descriptions and generate precise JSON Patches for scene modification. Many models were tested, but most showed a lack of consistency in adhering to the required output format.
