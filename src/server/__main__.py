@@ -1,16 +1,14 @@
-from api import *
 import os
 
+from dotenv import load_dotenv
 
-def start():
-    global server
-    if server is None:
-        server = ws.Server()
-    server.start()
+from server.api import ServerAPI
 
-def main():
-    server.start()
+load_dotenv()
 
 if __name__ == "__main__":
     os.system("clear")
-    main()
+    HOST = os.getenv("WEBSOCKET_HOST", "localhost")
+    PORT = int(os.getenv("WEBSOCKET_PORT", 8765))
+    server = ServerAPI(host=HOST, port=PORT)
+    server.start()
